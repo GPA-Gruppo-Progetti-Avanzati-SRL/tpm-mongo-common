@@ -1,4 +1,4 @@
-module tpm-mongo-common
+module github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
 
 go 1.21
 
