@@ -5,6 +5,8 @@ import (
 	"strconv"
 )
 
+const MongoDbDefaultInstanceName = "default"
+
 type CollectionCfg struct {
 	Id   string
 	Name string
