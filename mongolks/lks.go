@@ -42,6 +42,8 @@ func NewLinkedServiceWithConfig(cfg Config) (*LinkedService, error) {
 
 func (mdb *LinkedService) Connect(ctx context.Context) error {
 
+	const semLogContext = "mongo-lks::connect"
+
 	var mongoOptions = options.Client().ApplyURI(mdb.cfg.Host).
 		SetMinPoolSize(uint64(mdb.cfg.Pool.MinConn)).
 		SetMaxPoolSize(uint64(mdb.cfg.Pool.MaxConn)).
@@ -50,15 +52,15 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 
 	switch mdb.cfg.SecurityProtocol {
 	case "TLS":
-		log.Info().Bool("skip-verify", mdb.cfg.TLS.SkipVerify).Msg("security-protocol set to TLS....")
+		log.Info().Bool("skip-verify", mdb.cfg.TLS.SkipVerify).Msg(semLogContext + " security-protocol set to TLS....")
 		tlsCfg := &tls.Config{
 			InsecureSkipVerify: mdb.cfg.TLS.SkipVerify,
 		}
 		mongoOptions.SetTLSConfig(tlsCfg)
 	case "PLAIN":
-		log.Info().Str("security-protocol", mdb.cfg.SecurityProtocol).Msg("security-protocol set to PLAIN....nothing to do")
+		log.Info().Str("security-protocol", mdb.cfg.SecurityProtocol).Msg(semLogContext + " security-protocol set to PLAIN....nothing to do")
 	default:
-		log.Info().Str("security-protocol", mdb.cfg.SecurityProtocol).Msg("skipping mongo security-protocol settings")
+		log.Info().Str("security-protocol", mdb.cfg.SecurityProtocol).Msg(semLogContext + " skipping mongo security-protocol settings")
 	}
 
 	/*
@@ -72,7 +74,7 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 
 	client, err := mongo.Connect(context.Background(), mongoOptions)
 	if err != nil {
-		log.Error().Err(err).Send()
+		log.Error().Err(err).Msg(semLogContext)
 		return err
 	}
 
