@@ -37,7 +37,7 @@ type Config struct {
 	WriteConcern     string         `mapstructure:"write-concern" json:"write-concern" yaml:"write-concern"`
 	WriteTimeout     string         `mapstructure:"write-timeout" json:"write-timeout" yaml:"write-timeout"`
 	Collections      CollectionsCfg `mapstructure:"collections" json:"collections" yaml:"collections"`
-	SecurityProtocol string         `json:"security-protocol" json:"security-protocol" yaml:"security-protocol"`
+	SecurityProtocol string         `mapstructure:"security-protocol" json:"security-protocol" yaml:"security-protocol"`
 	TLS              TLSConfig      `json:"tls" mapstructure:"tls" yaml:"tls"`
 }
 
