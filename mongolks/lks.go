@@ -67,8 +67,16 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 	 * Simple User/password authentication
 	 */
 	if mdb.cfg.User != "" {
+		authMechanism := "SCRAM-SHA-256"
+		if mdb.cfg.AuthMechanism != "" {
+			authMechanism = mdb.cfg.AuthMechanism
+		}
+		authSource := mdb.cfg.DbName
+		if mdb.cfg.AuthSource != "" {
+			authSource = mdb.cfg.AuthSource
+		}
 		mongoOptions.SetAuth(options.Credential{
-			AuthSource: mdb.cfg.DbName, Username: mdb.cfg.User, Password: mdb.cfg.Pwd,
+			AuthSource: authSource, Username: mdb.cfg.User, Password: mdb.cfg.Pwd, AuthMechanism: authMechanism,
 		})
 	}
 

@@ -20,12 +20,14 @@ type TLSConfig struct {
 }
 
 type Config struct {
-	Name   string
-	Host   string
-	DbName string `mapstructure:"db-name" json:"db-name" yaml:"db-name"`
-	User   string `mapstructure:"user" json:"user" yaml:"user"`
-	Pwd    string `mapstructure:"pwd" json:"pwd" yaml:"pwd"`
-	Pool   struct {
+	Name          string
+	Host          string
+	DbName        string `mapstructure:"db-name" json:"db-name" yaml:"db-name"`
+	User          string `mapstructure:"user" json:"user" yaml:"user"`
+	Pwd           string `mapstructure:"pwd" json:"pwd" yaml:"pwd"`
+	AuthMechanism string `mapstructure:"authMechanism" json:"authMechanism" yaml:"authMechanism"`
+	AuthSource    string `mapstructure:"authSource" json:"authSource" yaml:"authSource"`
+	Pool          struct {
 		MinConn               int `mapstructure:"min-conn" json:"min-conn" yaml:"min-conn"`
 		MaxConn               int `mapstructure:"max-conn" json:"max-conn" yaml:"max-conn"`
 		MaxWaitQueueSize      int `mapstructure:"max-wait-queue-size" json:"max-wait-queue-size" yaml:"max-wait-queue-size"`
