@@ -19,22 +19,24 @@ type TLSConfig struct {
 	SkipVerify bool   `json:"skip-verify" mapstructure:"skip-verify" yaml:"skip-verify"`
 }
 
+type PoolConfig struct {
+	MinConn               int `mapstructure:"min-conn" json:"min-conn" yaml:"min-conn"`
+	MaxConn               int `mapstructure:"max-conn" json:"max-conn" yaml:"max-conn"`
+	MaxWaitQueueSize      int `mapstructure:"max-wait-queue-size" json:"max-wait-queue-size" yaml:"max-wait-queue-size"`
+	MaxWaitTime           int `mapstructure:"max-wait-time" json:"max-wait-time" yaml:"max-wait-time"`
+	MaxConnectionIdleTime int `mapstructure:"max-conn-idle-time" json:"max-conn-idle-time" yaml:"max-conn-idle-time"`
+	MaxConnectionLifeTime int `mapstructure:"max-conn-life-time" json:"max-conn-life-time" yaml:"max-conn-life-time"`
+}
+
 type Config struct {
-	Name          string
-	Host          string
-	DbName        string `mapstructure:"db-name" json:"db-name" yaml:"db-name"`
-	User          string `mapstructure:"user" json:"user" yaml:"user"`
-	Pwd           string `mapstructure:"pwd" json:"pwd" yaml:"pwd"`
-	AuthMechanism string `mapstructure:"authMechanism" json:"authMechanism" yaml:"authMechanism"`
-	AuthSource    string `mapstructure:"authSource" json:"authSource" yaml:"authSource"`
-	Pool          struct {
-		MinConn               int `mapstructure:"min-conn" json:"min-conn" yaml:"min-conn"`
-		MaxConn               int `mapstructure:"max-conn" json:"max-conn" yaml:"max-conn"`
-		MaxWaitQueueSize      int `mapstructure:"max-wait-queue-size" json:"max-wait-queue-size" yaml:"max-wait-queue-size"`
-		MaxWaitTime           int `mapstructure:"max-wait-time" json:"max-wait-time" yaml:"max-wait-time"`
-		MaxConnectionIdleTime int `mapstructure:"max-conn-idle-time" json:"max-conn-idle-time" yaml:"max-conn-idle-time"`
-		MaxConnectionLifeTime int `mapstructure:"max-conn-life-time" json:"max-conn-life-time" yaml:"max-conn-life-time"`
-	}
+	Name             string
+	Host             string
+	DbName           string         `mapstructure:"db-name" json:"db-name" yaml:"db-name"`
+	User             string         `mapstructure:"user" json:"user" yaml:"user"`
+	Pwd              string         `mapstructure:"pwd" json:"pwd" yaml:"pwd"`
+	AuthMechanism    string         `mapstructure:"authMechanism" json:"authMechanism" yaml:"authMechanism"`
+	AuthSource       string         `mapstructure:"authSource" json:"authSource" yaml:"authSource"`
+	Pool             PoolConfig     `mapstructure:"pool" json:"pool" yaml:"pool"`
 	BulkWriteOrdered bool           `mapstructure:"bulk-write-ordered" json:"bulk-write-ordered" yaml:"bulk-write-ordered"`
 	WriteConcern     string         `mapstructure:"write-concern" json:"write-concern" yaml:"write-concern"`
 	WriteTimeout     string         `mapstructure:"write-timeout" json:"write-timeout" yaml:"write-timeout"`
