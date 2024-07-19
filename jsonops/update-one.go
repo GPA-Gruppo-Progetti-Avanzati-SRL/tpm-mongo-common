@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jsonops/jsonopsutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
@@ -22,13 +22,13 @@ func UpdateOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 		return http.StatusInternalServerError, nil, err
 	}
 
-	statementFilter, err := jsonopsutil.UnmarshalJSON2BsonM(filter)
+	statementFilter, err := util.UnmarshalJson2BsonD(filter)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err
 	}
 
-	statementUpdate, err := jsonopsutil.UnmarshalJSONMap2BsonD(update)
+	statementUpdate, err := util.UnmarshalJson2BsonD(update)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err

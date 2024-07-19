@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jsonops/jsonopsutil"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
@@ -47,7 +47,7 @@ func Aggregate(lks *mongolks.LinkedService, collectionId string, pipeline []byte
 		return http.StatusInternalServerError, nil, err
 	}
 
-	statementQuery, err := jsonopsutil.UnmarshalJSON2ArrayOfBsonM(pipeline)
+	statementQuery, err := util.UnmarshalJson2ArrayOfBsonD(pipeline)
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}

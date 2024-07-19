@@ -12,7 +12,6 @@ import (
 var findOneQueryTest = []byte(`{ "year": 1939 }`)
 var findOneProjectionTest = []byte(`{ "year": 1 }`)
 var findSortTest = []byte(`{ "title": 1 }`)
-var aggregateTest = []byte(`[{ "$match": { "year": 1939 }}, { "$project": { "year": 1, "title": 1 }}]`)
 
 func TestFindOne(t *testing.T) {
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
@@ -34,6 +33,8 @@ func TestFind(t *testing.T) {
 		t.Log("item:", i, string(el))
 	}
 }
+
+var aggregateTest = []byte(`[{ "$match": { "year": 1939 }}, { "$project": { "year": 1, "title": 1 }}]`)
 
 func TestAggregateOne(t *testing.T) {
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")

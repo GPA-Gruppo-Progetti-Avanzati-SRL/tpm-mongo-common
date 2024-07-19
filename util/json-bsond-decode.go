@@ -1,10 +1,63 @@
-package jsonopsutil
+package util
 
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/feliixx/mongoextjson"
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson"
 	"sort"
 )
+
+func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
+	const semLogContext = "mongo-json-util::unmarshal-json-2-bson-d"
+
+	o := New()
+
+	err := json.Unmarshal(b, &o)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	d, err := o.ToBsonD()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	return d, nil
+}
+
+func UnmarshalJson2ArrayOfBsonD(b []byte) ([]bson.D, error) {
+	const semLogContext = "mongo-json-util::unmarshal-json-2-bson-d-array"
+	var err error
+
+	if len(b) == 0 {
+		return nil, nil
+	}
+	var omaps []OrderedMap
+	err = mongoextjson.Unmarshal(b, &omaps)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	var resp []bson.D
+	for _, o := range omaps {
+		d, err := o.ToBsonD()
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return nil, err
+		}
+
+		resp = append(resp, d)
+	}
+
+	return resp, nil
+
+}
 
 type Pair struct {
 	key   string
@@ -40,6 +93,69 @@ func New() *OrderedMap {
 	o.values = map[string]interface{}{}
 	o.escapeHTML = true
 	return &o
+}
+
+func (o *OrderedMap) ToBsonD() (bson.D, error) {
+	const semLogContext = "ordered-map::to-bson-d"
+	var d bson.D
+	if len(o.values) == 0 {
+		return d, nil
+	}
+
+	var a bson.D
+	for _, k := range o.Keys() {
+		v := o.Values()[k]
+		log.Trace().Str("type", fmt.Sprintf("%T", v)).Msg(semLogContext)
+		switch tv := v.(type) {
+		case OrderedMap:
+			d1, err := tv.ToBsonD()
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return d, err
+			}
+			a = append(a, bson.E{Key: k, Value: d1})
+		case []interface{}:
+			val, err := adaptSlice(tv)
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return nil, err
+			}
+			a = append(a, bson.E{Key: k, Value: val})
+		default:
+			a = append(a, bson.E{Key: k, Value: v})
+		}
+	}
+
+	return a, nil
+}
+
+func adaptSlice(a []interface{}) ([]interface{}, error) {
+	const semLogContext = "ordered-map::slice-to-bson-d"
+
+	var newA []interface{}
+	for i := range a {
+		log.Trace().Str("type", fmt.Sprintf("%T", a[i])).Msg(semLogContext)
+		switch ta := a[i].(type) {
+		case OrderedMap:
+			d1, err := ta.ToBsonD()
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return nil, err
+			}
+			newA = append(newA, d1)
+		case []interface{}:
+			val, err := adaptSlice(ta)
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return nil, err
+			}
+			a = append(a, val)
+		default:
+			newA = append(newA, a[i])
+		}
+	}
+
+	return newA, nil
 }
 
 func (o *OrderedMap) SetEscapeHTML(on bool) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jsonops/jsonopsutil"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
@@ -25,14 +25,14 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, sort [
 		return http.StatusInternalServerError, nil, err
 	}
 
-	statementQuery, err := jsonopsutil.UnmarshalJSON2BsonM(query)
+	statementQuery, err := util.UnmarshalJson2BsonD(query)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err
 	}
 
 	fo := options.FindOptions{}
-	srt, err := jsonopsutil.UnmarshalJSONMap2BsonD(sort)
+	srt, err := util.UnmarshalJson2BsonD(sort)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err
@@ -42,7 +42,7 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, sort [
 		fo.SetSort(srt)
 	}
 
-	prj, err := jsonopsutil.UnmarshalJSON2BsonM(projection)
+	prj, err := util.UnmarshalJson2BsonD(projection)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err
@@ -72,7 +72,7 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, sort [
 	return sc, nil, nil
 }
 
-func executeFindOp(c *mongo.Collection, query bson.M, fo *options.FindOptions) (int, [][]byte, error) {
+func executeFindOp(c *mongo.Collection, query bson.D, fo *options.FindOptions) (int, [][]byte, error) {
 	const semLogContext = "mongo-operation::execute-find-op"
 
 	crs, err := c.Find(context.Background(), query, fo)
