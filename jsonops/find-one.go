@@ -13,6 +13,37 @@ import (
 	"net/http"
 )
 
+const (
+	MongoActivityFindOneQueryProperty      = "$query"
+	MongoActivityFindOneSortProperty       = "$sort"
+	MongoActivityFindOneProjectionProperty = "$projection"
+	MongoActivityFindOneOptsProperty       = "$opts"
+)
+
+type FindOneStatementConfig struct {
+	Query      []byte `yaml:"query,omitempty" json:"query,omitempty" mapstructure:"query,omitempty"`
+	Sort       []byte `yaml:"sort,omitempty" json:"sort,omitempty" mapstructure:"sort,omitempty"`
+	Projection []byte `yaml:"projection,omitempty" json:"projection,omitempty" mapstructure:"projection,omitempty"`
+	Options    []byte `yaml:"options,omitempty" json:"options,omitempty" mapstructure:"options,omitempty"`
+}
+
+func NewFindOneStatementConfigFromJson(data []byte) (FindOneStatementConfig, error) {
+	var m map[string]json.RawMessage
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return FindOneStatementConfig{}, err
+	}
+
+	fo := FindOneStatementConfig{
+		Query:      m[MongoActivityFindOneQueryProperty],
+		Sort:       m[MongoActivityFindOneSortProperty],
+		Projection: m[MongoActivityFindOneProjectionProperty],
+		Options:    m[MongoActivityFindOneOptsProperty],
+	}
+
+	return fo, nil
+}
+
 func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, opts []byte) (int, []byte, error) {
 	const semLogContext = "json-ops::find-one"
 	var err error
