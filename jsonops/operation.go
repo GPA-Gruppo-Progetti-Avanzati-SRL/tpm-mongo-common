@@ -5,16 +5,19 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type MongoJsonOperationType string
+type MongoJsonOperationStatementPart string
+
 const (
-	FindOneOperationType = "find-one"
+	FindOneOperationType MongoJsonOperationType = "find-one"
 )
 
 type Operation interface {
-	OpType() string
+	OpType() MongoJsonOperationType
 	ToString() string
 }
 
-func NewOperation(opType string, m map[string][]byte) (Operation, error) {
+func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStatementPart][]byte) (Operation, error) {
 	const semLogContext = "json-ops::new-operation"
 	var op Operation
 	var err error
@@ -23,7 +26,7 @@ func NewOperation(opType string, m map[string][]byte) (Operation, error) {
 	case FindOneOperationType:
 		op, err = NewFindOneOperation(m)
 	default:
-		err = errors.New("invalid op-type " + opType)
+		err = errors.New("invalid op-type " + string(opType))
 	}
 
 	if err != nil {
