@@ -15,6 +15,10 @@ func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 
 	o := New()
 
+	if len(b) == 0 {
+		return nil, nil
+	}
+
 	err := json.Unmarshal(b, &o)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
