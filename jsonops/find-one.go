@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
@@ -11,9 +12,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
+	"strings"
 )
 
 const (
+	MongoActivityFindOneOpProperty         = "$op"
 	MongoActivityFindOneQueryProperty      = "$query"
 	MongoActivityFindOneSortProperty       = "$sort"
 	MongoActivityFindOneProjectionProperty = "$projection"
@@ -27,7 +30,75 @@ type FindOneStatementConfig struct {
 	Options    []byte `yaml:"options,omitempty" json:"options,omitempty" mapstructure:"options,omitempty"`
 }
 
+func (op *FindOneStatementConfig) ToString() string {
+	var sb strings.Builder
+	numberOfElements := 0
+	sb.WriteString("{")
+	if len(op.Query) > 0 {
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneQueryProperty))
+		sb.WriteString(string(op.Query))
+	}
+	if len(op.Sort) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneSortProperty))
+		sb.WriteString(string(op.Sort))
+	}
+	if len(op.Projection) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneProjectionProperty))
+		sb.WriteString(string(op.Projection))
+	}
+	if len(op.Options) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneOptsProperty))
+		sb.WriteString(string(op.Options))
+	}
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+func NewFindOneStatementConfig(m map[string][]byte) (*FindOneStatementConfig, error) {
+	foStmt, err := NewFindOneStatementConfigFromJson(m[MongoActivityFindOneOpProperty])
+	if err != nil {
+		return nil, err
+	}
+
+	if data, ok := m[MongoActivityFindOneQueryProperty]; ok {
+		foStmt.Query = data
+	}
+
+	if data, ok := m[MongoActivityFindOneSortProperty]; ok {
+		foStmt.Sort = data
+	}
+
+	if data, ok := m[MongoActivityFindOneProjectionProperty]; ok {
+		foStmt.Projection = data
+	}
+
+	if data, ok := m[MongoActivityFindOneOptsProperty]; ok {
+		foStmt.Options = data
+	}
+
+	return &foStmt, nil
+}
+
 func NewFindOneStatementConfigFromJson(data []byte) (FindOneStatementConfig, error) {
+
+	if len(data) == 0 {
+		return FindOneStatementConfig{}, nil
+	}
+
 	var m map[string]json.RawMessage
 	err := json.Unmarshal(data, &m)
 	if err != nil {
