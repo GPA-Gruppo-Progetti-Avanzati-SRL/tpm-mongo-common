@@ -1,0 +1,155 @@
+package jsonops
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"net/http"
+	"strings"
+)
+
+const (
+	MongoActivityReplaceOneOpProperty          MongoJsonOperationStatementPart = "$op"
+	MongoActivityReplaceOneFilterProperty      MongoJsonOperationStatementPart = "$filter"
+	MongoActivityReplaceOneReplacementProperty MongoJsonOperationStatementPart = "$replacement"
+	MongoActivityReplaceOneOptsProperty        MongoJsonOperationStatementPart = "$opts"
+)
+
+type ReplaceOneOperation struct {
+	Filter      []byte `yaml:"filter,omitempty" json:"filter,omitempty" mapstructure:"filter,omitempty"`
+	Replacement []byte `yaml:"replacement,omitempty" json:"replacement,omitempty" mapstructure:"replacement,omitempty"`
+	Options     []byte `yaml:"options,omitempty" json:"options,omitempty" mapstructure:"options,omitempty"`
+}
+
+func (op *ReplaceOneOperation) OpType() MongoJsonOperationType {
+	return ReplaceOneOperationType
+}
+
+func (op *ReplaceOneOperation) ToString() string {
+	var sb strings.Builder
+	numberOfElements := 0
+	sb.WriteString("{")
+	if len(op.Filter) > 0 {
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityReplaceOneFilterProperty))
+		sb.WriteString(string(op.Filter))
+	}
+	if len(op.Replacement) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityReplaceOneReplacementProperty))
+		sb.WriteString(string(op.Replacement))
+	}
+	if len(op.Options) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityReplaceOneOptsProperty))
+		sb.WriteString(string(op.Options))
+	}
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+func (op *ReplaceOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+	sc, resp, err := ReplaceOne(lks, collectionId, op.Filter, op.Replacement, op.Options)
+	return sc, resp, err
+}
+
+func NewReplaceOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*ReplaceOneOperation, error) {
+	foStmt, err := NewReplaceOneStatementConfigFromJson(m[MongoActivityReplaceOneOpProperty])
+	if err != nil {
+		return nil, err
+	}
+
+	if data, ok := m[MongoActivityReplaceOneFilterProperty]; ok {
+		foStmt.Filter = data
+	}
+
+	if data, ok := m[MongoActivityReplaceOneReplacementProperty]; ok {
+		foStmt.Replacement = data
+	}
+
+	if data, ok := m[MongoActivityReplaceOneOptsProperty]; ok {
+		foStmt.Options = data
+	}
+
+	return &foStmt, nil
+}
+
+func NewReplaceOneStatementConfigFromJson(data []byte) (ReplaceOneOperation, error) {
+
+	if len(data) == 0 {
+		return ReplaceOneOperation{}, nil
+	}
+
+	var m map[MongoJsonOperationStatementPart]json.RawMessage
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return ReplaceOneOperation{}, err
+	}
+
+	fo := ReplaceOneOperation{
+		Filter:      m[MongoActivityReplaceOneFilterProperty],
+		Replacement: m[MongoActivityReplaceOneReplacementProperty],
+		Options:     m[MongoActivityReplaceOneOptsProperty],
+	}
+
+	return fo, nil
+}
+
+func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte, replacement []byte, opts []byte) (int, []byte, error) {
+	const semLogContext = "json-ops::replace-one"
+	var err error
+
+	c := lks.GetCollection(collectionId, "")
+	if c == nil {
+		err = errors.New("cannot find requested collection")
+		log.Error().Err(err).Str("collection", collectionId).Msg(semLogContext)
+		return http.StatusInternalServerError, nil, err
+	}
+
+	opFilter, err := util.UnmarshalJson2BsonD(filter)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return http.StatusInternalServerError, nil, err
+	}
+
+	opReplacement, err := util.UnmarshalJson2BsonD(replacement)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return http.StatusInternalServerError, nil, err
+	}
+
+	uo := options.ReplaceOptions{}
+	if len(opts) > 0 {
+		err = json.Unmarshal(opts, &uo)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return http.StatusInternalServerError, nil, err
+		}
+	}
+	res, err := c.ReplaceOne(context.Background(), opFilter, opReplacement, &uo)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return http.StatusInternalServerError, nil, err
+	}
+
+	var b []byte
+	b, err = json.Marshal(res)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return http.StatusInternalServerError, nil, err
+	}
+
+	return http.StatusOK, b, nil
+}

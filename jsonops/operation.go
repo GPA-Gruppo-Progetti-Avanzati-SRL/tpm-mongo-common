@@ -10,7 +10,8 @@ type MongoJsonOperationType string
 type MongoJsonOperationStatementPart string
 
 const (
-	FindOneOperationType MongoJsonOperationType = "find-one"
+	FindOneOperationType    MongoJsonOperationType = "find-one"
+	ReplaceOneOperationType MongoJsonOperationType = "replace-one"
 )
 
 type Operation interface {

@@ -69,3 +69,16 @@ func TestUpdateOne(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
 }
+
+var replaceOneTestFilter = []byte(`{ "year": 1939 }`)
+var replaceOneTestReplacement = []byte(`{ "year-new": 1939 }`)
+var replaceOneTestOpts = []byte(`{ "upsert": true }`)
+
+func TestReplaceOne(t *testing.T) {
+	lks, err := mongolks.GetLinkedService(context.Background(), "default")
+	require.NoError(t, err)
+
+	sc, resp, err := jsonops.ReplaceOne(lks, CollectionId, replaceOneTestFilter, replaceOneTestReplacement, replaceOneTestOpts)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(resp))
+}
