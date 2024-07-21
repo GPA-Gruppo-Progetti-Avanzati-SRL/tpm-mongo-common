@@ -72,6 +72,11 @@ func (op *FindOneOperation) ToString() string {
 	return sb.String()
 }
 
+func (op *FindOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+	sc, resp, err := FindOne(lks, collectionId, op.Query, op.Projection, op.Options)
+	return sc, resp, err
+}
+
 func NewFindOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*FindOneOperation, error) {
 	foStmt, err := NewFindOneStatementConfigFromJson(m[MongoActivityFindOneOpProperty])
 	if err != nil {

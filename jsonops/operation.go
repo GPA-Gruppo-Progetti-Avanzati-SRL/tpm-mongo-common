@@ -2,6 +2,7 @@ package jsonops
 
 import (
 	"errors"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 )
 
@@ -15,6 +16,7 @@ const (
 type Operation interface {
 	OpType() MongoJsonOperationType
 	ToString() string
+	Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error)
 }
 
 func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStatementPart][]byte) (Operation, error) {
