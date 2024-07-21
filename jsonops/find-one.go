@@ -23,14 +23,18 @@ const (
 	MongoActivityFindOneOptsProperty       = "$opts"
 )
 
-type FindOneStatementConfig struct {
+type FindOneOperation struct {
 	Query      []byte `yaml:"query,omitempty" json:"query,omitempty" mapstructure:"query,omitempty"`
 	Sort       []byte `yaml:"sort,omitempty" json:"sort,omitempty" mapstructure:"sort,omitempty"`
 	Projection []byte `yaml:"projection,omitempty" json:"projection,omitempty" mapstructure:"projection,omitempty"`
 	Options    []byte `yaml:"options,omitempty" json:"options,omitempty" mapstructure:"options,omitempty"`
 }
 
-func (op *FindOneStatementConfig) ToString() string {
+func (op *FindOneOperation) OpType() string {
+	return FindOneOperationType
+}
+
+func (op *FindOneOperation) ToString() string {
 	var sb strings.Builder
 	numberOfElements := 0
 	sb.WriteString("{")
@@ -68,7 +72,7 @@ func (op *FindOneStatementConfig) ToString() string {
 	return sb.String()
 }
 
-func NewFindOneStatementConfig(m map[string][]byte) (*FindOneStatementConfig, error) {
+func NewFindOneOperation(m map[string][]byte) (*FindOneOperation, error) {
 	foStmt, err := NewFindOneStatementConfigFromJson(m[MongoActivityFindOneOpProperty])
 	if err != nil {
 		return nil, err
@@ -93,19 +97,19 @@ func NewFindOneStatementConfig(m map[string][]byte) (*FindOneStatementConfig, er
 	return &foStmt, nil
 }
 
-func NewFindOneStatementConfigFromJson(data []byte) (FindOneStatementConfig, error) {
+func NewFindOneStatementConfigFromJson(data []byte) (FindOneOperation, error) {
 
 	if len(data) == 0 {
-		return FindOneStatementConfig{}, nil
+		return FindOneOperation{}, nil
 	}
 
 	var m map[string]json.RawMessage
 	err := json.Unmarshal(data, &m)
 	if err != nil {
-		return FindOneStatementConfig{}, err
+		return FindOneOperation{}, err
 	}
 
-	fo := FindOneStatementConfig{
+	fo := FindOneOperation{
 		Query:      m[MongoActivityFindOneQueryProperty],
 		Sort:       m[MongoActivityFindOneSortProperty],
 		Projection: m[MongoActivityFindOneProjectionProperty],
