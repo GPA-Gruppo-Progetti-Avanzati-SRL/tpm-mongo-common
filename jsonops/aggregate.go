@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+	"strings"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
@@ -13,6 +15,87 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 )
+
+const (
+	MongoActivityAggregateOneOpProperty       MongoJsonOperationStatementPart = "$op"
+	MongoActivityAggregateOnePipelineProperty MongoJsonOperationStatementPart = "$pipeline"
+	MongoActivityAggregateOneOptsProperty     MongoJsonOperationStatementPart = "$opts"
+)
+
+type AggregateOneOperation struct {
+	Filter   []byte `yaml:"filter,omitempty" json:"filter,omitempty" mapstructure:"filter,omitempty"`
+	Pipeline []byte `yaml:"pipeline,omitempty" json:"pipeline,omitempty" mapstructure:"pipelineP,omitempty"`
+	Options  []byte `yaml:"options,omitempty" json:"options,omitempty" mapstructure:"options,omitempty"`
+}
+
+func (op *AggregateOneOperation) OpType() MongoJsonOperationType {
+	return AggregateOneOperationType
+}
+
+func (op *AggregateOneOperation) ToString() string {
+	var sb strings.Builder
+	numberOfElements := 0
+	sb.WriteString("{")
+
+	if len(op.Pipeline) > 0 {
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityAggregateOnePipelineProperty))
+		sb.WriteString(string(op.Pipeline))
+	}
+	if len(op.Options) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityAggregateOneOptsProperty))
+		sb.WriteString(string(op.Options))
+	}
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+func (op *AggregateOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+	sc, resp, err := AggregateOne(lks, collectionId, op.Pipeline, op.Options)
+	return sc, resp, err
+}
+
+func NewAggregateOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*AggregateOneOperation, error) {
+	foStmt, err := NewAggregateOneStatementConfigFromJson(m[MongoActivityAggregateOneOpProperty])
+	if err != nil {
+		return nil, err
+	}
+
+	if data, ok := m[MongoActivityAggregateOnePipelineProperty]; ok {
+		foStmt.Pipeline = data
+	}
+
+	if data, ok := m[MongoActivityAggregateOneOptsProperty]; ok {
+		foStmt.Options = data
+	}
+
+	return &foStmt, nil
+}
+
+func NewAggregateOneStatementConfigFromJson(data []byte) (AggregateOneOperation, error) {
+
+	if len(data) == 0 {
+		return AggregateOneOperation{}, nil
+	}
+
+	var m map[MongoJsonOperationStatementPart]json.RawMessage
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return AggregateOneOperation{}, err
+	}
+
+	fo := AggregateOneOperation{
+		Pipeline: m[MongoActivityAggregateOnePipelineProperty],
+		Options:  m[MongoActivityAggregateOneOptsProperty],
+	}
+
+	return fo, nil
+}
 
 func AggregateOne(lks *mongolks.LinkedService, collectionId string, pipeline []byte, opts []byte) (int, []byte, error) {
 	const semLogContext = "json-ops::aggregate-one"

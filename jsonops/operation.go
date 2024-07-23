@@ -10,8 +10,9 @@ type MongoJsonOperationType string
 type MongoJsonOperationStatementPart string
 
 const (
-	FindOneOperationType    MongoJsonOperationType = "find-one"
-	ReplaceOneOperationType MongoJsonOperationType = "replace-one"
+	FindOneOperationType      MongoJsonOperationType = "find-one"
+	ReplaceOneOperationType   MongoJsonOperationType = "replace-one"
+	AggregateOneOperationType MongoJsonOperationType = "aggregate-one"
 )
 
 type Operation interface {
@@ -29,6 +30,8 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 	case FindOneOperationType:
 		op, err = NewFindOneOperation(m)
 	case ReplaceOneOperationType:
+		op, err = NewReplaceOneOperation(m)
+	case AggregateOneOperationType:
 		op, err = NewReplaceOneOperation(m)
 	default:
 		err = errors.New("invalid op-type " + string(opType))
