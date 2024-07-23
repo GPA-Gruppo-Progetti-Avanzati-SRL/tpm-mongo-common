@@ -32,7 +32,7 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 	case ReplaceOneOperationType:
 		op, err = NewReplaceOneOperation(m)
 	case AggregateOneOperationType:
-		op, err = NewReplaceOneOperation(m)
+		op, err = NewAggregateOneOperation(m)
 	default:
 		err = errors.New("invalid op-type " + string(opType))
 	}
