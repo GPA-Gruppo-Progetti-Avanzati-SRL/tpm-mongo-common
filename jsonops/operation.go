@@ -13,6 +13,7 @@ const (
 	FindOneOperationType      MongoJsonOperationType = "find-one"
 	ReplaceOneOperationType   MongoJsonOperationType = "replace-one"
 	AggregateOneOperationType MongoJsonOperationType = "aggregate-one"
+	UpdateOneOperationType    MongoJsonOperationType = "update-one"
 )
 
 type Operation interface {
@@ -31,6 +32,8 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 		op, err = NewFindOneOperation(m)
 	case ReplaceOneOperationType:
 		op, err = NewReplaceOneOperation(m)
+	case UpdateOneOperationType:
+		op, err = NewUpdateOneOperation(m)
 	case AggregateOneOperationType:
 		op, err = NewAggregateOneOperation(m)
 	default:

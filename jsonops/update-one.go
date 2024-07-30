@@ -4,12 +4,108 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
+	"strings"
 )
+
+const (
+	MongoActivityUpdateOneOpProperty     MongoJsonOperationStatementPart = "$op"
+	MongoActivityUpdateOneFilterProperty MongoJsonOperationStatementPart = "$filter"
+	MongoActivityUpdateOneUpdateProperty MongoJsonOperationStatementPart = "$update"
+	MongoActivityUpdateOneOptsProperty   MongoJsonOperationStatementPart = "$opts"
+)
+
+type UpdateOneOperation struct {
+	Filter  []byte `yaml:"filter,omitempty" json:"filter,omitempty" mapstructure:"filter,omitempty"`
+	Update  []byte `yaml:"update,omitempty" json:"update,omitempty" mapstructure:"update,omitempty"`
+	Options []byte `yaml:"options,omitempty" json:"options,omitempty" mapstructure:"options,omitempty"`
+}
+
+func (op *UpdateOneOperation) OpType() MongoJsonOperationType {
+	return UpdateOneOperationType
+}
+
+func (op *UpdateOneOperation) ToString() string {
+	var sb strings.Builder
+	numberOfElements := 0
+	sb.WriteString("{")
+	if len(op.Filter) > 0 {
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityUpdateOneFilterProperty))
+		sb.WriteString(string(op.Filter))
+	}
+	if len(op.Update) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityUpdateOneUpdateProperty))
+		sb.WriteString(string(op.Update))
+	}
+	if len(op.Options) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityUpdateOneOptsProperty))
+		sb.WriteString(string(op.Options))
+	}
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+func (op *UpdateOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+	sc, resp, err := UpdateOne(lks, collectionId, op.Filter, op.Update, op.Options)
+	return sc, resp, err
+}
+
+func NewUpdateOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*UpdateOneOperation, error) {
+	foStmt, err := NewUpdateOneStatementConfigFromJson(m[MongoActivityUpdateOneOpProperty])
+	if err != nil {
+		return nil, err
+	}
+
+	if data, ok := m[MongoActivityUpdateOneFilterProperty]; ok {
+		foStmt.Filter = data
+	}
+
+	if data, ok := m[MongoActivityUpdateOneUpdateProperty]; ok {
+		foStmt.Update = data
+	}
+
+	if data, ok := m[MongoActivityUpdateOneOptsProperty]; ok {
+		foStmt.Options = data
+	}
+
+	return &foStmt, nil
+}
+
+func NewUpdateOneStatementConfigFromJson(data []byte) (UpdateOneOperation, error) {
+
+	if len(data) == 0 {
+		return UpdateOneOperation{}, nil
+	}
+
+	var m map[MongoJsonOperationStatementPart]json.RawMessage
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return UpdateOneOperation{}, err
+	}
+
+	fo := UpdateOneOperation{
+		Filter:  m[MongoActivityUpdateOneFilterProperty],
+		Update:  m[MongoActivityUpdateOneUpdateProperty],
+		Options: m[MongoActivityUpdateOneOptsProperty],
+	}
+
+	return fo, nil
+}
 
 func UpdateOne(lks *mongolks.LinkedService, collectionId string, filter []byte, update []byte, opts []byte) (int, []byte, error) {
 	const semLogContext = "json-ops::update-one"
