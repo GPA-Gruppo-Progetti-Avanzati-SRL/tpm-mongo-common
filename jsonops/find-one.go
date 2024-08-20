@@ -72,11 +72,6 @@ func (op *FindOneOperation) ToString() string {
 	return sb.String()
 }
 
-func (op *FindOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
-	sc, resp, err := FindOne(lks, collectionId, op.Query, op.Projection, op.Options)
-	return sc, resp, err
-}
-
 func NewFindOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*FindOneOperation, error) {
 	foStmt, err := NewFindOneStatementConfigFromJson(m[MongoActivityFindOneOpProperty])
 	if err != nil {
@@ -122,6 +117,11 @@ func NewFindOneStatementConfigFromJson(data []byte) (FindOneOperation, error) {
 	}
 
 	return fo, nil
+}
+
+func (op *FindOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+	sc, resp, err := FindOne(lks, collectionId, op.Query, op.Projection, op.Options)
+	return sc, resp, err
 }
 
 func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, opts []byte) (int, []byte, error) {
@@ -191,4 +191,8 @@ func executeFindOneOp(c *mongo.Collection, query bson.D, fo *options.FindOneOpti
 	}
 
 	return http.StatusOK, body, nil
+}
+
+func (op *FindOneOperation) NewWriteModel() (mongo.WriteModel, error) {
+	panic("new write model not supported in find operations")
 }

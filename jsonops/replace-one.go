@@ -8,6 +8,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"strings"
@@ -60,11 +61,6 @@ func (op *ReplaceOneOperation) ToString() string {
 	return sb.String()
 }
 
-func (op *ReplaceOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
-	sc, resp, err := ReplaceOne(lks, collectionId, op.Filter, op.Replacement, op.Options)
-	return sc, resp, err
-}
-
 func NewReplaceOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*ReplaceOneOperation, error) {
 	foStmt, err := NewReplaceOneStatementConfigFromJson(m[MongoActivityReplaceOneOpProperty])
 	if err != nil {
@@ -105,6 +101,11 @@ func NewReplaceOneStatementConfigFromJson(data []byte) (ReplaceOneOperation, err
 	}
 
 	return fo, nil
+}
+
+func (op *ReplaceOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+	sc, resp, err := ReplaceOne(lks, collectionId, op.Filter, op.Replacement, op.Options)
+	return sc, resp, err
 }
 
 func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte, replacement []byte, opts []byte) (int, []byte, error) {
@@ -152,4 +153,36 @@ func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte,
 	}
 
 	return http.StatusOK, b, nil
+}
+
+func (op *ReplaceOneOperation) NewWriteModel() (mongo.WriteModel, error) {
+	const semLogContext = "json-ops::new-update-one-model"
+
+	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	statementReplacement, err := util.UnmarshalJson2BsonD(op.Replacement)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	upsert := false
+	uo := options.ReplaceOptions{}
+	if len(op.Options) > 0 {
+		err = json.Unmarshal(op.Options, &uo)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return nil, err
+		}
+
+		if uo.Upsert != nil {
+			upsert = *uo.Upsert
+		}
+	}
+
+	return mongo.NewReplaceOneModel().SetFilter(statementFilter).SetReplacement(statementReplacement).SetUpsert(upsert), nil
 }

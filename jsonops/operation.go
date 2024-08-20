@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type MongoJsonOperationType string
@@ -20,6 +21,7 @@ type Operation interface {
 	OpType() MongoJsonOperationType
 	ToString() string
 	Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error)
+	NewWriteModel() (mongo.WriteModel, error)
 }
 
 func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStatementPart][]byte) (Operation, error) {

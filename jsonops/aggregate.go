@@ -55,11 +55,6 @@ func (op *AggregateOneOperation) ToString() string {
 	return sb.String()
 }
 
-func (op *AggregateOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
-	sc, resp, err := AggregateOne(lks, collectionId, op.Pipeline, op.Options)
-	return sc, resp, err
-}
-
 func NewAggregateOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*AggregateOneOperation, error) {
 	foStmt, err := NewAggregateOneStatementConfigFromJson(m[MongoActivityAggregateOneOpProperty])
 	if err != nil {
@@ -95,6 +90,11 @@ func NewAggregateOneStatementConfigFromJson(data []byte) (AggregateOneOperation,
 	}
 
 	return fo, nil
+}
+
+func (op *AggregateOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+	sc, resp, err := AggregateOne(lks, collectionId, op.Pipeline, op.Options)
+	return sc, resp, err
 }
 
 func AggregateOne(lks *mongolks.LinkedService, collectionId string, pipeline []byte, opts []byte) (int, []byte, error) {
@@ -188,4 +188,8 @@ func executeAggregateOp(c *mongo.Collection, pipeline interface{}, fo *options.A
 	}
 
 	return http.StatusOK, resp, nil
+}
+
+func (op *AggregateOneOperation) NewWriteModel() (mongo.WriteModel, error) {
+	panic("new write model not supported in aggregation queries operations")
 }
