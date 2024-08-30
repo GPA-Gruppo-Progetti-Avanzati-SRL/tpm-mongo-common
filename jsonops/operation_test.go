@@ -58,14 +58,19 @@ func TestAggregate(t *testing.T) {
 }
 
 var updateOneTestFilter = []byte(`{ "year": 1939 }`)
-var updateOneTestUpdate = []byte(`{ "$set": { "year-new": 1939 }}`)
+var updateOneTestUpdateWithArray = []byte(`[{ "$set": { "year-new": 1939, "update-mode-array": "done", "aggregate-field" : { "$cond": [ false, "condition is true", "condition is false" ] } }}]`)
+var updateOneTestUpdateWithMap = []byte(`{ "$set": { "year-new": 1939, "update-mode-map": "done" }}`)
 var updateOneTestOpts = []byte(`{ "upsert": true }`)
 
 func TestUpdateOne(t *testing.T) {
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	sc, resp, err := jsonops.UpdateOne(lks, CollectionId, updateOneTestFilter, updateOneTestUpdate, updateOneTestOpts)
+	sc, resp, err := jsonops.UpdateOne(lks, CollectionId, updateOneTestFilter, updateOneTestUpdateWithMap, updateOneTestOpts)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(resp))
+
+	sc, resp, err = jsonops.UpdateOne(lks, CollectionId, updateOneTestFilter, updateOneTestUpdateWithArray, updateOneTestOpts)
 	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
 }

@@ -125,7 +125,7 @@ func UpdateOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 		return http.StatusInternalServerError, nil, err
 	}
 
-	statementUpdate, err := util.UnmarshalJson2BsonD(update)
+	statementUpdate, err := util.UnmarshalJson2Bson(update)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err
@@ -164,7 +164,7 @@ func (op *UpdateOneOperation) NewWriteModel() (mongo.WriteModel, error) {
 		return nil, err
 	}
 
-	statementUpdate, err := util.UnmarshalJson2BsonD(op.Update)
+	statementUpdate, err := util.UnmarshalJson2Bson(op.Update)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

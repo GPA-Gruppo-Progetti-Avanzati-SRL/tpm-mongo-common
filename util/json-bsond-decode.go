@@ -3,12 +3,55 @@ package util
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/feliixx/mongoextjson"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"sort"
+	"strings"
 )
+
+const (
+	jsonIsUnknown = "bson.unknown"
+	jsonIsBsonD   = "bson.d"
+	jsonIsBsonA   = "bson.a"
+)
+
+func jsonIsBsonDOrBsonA(json string) string {
+	json = strings.TrimSpace(json)
+	if len(json) == 0 {
+		return jsonIsUnknown
+	}
+
+	var res string
+	switch json[0] {
+	case '{':
+		res = jsonIsBsonD
+	case '[':
+		res = jsonIsBsonA
+	default:
+		res = jsonIsUnknown
+	}
+
+	return res
+}
+
+func UnmarshalJson2Bson(b []byte) (any, error) {
+	var res interface{}
+	var err error
+
+	switch jsonIsBsonDOrBsonA(string(b)) {
+	case jsonIsBsonD:
+		res, err = UnmarshalJson2BsonD(b)
+	case jsonIsBsonA:
+		res, err = UnmarshalJson2ArrayOfBsonD(b)
+	default:
+		err = errors.New("cannot determine if json is a map or array")
+	}
+
+	return res, err
+}
 
 func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 	const semLogContext = "mongo-json-util::unmarshal-json-2-bson-d"
