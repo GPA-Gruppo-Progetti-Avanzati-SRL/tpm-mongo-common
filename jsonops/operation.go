@@ -15,6 +15,8 @@ const (
 	ReplaceOneOperationType   MongoJsonOperationType = "replace-one"
 	AggregateOneOperationType MongoJsonOperationType = "aggregate-one"
 	UpdateOneOperationType    MongoJsonOperationType = "update-one"
+	DeleteOneOperationType    MongoJsonOperationType = "delete-one"
+	InsertOneOperationType    MongoJsonOperationType = "insert-one"
 )
 
 type Operation interface {
@@ -38,6 +40,10 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 		op, err = NewUpdateOneOperation(m)
 	case AggregateOneOperationType:
 		op, err = NewAggregateOneOperation(m)
+	case DeleteOneOperationType:
+		op, err = NewDeleteOneOperation(m)
+	case InsertOneOperationType:
+		op, err = NewInsertOneOperation(m)
 	default:
 		err = errors.New("invalid op-type " + string(opType))
 	}

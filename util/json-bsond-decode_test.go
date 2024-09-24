@@ -14,7 +14,7 @@ func TestDecodeJson(t *testing.T) {
 	t.Log(d)
 }
 
-var aggregateTestJson = []byte(`[{ "$match": { "year": 1939 }}, { "$project": { "year": 1, "title": 1 }}]`)
+var aggregateTestJson = []byte(`[{ "$match": { "year": 1939, "the_date": {"$date":"2019-08-11T17:54:14.692Z"} }}, { "$project": { "year": 1, "title": 1 }}]`)
 
 func TestUnmarshalJson2ArrayOfBsonD(t *testing.T) {
 	docs, err := util.UnmarshalJson2ArrayOfBsonD(aggregateTestJson)

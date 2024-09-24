@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/feliixx/mongoextjson"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsonrw"
 	"sort"
 	"strings"
 )
@@ -62,7 +62,15 @@ func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 		return nil, nil
 	}
 
-	err := json.Unmarshal(b, &o)
+	doc := bson.M{}
+	err := json.Unmarshal(b, &doc)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, &o)
+	// err := json.Unmarshal(b, &o)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
@@ -85,7 +93,7 @@ func UnmarshalJson2ArrayOfBsonD(b []byte) ([]bson.D, error) {
 		return nil, nil
 	}
 	var omaps []OrderedMap
-	err = mongoextjson.Unmarshal(b, &omaps)
+	err = json.Unmarshal(b, &omaps)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
@@ -270,7 +278,8 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 	if o.values == nil {
 		o.values = map[string]interface{}{}
 	}
-	err := json.Unmarshal(b, &o.values)
+	// err := json.Unmarshal(b, &o.values)
+	err := UnmarshalMongoJson(b, &o.values)
 	if err != nil {
 		return err
 	}
@@ -426,4 +435,23 @@ func (o OrderedMap) MarshalJSON() ([]byte, error) {
 	}
 	buf.WriteByte('}')
 	return buf.Bytes(), nil
+}
+
+func UnmarshalMongoJson(data []byte, v any) error {
+	vr, err := bsonrw.NewExtJSONValueReader(bytes.NewReader(data), false)
+	if err != nil {
+		return err
+	}
+
+	decoder, err := bson.NewDecoder(vr)
+	if err != nil {
+		return err
+	}
+
+	err = decoder.Decode(v)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
