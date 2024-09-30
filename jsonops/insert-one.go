@@ -92,12 +92,12 @@ func NewInsertOneStatementConfigFromJson(data []byte) (InsertOneOperation, error
 	return fo, nil
 }
 
-func (op *InsertOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+func (op *InsertOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (OperationResult, []byte, error) {
 	sc, resp, err := InsertOne(lks, collectionId, op.Document, op.Options)
 	return sc, resp, err
 }
 
-func InsertOne(lks *mongolks.LinkedService, collectionId string, document []byte, opts []byte) (int, []byte, error) {
+func InsertOne(lks *mongolks.LinkedService, collectionId string, document []byte, opts []byte) (OperationResult, []byte, error) {
 	const semLogContext = "json-ops::insert-one"
 	var err error
 
@@ -105,13 +105,13 @@ func InsertOne(lks *mongolks.LinkedService, collectionId string, document []byte
 	if c == nil {
 		err = errors.New("cannot find requested collection")
 		log.Error().Err(err).Str("collection", collectionId).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	opDocument, err := util.UnmarshalJson2BsonD(document)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	uo := options.InsertOneOptions{}
@@ -119,23 +119,23 @@ func InsertOne(lks *mongolks.LinkedService, collectionId string, document []byte
 		err = json.Unmarshal(opts, &uo)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
-			return http.StatusInternalServerError, nil, err
+			return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 		}
 	}
 	res, err := c.InsertOne(context.Background(), opDocument, &uo)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	var b []byte
 	b, err = json.Marshal(res)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	return http.StatusOK, b, nil
+	return OperationResultFromInsertOneResult(res), b, nil
 }
 
 func (op *InsertOneOperation) NewWriteModel() (mongo.WriteModel, error) {

@@ -103,12 +103,12 @@ func NewReplaceOneStatementConfigFromJson(data []byte) (ReplaceOneOperation, err
 	return fo, nil
 }
 
-func (op *ReplaceOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+func (op *ReplaceOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (OperationResult, []byte, error) {
 	sc, resp, err := ReplaceOne(lks, collectionId, op.Filter, op.Replacement, op.Options)
 	return sc, resp, err
 }
 
-func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte, replacement []byte, opts []byte) (int, []byte, error) {
+func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte, replacement []byte, opts []byte) (OperationResult, []byte, error) {
 	const semLogContext = "json-ops::replace-one"
 	var err error
 
@@ -116,19 +116,19 @@ func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte,
 	if c == nil {
 		err = errors.New("cannot find requested collection")
 		log.Error().Err(err).Str("collection", collectionId).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	opFilter, err := util.UnmarshalJson2BsonD(filter)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	opReplacement, err := util.UnmarshalJson2BsonD(replacement)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	uo := options.ReplaceOptions{}
@@ -136,23 +136,23 @@ func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte,
 		err = json.Unmarshal(opts, &uo)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
-			return http.StatusInternalServerError, nil, err
+			return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 		}
 	}
 	res, err := c.ReplaceOne(context.Background(), opFilter, opReplacement, &uo)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	var b []byte
 	b, err = json.Marshal(res)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	return http.StatusOK, b, nil
+	return OperationResultFromUpdateResult(res), b, nil
 }
 
 func (op *ReplaceOneOperation) NewWriteModel() (mongo.WriteModel, error) {

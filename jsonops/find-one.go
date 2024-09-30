@@ -119,12 +119,12 @@ func NewFindOneStatementConfigFromJson(data []byte) (FindOneOperation, error) {
 	return fo, nil
 }
 
-func (op *FindOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+func (op *FindOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (OperationResult, []byte, error) {
 	sc, resp, err := FindOne(lks, collectionId, op.Query, op.Projection, op.Options)
 	return sc, resp, err
 }
 
-func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, opts []byte) (int, []byte, error) {
+func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, opts []byte) (OperationResult, []byte, error) {
 	const semLogContext = "json-ops::find-one"
 	var err error
 
@@ -132,20 +132,20 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 	if c == nil {
 		err = errors.New("cannot find requested collection")
 		log.Error().Err(err).Str("collection", collectionId).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	statementQuery, err := util.UnmarshalJson2BsonD(query)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	fo := options.FindOneOptions{}
 	prj, err := util.UnmarshalJson2BsonD(projection)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	if len(prj) > 0 {
@@ -154,14 +154,14 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 
 	sc, body, err := executeFindOneOp(c, statementQuery, &fo)
 	if err != nil {
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	if sc == http.StatusOK {
+	if sc.StatusCode == http.StatusOK {
 		b, err := json.Marshal(body)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
-			return http.StatusInternalServerError, nil, err
+			return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 		}
 
 		return sc, b, nil
@@ -170,27 +170,27 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 	return sc, nil, nil
 }
 
-func executeFindOneOp(c *mongo.Collection, query bson.D, fo *options.FindOneOptions) (int, bson.M, error) {
+func executeFindOneOp(c *mongo.Collection, query bson.D, fo *options.FindOneOptions) (OperationResult, bson.M, error) {
 	const semLogContext = "mongo-operation::execute-find-one-op"
 
 	result := c.FindOne(context.Background(), query, fo)
 	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-		return http.StatusNotFound, nil, nil
+		return OperationResult{StatusCode: http.StatusNotFound}, nil, nil
 	}
 
 	if result.Err() != nil {
 		log.Error().Err(result.Err()).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, result.Err()
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, result.Err()
 	}
 
 	var body bson.M
 	err := result.Decode(&body)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	return http.StatusOK, body, nil
+	return OperationResult{StatusCode: http.StatusOK}, body, nil
 }
 
 func (op *FindOneOperation) NewWriteModel() (mongo.WriteModel, error) {

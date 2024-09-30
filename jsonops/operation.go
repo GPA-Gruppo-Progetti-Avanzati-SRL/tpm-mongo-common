@@ -5,6 +5,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
+	"net/http"
 )
 
 type MongoJsonOperationType string
@@ -22,7 +23,7 @@ const (
 type Operation interface {
 	OpType() MongoJsonOperationType
 	ToString() string
-	Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error)
+	Execute(lks *mongolks.LinkedService, collectionId string) (OperationResult, []byte, error)
 	NewWriteModel() (mongo.WriteModel, error)
 }
 
@@ -53,4 +54,37 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 	}
 
 	return op, err
+}
+
+type OperationResult struct {
+	StatusCode    int
+	MatchedCount  int64 // The number of documents matched by the filter.
+	ModifiedCount int64 // The number of documents modified by the operation.
+	UpsertedCount int64 // The number of documents upserted by the operation.
+	DeletedCount  int64
+	ObjectID      interface{} // The _id field of the upserted document, or nil if no upsert was done.
+}
+
+func OperationResultFromUpdateResult(ur *mongo.UpdateResult) OperationResult {
+	return OperationResult{
+		StatusCode:    http.StatusOK,
+		MatchedCount:  ur.MatchedCount,
+		ModifiedCount: ur.ModifiedCount,
+		UpsertedCount: ur.UpsertedCount,
+		ObjectID:      ur.UpsertedID,
+	}
+}
+
+func OperationResultFromInsertOneResult(ur *mongo.InsertOneResult) OperationResult {
+	return OperationResult{
+		StatusCode: http.StatusOK,
+		ObjectID:   ur.InsertedID,
+	}
+}
+
+func OperationResultFromDeleteResult(ur *mongo.DeleteResult) OperationResult {
+	return OperationResult{
+		StatusCode:   http.StatusOK,
+		DeletedCount: ur.DeletedCount,
+	}
 }

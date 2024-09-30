@@ -89,12 +89,12 @@ func NewDeleteOneStatementConfigFromJson(data []byte) (DeleteOneOperation, error
 	return fo, nil
 }
 
-func (op *DeleteOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (int, []byte, error) {
+func (op *DeleteOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (OperationResult, []byte, error) {
 	sc, resp, err := DeleteOne(lks, collectionId, op.Filter, op.Options)
 	return sc, resp, err
 }
 
-func DeleteOne(lks *mongolks.LinkedService, collectionId string, filter []byte, opts []byte) (int, []byte, error) {
+func DeleteOne(lks *mongolks.LinkedService, collectionId string, filter []byte, opts []byte) (OperationResult, []byte, error) {
 	const semLogContext = "json-ops::delete-one"
 	var err error
 
@@ -102,13 +102,13 @@ func DeleteOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 	if c == nil {
 		err = errors.New("cannot find requested collection")
 		log.Error().Err(err).Str("collection", collectionId).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	opFilter, err := util.UnmarshalJson2BsonD(filter)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	uo := options.DeleteOptions{}
@@ -116,23 +116,23 @@ func DeleteOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 		err = json.Unmarshal(opts, &uo)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
-			return http.StatusInternalServerError, nil, err
+			return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 		}
 	}
 	res, err := c.DeleteOne(context.Background(), opFilter, &uo)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
 	var b []byte
 	b, err = json.Marshal(res)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return http.StatusInternalServerError, nil, err
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	return http.StatusOK, b, nil
+	return OperationResultFromDeleteResult(res), b, nil
 }
 
 func (op *DeleteOneOperation) NewWriteModel() (mongo.WriteModel, error) {
