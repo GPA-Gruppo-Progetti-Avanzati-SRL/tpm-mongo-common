@@ -80,7 +80,17 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 		})
 	}
 
-	client, err := mongo.Connect(context.Background(), mongoOptions)
+	connTimeout := 10 * time.Second
+	if mdb.cfg.ConnectTimeout > 0 {
+		connTimeout = mdb.cfg.ConnectTimeout
+	}
+	log.Info().Dur("connect-timeout", connTimeout).Msg(semLogContext)
+
+	deadline := time.Now().Add(connTimeout)
+	ctx, cancelCtx := context.WithDeadline(ctx, deadline)
+	defer cancelCtx()
+	client, err := mongo.Connect(ctx, mongoOptions)
+
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -94,7 +104,11 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 		}
 	*/
 
-	err = client.Ping(ctx, readpref.Primary())
+	deadline = time.Now().Add(connTimeout)
+	pingCtx, pingCancelCtx := context.WithDeadline(ctx, deadline)
+	defer pingCancelCtx()
+
+	err = client.Ping(pingCtx, readpref.Primary())
 	if err != nil {
 		return err
 	}

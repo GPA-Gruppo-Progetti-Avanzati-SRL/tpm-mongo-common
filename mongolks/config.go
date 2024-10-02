@@ -3,6 +3,7 @@ package mongolks
 import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"strconv"
+	"time"
 )
 
 const MongoDbDefaultInstanceName = "default"
@@ -31,18 +32,19 @@ type PoolConfig struct {
 type Config struct {
 	Name             string
 	Host             string
-	DbName           string         `mapstructure:"db-name" json:"db-name" yaml:"db-name"`
-	User             string         `mapstructure:"user" json:"user" yaml:"user"`
-	Pwd              string         `mapstructure:"pwd" json:"pwd" yaml:"pwd"`
-	AuthMechanism    string         `mapstructure:"authMechanism" json:"authMechanism" yaml:"authMechanism"`
-	AuthSource       string         `mapstructure:"authSource" json:"authSource" yaml:"authSource"`
-	Pool             PoolConfig     `mapstructure:"pool" json:"pool" yaml:"pool"`
-	BulkWriteOrdered bool           `mapstructure:"bulk-write-ordered" json:"bulk-write-ordered" yaml:"bulk-write-ordered"`
-	WriteConcern     string         `mapstructure:"write-concern" json:"write-concern" yaml:"write-concern"`
-	WriteTimeout     string         `mapstructure:"write-timeout" json:"write-timeout" yaml:"write-timeout"`
-	Collections      CollectionsCfg `mapstructure:"collections" json:"collections" yaml:"collections"`
-	SecurityProtocol string         `mapstructure:"security-protocol" json:"security-protocol" yaml:"security-protocol"`
+	DbName           string         `mapstructure:"db-name,omitempty" json:"db-name,omitempty" yaml:"db-name,omitempty"`
+	User             string         `mapstructure:"user,omitempty" json:"user,omitempty" yaml:"user,omitempty"`
+	Pwd              string         `mapstructure:"pwd,omitempty" json:"pwd,omitempty" yaml:"pwd,omitempty"`
+	AuthMechanism    string         `mapstructure:"authMechanism,omitempty" json:"authMechanism,omitempty" yaml:"authMechanism,omitempty"`
+	AuthSource       string         `mapstructure:"authSource,omitempty" json:"authSource,omitempty" yaml:"authSource,omitempty"`
+	Pool             PoolConfig     `mapstructure:"pool,omitempty" json:"pool,omitempty" yaml:"pool,omitempty"`
+	BulkWriteOrdered bool           `mapstructure:"bulk-write-ordered,omitempty" json:"bulk-write-ordered,omitempty" yaml:"bulk-write-ordered,omitempty"`
+	WriteConcern     string         `mapstructure:"write-concern,omitempty" json:"write-concern,omitempty" yaml:"write-concern,omitempty"`
+	WriteTimeout     string         `mapstructure:"write-timeout,omitempty" json:"write-timeout,omitempty" yaml:"write-timeout,omitempty"`
+	Collections      CollectionsCfg `mapstructure:"collections,omitempty" json:"collections,omitempty" yaml:"collections,omitempty"`
+	SecurityProtocol string         `mapstructure:"security-protocol,omitempty" json:"security-protocol,omitempty" yaml:"security-protocol,omitempty"`
 	TLS              TLSConfig      `json:"tls" mapstructure:"tls" yaml:"tls"`
+	ConnectTimeout   time.Duration  `mapstructure:"connect-timeout,omitempty" json:"connect-timeout,omitempty" yaml:"connect-timeout,omitempty"`
 }
 
 /*
