@@ -3,9 +3,8 @@ module github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
 go 1.21
 
 require (
-	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.44
+	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.55
 	github.com/feliixx/mongoextjson v1.2.0
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/rs/zerolog v1.33.0
 	github.com/stretchr/testify v1.9.0
 	go.mongodb.org/mongo-driver v1.16.0
