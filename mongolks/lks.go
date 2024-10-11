@@ -67,7 +67,7 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 	 * Simple User/password authentication
 	 */
 	if mdb.cfg.User != "" {
-		authMechanism := "SCRAM-SHA-256"
+		authMechanism := "" // "SCRAM-SHA-256"
 		if mdb.cfg.AuthMechanism != "" {
 			authMechanism = mdb.cfg.AuthMechanism
 		}
@@ -84,7 +84,7 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 	if mdb.cfg.ConnectTimeout > 0 {
 		connTimeout = mdb.cfg.ConnectTimeout
 	}
-	log.Info().Dur("connect-timeout", connTimeout).Msg(semLogContext)
+	log.Trace().Dur("connect-timeout", connTimeout).Msg(semLogContext)
 
 	deadline := time.Now().Add(connTimeout)
 	ctx, cancelCtx := context.WithDeadline(ctx, deadline)

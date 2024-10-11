@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jsonops"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
+	"go.mongodb.org/mongo-driver/mongo"
 	"testing"
 	"time"
 )
@@ -187,4 +189,107 @@ func TestExtJson(t *testing.T) {
 	vr, err = bsonrw.NewExtJSONValueReader(bytes.NewReader(data), false)
 	require.NoError(t, err)
 	vr.ReadCodeWithScope()
+}
+
+func TestBoh(t *testing.T) {
+	p := getBsonD("20240701", bson.M{"operazotre": "whatever"})
+	b, err := json.Marshal(p)
+	require.NoError(t, err)
+
+	fmt.Println(string(b))
+}
+
+func getUpdatePipeline(operazioneData string, obj interface{}) mongo.Pipeline {
+
+	return mongo.Pipeline{
+		bson.D{{
+			Key: "$set", Value: bson.M{
+				"opLiquidazioni": bson.M{
+					"$filter": bson.M{
+						"input": bson.M{
+							"$ifNull": bson.A{"$opLiquidazioni", bson.A{}},
+						},
+						"as": "item",
+						"cond": bson.M{
+							"$ne": bson.A{"$$item.operazione.data", operazioneData},
+						},
+					},
+				},
+			},
+		}},
+
+		bson.D{{
+			Key: "$set", Value: bson.M{
+				"opLiquidazioni": bson.M{
+					"$concatArrays": bson.A{
+						"$opLiquidazioni",
+						bson.A{
+							obj,
+						},
+					},
+				},
+			},
+		}},
+
+		{ // Second stage: Sort the opLiquidazioni array by operazione.data
+			{Key: "$set", Value: bson.M{
+				"opLiquidazioni": bson.M{
+					"$sortArray": bson.M{
+						"input": "$opLiquidazioni",
+						"sortBy": bson.M{
+							"operazione.data": 1, // Sorting in ascending order
+						},
+					},
+				},
+			}},
+		},
+	}
+}
+
+func getBsonD(operazioneData string, obj interface{}) bson.A {
+
+	return bson.A{
+		bson.D{{
+			Key: "$set", Value: bson.M{
+				"opLiquidazioni": bson.M{
+					"$filter": bson.M{
+						"input": bson.M{
+							"$ifNull": bson.A{"$opLiquidazioni", bson.A{}},
+						},
+						"as": "item",
+						"cond": bson.M{
+							"$ne": bson.A{"$$item.operazione.data", operazioneData},
+						},
+					},
+				},
+			},
+		}},
+
+		bson.D{{
+			Key: "$set", Value: bson.M{
+				"opLiquidazioni": bson.M{
+					"$concatArrays": bson.A{
+						"$opLiquidazioni",
+						bson.A{
+							obj,
+						},
+					},
+				},
+			},
+		}},
+
+		bson.D{ // Second stage: Sort the opLiquidazioni array by operazione.data
+			{Key: "$set", Value: bson.M{
+				"opLiquidazioni": bson.M{
+					"$sortArray": bson.M{
+						"input": "$opLiquidazioni",
+						"sortBy": bson.M{
+							"operazione.data": 1, // Sorting in ascending order
+						},
+					},
+				},
+			}},
+		},
+	}
+
 }
