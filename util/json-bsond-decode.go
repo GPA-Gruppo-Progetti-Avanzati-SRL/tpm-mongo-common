@@ -69,7 +69,7 @@ func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 	err := json.Unmarshal(b, &doc)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		log.Info().Str("json", string(b)).Msg(semLogContext)
+		log.Error().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
@@ -77,14 +77,14 @@ func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 	// err := json.Unmarshal(b, &o)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		log.Info().Str("json", string(b)).Msg(semLogContext)
+		log.Error().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
 	d, err := o.ToBsonD()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		log.Info().Str("json", string(b)).Msg(semLogContext)
+		log.Error().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
@@ -102,7 +102,7 @@ func UnmarshalJson2ArrayOfBsonD(b []byte) ([]bson.D, error) {
 	err = json.Unmarshal(b, &omaps)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		log.Info().Str("json", string(b)).Msg(semLogContext)
+		log.Error().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
