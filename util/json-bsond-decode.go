@@ -50,6 +50,9 @@ func UnmarshalJson2Bson(b []byte) (any, error) {
 		err = errors.New("cannot determine if json is a map or array")
 	}
 
+	if err != nil {
+		log.Error().Err(err).Msg("error unmarshalling bson")
+	}
 	return res, err
 }
 
@@ -66,6 +69,7 @@ func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 	err := json.Unmarshal(b, &doc)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
+		log.Info().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
@@ -73,12 +77,14 @@ func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 	// err := json.Unmarshal(b, &o)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
+		log.Info().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
 	d, err := o.ToBsonD()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
+		log.Info().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
@@ -96,6 +102,7 @@ func UnmarshalJson2ArrayOfBsonD(b []byte) ([]bson.D, error) {
 	err = json.Unmarshal(b, &omaps)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
+		log.Info().Str("json", string(b)).Msg(semLogContext)
 		return nil, err
 	}
 
