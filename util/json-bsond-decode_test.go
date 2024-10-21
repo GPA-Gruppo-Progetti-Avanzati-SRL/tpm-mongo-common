@@ -23,3 +23,13 @@ func TestUnmarshalJson2ArrayOfBsonD(t *testing.T) {
 		t.Log(d)
 	}
 }
+
+var conversionTestJson = []byte(`{ "$match": { "year": 1939, "myOid": {"$oid": "65a6773b79d056df01e93e42"}, "the_date": {"$date":"2019-08-11T17:54:14.692Z"} }}`)
+
+func TestConvertJsonExtended2Json(t *testing.T) {
+
+	b, err := util.JsonExtended2JsonConv(conversionTestJson)
+	require.NoError(t, err)
+
+	t.Log(string(b))
+}

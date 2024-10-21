@@ -462,3 +462,21 @@ func UnmarshalMongoJson(data []byte, v any) error {
 
 	return nil
 }
+
+func JsonExtended2JsonConv(data []byte) ([]byte, error) {
+	const semLogContext = "mongo-json-util::json-ext-2-json"
+	var m bson.M
+	err := UnmarshalMongoJson(data, &m)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	b, err := json.Marshal(m)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	return b, nil
+}
