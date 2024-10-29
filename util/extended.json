@@ -1,0 +1,66 @@
+{
+  "_id": "CCSALDO_00100123456",
+  "anagrafica": {
+    "ndg": "659052",
+    "naturaGiuridica": "PF",
+    "codiceFiscale": "XXXMHO44R27I266I",
+    "cognome": "XAXOXUYIBZI",
+    "nome": "MOHOI",
+    "dataNascita": "1944-10-27",
+    "partitaIva": null,
+    "ragioneSociale": null,
+    "intestatari": [
+      {
+        "cognome": "XAXOXUYIBZI",
+        "naturaGiuridica": "PF",
+        "ndg": "659052",
+        "nome": "MOHOI",
+        "partitaIva": null,
+        "ragioneSociale": null,
+        "codiceFiscale": "XXXMHO44R27I266I"
+      }
+    ]
+  },
+  "infoTecniche": {
+    "dataOperazione": {
+      "$date": 1729072946372
+    },
+    "dataAlimentazione": {
+      "$date": 1729072951215
+    },
+    "dataAggiornamento": {
+      "$date": 1729072952000
+    },
+    "tipoOperazione": "U",
+    "requestId": "4917a81f-5683-4eab-a5b1-55c6f2b1e4c7",
+    "pipelineId": "conti-saldo"
+  },
+  "prodotto": {
+    "natura": "CC",
+    "rapporto": "1008865469",
+    "alias": null,
+    "pan": null,
+    "descrizione": null,
+    "iban": "IT43F0760103200001008865469",
+    "categoria": "1800",
+    "servizio": "CC",
+    "filiale": "55355"
+  },
+  "saldo": {
+    "dataAggiornamento": "2024-10-16T12:02:26.372+02:00",
+    "contabile": {
+      "$numberLong": "20001398626020"
+    },
+    "disponibile": {
+      "$numberLong": "20001398626020"
+    },
+    "liquido": {
+      "$numberLong": "20001398626020"
+    },
+    "capienza": {
+      "$numberLong": "20001363862110"
+    }
+  },
+  "tipoConto": "RETAIL",
+  "tipologia": "SALDO"
+}
