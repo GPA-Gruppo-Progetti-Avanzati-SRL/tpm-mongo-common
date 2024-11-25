@@ -25,7 +25,7 @@ func TestNonBlockingChangeStream(t *testing.T) {
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	coll := lks.GetCollection(CollectionId, "")
+	coll := lks.GetCollection(WatchCollectionId, "")
 
 	opt := options.ChangeStreamOptions{
 		BatchSize:                nil,

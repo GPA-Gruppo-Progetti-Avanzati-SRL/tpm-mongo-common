@@ -1,0 +1,13 @@
+name: document
+attributes:
+  - name: _bid
+    type: string
+    options: with-filter
+  - name: _et
+    type: string
+    options: with-filter
+  - name: resume_token
+    type: string
+    options: with-filter
+  - name: at
+    type: string

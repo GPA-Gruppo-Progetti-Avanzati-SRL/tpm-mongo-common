@@ -2,14 +2,19 @@ package changestream_test
 
 import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"os"
 	"strconv"
 	"testing"
 )
 
 const (
-	CollectionId               = "diaries"
-	CollectionName             = "diaries"
+	WatchCollectionId        = "watch-collection"
+	WatchCollectionName      = "diaries"
+	CheckpointCollectionId   = "checkpoint-collection"
+	CheckpointCollectionName = "cs_checkpoints"
+
 	DbName                     = "test"
 	HostEnvVarName             = "MONGODB_HOST_ENV"
 	DbEnvVarName               = "MONGODB_DB_ENV"
@@ -41,8 +46,12 @@ var cfg = mongolks.Config{
 	WriteTimeout:     "120s",
 	Collections: []mongolks.CollectionCfg{
 		{
-			Id:   CollectionId,
-			Name: CollectionName,
+			Id:   WatchCollectionId,
+			Name: WatchCollectionName,
+		},
+		{
+			Id:   CheckpointCollectionId,
+			Name: CheckpointCollectionName,
 		},
 	},
 	SecurityProtocol: os.Getenv(SecurityProtocolEnvVarName),
@@ -50,7 +59,7 @@ var cfg = mongolks.Config{
 }
 
 func TestMain(m *testing.M) {
-
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	skp, err := strconv.ParseBool(os.Getenv(SkpVerifEnvVarName))
 	if err != nil {
 		panic(err)

@@ -2,13 +2,11 @@ package changestream_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"os"
@@ -43,12 +41,12 @@ const (
 	ResumeTokenValueJson = `{"_data": "8267015CC80000045C2B042C0100296E5A1004F3ACB4AA4DE147A0B0F5F541701E4310463C6F7065726174696F6E54797065003C696E736572740046646F63756D656E744B65790046645F6964006467015CC74C1EBED2B6389905000004"}`
 )
 
-func TestChangeStream(t *testing.T) {
+func TestChangeStreamOld(t *testing.T) {
 	const semLogContext = "test-change-stream"
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	coll := lks.GetCollection(CollectionId, "")
+	coll := lks.GetCollection(WatchCollectionId, "")
 
 	opt := options.ChangeStreamOptions{
 		BatchSize:                nil,
@@ -65,24 +63,26 @@ func TestChangeStream(t *testing.T) {
 		CustomPipeline:           nil,
 	}
 
-	var resumeTokenMap bson.M
-	if ResumeTokenValueJson != "" {
-		err = json.Unmarshal([]byte(ResumeTokenValueJson), &resumeTokenMap)
-		require.NoError(t, err)
-		opt.SetResumeAfter(resumeTokenMap)
-	} else {
-		if ResumeTokenValue != "" {
-			var tok bson.M
-			tok = bson.M{"_data": ResumeTokenValue}
+	/*
+		var resumeTokenMap bson.M
+		if ResumeTokenValueJson != "" {
+			err = json.Unmarshal([]byte(ResumeTokenValueJson), &resumeTokenMap)
 			require.NoError(t, err)
-			if len(tok) != 0 {
-				opt.SetResumeAfter(tok)
-			}
+			opt.SetResumeAfter(resumeTokenMap)
 		} else {
-			startTs := primitive.Timestamp{T: uint32(time.Now().Add(-2 * time.Hour).Unix())}
-			opt.SetStartAtOperationTime(&startTs)
+			if ResumeTokenValue != "" {
+				var tok bson.M
+				tok = bson.M{"_data": ResumeTokenValue}
+				require.NoError(t, err)
+				if len(tok) != 0 {
+					opt.SetResumeAfter(tok)
+				}
+			} else {
+				startTs := primitive.Timestamp{T: uint32(time.Now().Add(-2 * time.Hour).Unix())}
+				opt.SetStartAtOperationTime(&startTs)
+			}
 		}
-	}
+	*/
 
 	log.Info().Msg(semLogContext + " enabling SIGINT e SIGTERM")
 	shutdownChannel := make(chan error)
