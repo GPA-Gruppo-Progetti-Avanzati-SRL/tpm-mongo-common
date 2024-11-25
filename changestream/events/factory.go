@@ -3,6 +3,7 @@ package events
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -26,6 +27,13 @@ type ChangeEvent interface {
 
 func ParseEvent(m bson.M) (ChangeEvent, error) {
 	const semLogContext = "event-factory::parse-event"
+
+	j, err := json.Marshal(m)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+	fmt.Println(string(j))
 
 	opType, err := getString(m, "operationType", true)
 	if err != nil {

@@ -66,6 +66,26 @@ func getTimestamp(m bson.M, fieldName string, mandatory bool) (primitive.Timesta
 	return v, nil
 }
 
+func getDateTime(m bson.M, fieldName string, mandatory bool) (primitive.DateTime, error) {
+
+	var err error
+	i, ok := m[fieldName]
+	if !ok {
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+		}
+		return 0, err
+	}
+
+	v, ok := i.(primitive.DateTime)
+	if !ok {
+		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
+		return 0, err
+	}
+
+	return v, nil
+}
+
 func getDocument(m bson.M, fieldName string, mandatory bool) (primitive.M, error) {
 
 	var err error

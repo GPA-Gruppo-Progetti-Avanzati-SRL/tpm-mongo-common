@@ -20,6 +20,7 @@ type ReplaceEvent struct {
 	Lsid                     primitive.M         `yaml:"lsid,omitempty" mapstructure:"lsid,omitempty" json:"lsid,omitempty"`
 	Ns                       Namespace           `yaml:"ns,omitempty" mapstructure:"ns,omitempty" json:"ns,omitempty"`
 	TxnNumber                int64               `bson:"txnNumber,omitempty" mapstructure:"txnNumber,omitempty" json:"txnNumber,omitempty"`
+	WallTime                 primitive.DateTime  `bson:"wall-time,omitempty" mapstructure:"wall-time,omitempty" json:"wall-time,omitempty"`
 }
 
 func (e *ReplaceEvent) String() string {
@@ -77,6 +78,10 @@ func parseReplaceOperationType(m bson.M) (*ReplaceEvent, error) {
 
 	if err == nil {
 		e.TxnNumber, err = getNumberLong(m, "txnNumber", false)
+	}
+
+	if err == nil {
+		e.WallTime, err = getDateTime(m, "wallTime", true)
 	}
 
 	return e, err
