@@ -3,6 +3,7 @@ package changestream
 import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -57,6 +58,7 @@ type Config struct {
 	OnErrorPolicy            string                           `yaml:"on-error-policy,omitempty"  mapstructure:"on-error-policy,omitempty"  json:"on-error-policy,omitempty"`
 	RetryCount               int                              `yaml:"retry-count,omitempty"  mapstructure:"retry-count,omitempty"  json:"retry-count,omitempty"`
 	ChangeStream             ChangeStreamOptions              `yaml:"change-stream-opts,omitempty"  mapstructure:"change-stream-opts,omitempty"  json:"change-stream-opts,omitempty"`
+	CheckPointServiceCfg     *factory.Config                  `yaml:"checkpoint-svc,omitempty"  mapstructure:"checkpoint-svc,omitempty"  json:"checkpoint-svc,omitempty"`
 	checkPointSvc            checkpoint.ResumeTokenCheckpointSvc
 }
 

@@ -41,10 +41,18 @@ id: my-watcher
 lks-name: default
 collection-id: watch-collection
 out-of-seq-error: true
+retry-count: 4
 ref-metrics:
    group-id: "change-stream"
    counter-id: "cdc-events"
    histogram-id: "cdc-event-duration"
+checkpoint-svc:
+   # mongo, file
+   type: mongo
+   file-name: resume-token-checkpoint.json
+   tick-interval: 10
+   mongo-db-instance: default
+   mongo-db-collection-id: checkpoint-collection
 change-stream-opts:
    # batch-size: 500
    # full-document: default
@@ -57,22 +65,9 @@ change-stream-opts:
      [{ "$match": { "operationType": "insert" } }]
 `)
 
-var yamlCheckpointConfig = []byte(`
-# mongo, file
-type: mongo
-file-name: resume-token-checkpoint.json
-tick-interval: 10
-mongo-db-instance: default
-mongo-db-collection-id: checkpoint-collection
-`)
-
 func TestChangeStream(t *testing.T) {
 	cfg := changestream.Config{}
 	err := yaml.Unmarshal(yamlWatcherConfig, &cfg)
-	require.NoError(t, err)
-
-	chkCfg := factory.Config{}
-	err = yaml.Unmarshal(yamlCheckpointConfig, &chkCfg)
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
@@ -85,9 +80,13 @@ func TestChangeStream(t *testing.T) {
 		shutdownChannel <- fmt.Errorf("signal received: %v", <-c)
 	}()
 
-	svc, err := factory.NewCheckPointSvc(chkCfg)
-	require.NoError(t, err)
-	w, err := changestream.NewWatcher(&cfg, shutdownChannel, &wg, changestream.WithRetryCount(5), changestream.WithCheckpointSvc(svc))
+	var opts []changestream.ConfigOption
+	if cfg.CheckPointServiceCfg != nil {
+		svc, err := factory.NewCheckPointSvc(*cfg.CheckPointServiceCfg)
+		require.NoError(t, err)
+		opts = append(opts, changestream.WithCheckpointSvc(svc))
+	}
+	w, err := changestream.NewWatcher(&cfg, shutdownChannel, &wg, opts...)
 	require.NoError(t, err)
 
 	_ = w.Add(&listeners.DefaultListener{})

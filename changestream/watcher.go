@@ -194,8 +194,6 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 			return prevToken, err
 		}
 
-		log.Trace().Str("resume-token", resumeToken.Value).Msg(semLogContext)
-
 		if s.cfg.VerifyOutOfSequenceError {
 			if resumeToken.Value <= prevToken.Value {
 				log.Error().Err(OutOfSequenceError).Str("current", resumeToken.Value).Str("prev", prevToken.Value).Msg(semLogContext + " - out-of-sequence token")

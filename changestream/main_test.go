@@ -60,6 +60,7 @@ var cfg = mongolks.Config{
 
 func TestMain(m *testing.M) {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 	skp, err := strconv.ParseBool(os.Getenv(SkpVerifEnvVarName))
 	if err != nil {
 		panic(err)
