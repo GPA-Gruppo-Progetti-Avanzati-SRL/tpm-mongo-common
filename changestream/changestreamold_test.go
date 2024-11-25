@@ -16,26 +16,6 @@ import (
 	"time"
 )
 
-var testDataTemplate = `{ "name": "hello world", "item": %d }`
-
-const TestDataSize = 1000000
-
-func TestPrepareData2Load(t *testing.T) {
-	f, err := os.Create("../local-files/change-stream-test-data.json")
-	require.NoError(t, err)
-	defer f.Close()
-
-	_, err = f.WriteString("[")
-	for i := 0; i < TestDataSize; i++ {
-		if i > 0 {
-			_, err = f.WriteString(",")
-		}
-		_, err = f.WriteString(fmt.Sprintf(testDataTemplate, i))
-		require.NoError(t, err)
-	}
-	_, err = f.WriteString("]")
-}
-
 const (
 	ResumeTokenValue     = "8267015CC7000004682B042C0100296E5A1004F3ACB4AA4DE147A0B0F5F541701E4310463C6F7065726174696F6E54797065003C696E736572740046646F63756D656E744B65790046645F6964006467015CC64C1EBED2B638951D000004"
 	ResumeTokenValueJson = `{"_data": "8267015CC80000045C2B042C0100296E5A1004F3ACB4AA4DE147A0B0F5F541701E4310463C6F7065726174696F6E54797065003C696E736572740046646F63756D656E744B65790046645F6964006467015CC74C1EBED2B6389905000004"}`

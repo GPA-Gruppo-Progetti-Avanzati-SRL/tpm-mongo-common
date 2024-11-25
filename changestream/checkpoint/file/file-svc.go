@@ -20,7 +20,7 @@ type CheckpointSvc struct {
 	NumberOfTicks int
 }
 
-func NewSvc(cfg CheckpointSvcConfig) checkpoint.ResumeTokenCheckpointSvc {
+func NewCheckpointSvc(cfg CheckpointSvcConfig) checkpoint.ResumeTokenCheckpointSvc {
 	return &CheckpointSvc{
 		cfg:           cfg,
 		NumberOfTicks: -1,

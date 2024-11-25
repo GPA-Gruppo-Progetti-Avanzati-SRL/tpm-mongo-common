@@ -12,9 +12,9 @@ import (
 )
 
 type CheckpointSvcConfig struct {
-	Instance     string
-	CollectionId string
-	TickInterval int
+	Instance     string `yaml:"instance,omitempty" mapstructure:"instance,omitempty" json:"instance,omitempty"`
+	CollectionId string `yaml:"collection-id,omitempty" mapstructure:"collection-id,omitempty" json:"collection-id,omitempty"`
+	TickInterval int    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
 }
 
 type CheckpointSvc struct {
@@ -25,7 +25,7 @@ type CheckpointSvc struct {
 	coll *mongo.Collection
 }
 
-func NewMongoDbSvc(cfg CheckpointSvcConfig) (checkpoint.ResumeTokenCheckpointSvc, error) {
+func NewCheckpointSvc(cfg CheckpointSvcConfig) (checkpoint.ResumeTokenCheckpointSvc, error) {
 	const semLogContext = "mongodb-checkpoint-svc::new"
 
 	coll, err := mongolks.GetCollection(context.Background(), cfg.Instance, cfg.CollectionId)

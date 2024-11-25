@@ -3,7 +3,7 @@ package changestream_test
 import (
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/mdb"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/listeners"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
@@ -15,7 +15,28 @@ import (
 	"testing"
 )
 
-var yamlConfig = []byte(`
+const (
+	TestDataSize     = 1000000
+	testDataTemplate = `{ "name": "hello world", "item": %d }`
+)
+
+func TestPrepareData2Load(t *testing.T) {
+	f, err := os.Create("../local-files/change-stream-test-data.json")
+	require.NoError(t, err)
+	defer f.Close()
+
+	_, err = f.WriteString("[")
+	for i := 0; i < TestDataSize; i++ {
+		if i > 0 {
+			_, err = f.WriteString(",")
+		}
+		_, err = f.WriteString(fmt.Sprintf(testDataTemplate, i))
+		require.NoError(t, err)
+	}
+	_, err = f.WriteString("]")
+}
+
+var yamlWatcherConfig = []byte(`
 id: my-watcher
 lks-name: default
 collection-id: watch-collection
@@ -36,9 +57,22 @@ change-stream-opts:
      [{ "$match": { "operationType": "insert" } }]
 `)
 
+var yamlCheckpointConfig = []byte(`
+# mongo, file
+type: mongo
+file-name: resume-token-checkpoint.json
+tick-interval: 10
+mongo-db-instance: default
+mongo-db-collection-id: checkpoint-collection
+`)
+
 func TestChangeStream(t *testing.T) {
 	cfg := changestream.Config{}
-	err := yaml.Unmarshal(yamlConfig, &cfg)
+	err := yaml.Unmarshal(yamlWatcherConfig, &cfg)
+	require.NoError(t, err)
+
+	chkCfg := factory.Config{}
+	err = yaml.Unmarshal(yamlCheckpointConfig, &chkCfg)
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
@@ -51,12 +85,7 @@ func TestChangeStream(t *testing.T) {
 		shutdownChannel <- fmt.Errorf("signal received: %v", <-c)
 	}()
 
-	// svc := file.NewSvc(file.CheckpointSvcConfig{Fn: "resume-token-checkpoint.json", TickInterval: 10})
-	svc, err := mdb.NewMongoDbSvc(mdb.CheckpointSvcConfig{
-		Instance:     "default",
-		CollectionId: CheckpointCollectionId,
-		TickInterval: 10,
-	})
+	svc, err := factory.NewCheckPointSvc(chkCfg)
 	require.NoError(t, err)
 	w, err := changestream.NewWatcher(&cfg, shutdownChannel, &wg, changestream.WithRetryCount(5), changestream.WithCheckpointSvc(svc))
 	require.NoError(t, err)
