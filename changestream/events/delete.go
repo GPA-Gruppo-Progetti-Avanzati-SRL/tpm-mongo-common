@@ -34,6 +34,10 @@ func (e *DeleteEvent) String() string {
 	return string(b)
 }
 
+func (e *DeleteEvent) IsZero() bool {
+	return e.OpType == ""
+}
+
 func parseDeleteOperationType(m bson.M) (*DeleteEvent, error) {
 	const semLogContext = "delete-event::parse"
 

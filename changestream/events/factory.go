@@ -23,6 +23,7 @@ type EventId struct {
 
 type ChangeEvent interface {
 	String() string
+	IsZero() bool
 }
 
 func ParseEvent(m bson.M) (ChangeEvent, error) {

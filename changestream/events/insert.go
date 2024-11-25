@@ -34,6 +34,10 @@ func (e *InsertEvent) String() string {
 	return string(b)
 }
 
+func (e *InsertEvent) IsZero() bool {
+	return e.OpType == ""
+}
+
 func parseInsertOperationType(m bson.M) (*InsertEvent, error) {
 	const semLogContext = "insert-event::parse"
 

@@ -36,6 +36,10 @@ func (e *UpdateEvent) String() string {
 	return string(b)
 }
 
+func (e *UpdateEvent) IsZero() bool {
+	return e.OpType == ""
+}
+
 func parseUpdateOperationType(m bson.M) (*UpdateEvent, error) {
 	const semLogContext = "update-event::parse"
 

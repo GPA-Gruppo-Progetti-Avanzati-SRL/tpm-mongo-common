@@ -35,6 +35,10 @@ func (e *ReplaceEvent) String() string {
 	return string(b)
 }
 
+func (e *ReplaceEvent) IsZero() bool {
+	return e.OpType == ""
+}
+
 func parseReplaceOperationType(m bson.M) (*ReplaceEvent, error) {
 	const semLogContext = "replace-event::parse"
 
