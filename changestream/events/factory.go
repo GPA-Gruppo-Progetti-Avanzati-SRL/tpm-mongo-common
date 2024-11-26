@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
+	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -28,7 +29,8 @@ type ChangeEvent interface {
 }
 
 type changeEventImpl struct {
-	t checkpoint.ResumeToken
+	t    checkpoint.ResumeToken
+	Span opentracing.Span
 }
 
 func (ce *changeEventImpl) ResumeToken() checkpoint.ResumeToken {
