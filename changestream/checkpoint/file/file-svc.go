@@ -7,7 +7,17 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/rs/zerolog/log"
 	"os"
+	"time"
 )
+
+type Document struct {
+	Bid         string `json:"_bid,omitempty" bson:"_bid,omitempty" yaml:"_bid,omitempty"`
+	Et          string `json:"_et,omitempty" bson:"_et,omitempty" yaml:"_et,omitempty"`
+	ResumeToken string `json:"resume_token,omitempty" bson:"resume_token,omitempty" yaml:"resume_token,omitempty"`
+	At          string `json:"at,omitempty" bson:"at,omitempty" yaml:"at,omitempty"`
+	ShortToken  string `json:"short_token,omitempty" bson:"short_token,omitempty" yaml:"short_token,omitempty"`
+	TxnOpnIndex string `json:"txn_opn_index,omitempty" bson:"txn_opn_index,omitempty" yaml:"txn_opn_index,omitempty"`
+}
 
 type CheckpointSvcConfig struct {
 	Fn           string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
@@ -46,12 +56,15 @@ func (f *CheckpointSvc) Retrieve(watcherId string) (checkpoint.ResumeToken, erro
 		return token, err
 	}
 
-	err = json.Unmarshal(b, &token)
+	d := Document{}
+	err = json.Unmarshal(b, &d)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return token, err
 	}
 
+	token.At = d.At
+	token.Value = d.ResumeToken
 	return token, nil
 }
 
@@ -85,7 +98,21 @@ func (f *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) err
 
 	log.Trace().Str("fn", f.cfg.Fn).Msg(semLogContext)
 
-	b, err := json.Marshal(token)
+	info, err := token.Parse()
+	if err != nil {
+		return err
+	}
+
+	d := Document{
+		Bid:         watcherId,
+		Et:          "",
+		ResumeToken: token.Value,
+		At:          time.Now().Format(time.RFC3339),
+		ShortToken:  token.ShortVersion(),
+		TxnOpnIndex: info.TxnOpIndex,
+	}
+
+	b, err := json.Marshal(d)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
