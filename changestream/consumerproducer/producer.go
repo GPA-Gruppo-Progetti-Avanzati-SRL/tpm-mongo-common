@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	MetricBatchErrors     = "tprod-batch-errors"
-	MetricBatches         = "tprod-batches"
-	MetricBatchSize       = "tprod-batch-size"
-	MetricBatchDuration   = "tprod-batch-duration"
-	MetricMessageErrors   = "tprod-event-errors"
-	MetricMessages        = "tprod-events"
-	MetricMessageDuration = "tprod-event-duration"
+	MetricBatchErrors     = "cdc-batch-errors"
+	MetricBatches         = "cdc-batches"
+	MetricBatchSize       = "cdc-batch-size"
+	MetricBatchDuration   = "cdc-batch-duration"
+	MetricMessageErrors   = "cdc-event-errors"
+	MetricMessages        = "cdc-events"
+	MetricMessageDuration = "cdc-event-duration"
 )
 
 type producerImpl struct {
