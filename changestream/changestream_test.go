@@ -65,7 +65,7 @@ change-stream-opts:
      [{ "$match": { "operationType": "insert" } }]
 `)
 
-func TestChangeStream(t *testing.T) {
+func TestWatcher(t *testing.T) {
 	cfg := changestream.Config{}
 	err := yaml.Unmarshal(yamlWatcherConfig, &cfg)
 	require.NoError(t, err)
@@ -97,4 +97,39 @@ func TestChangeStream(t *testing.T) {
 	log.Debug().Interface("signal", sig).Msg("got termination signal")
 	w.Close()
 	wg.Wait()
+}
+
+func TestConsumer(t *testing.T) {
+	const semLogContext = "change-stream::consumer"
+
+	cfg := changestream.Config{}
+	err := yaml.Unmarshal(yamlWatcherConfig, &cfg)
+	require.NoError(t, err)
+
+	c, err := changestream.NewConsumer(&cfg)
+	require.NoError(t, err)
+
+	log.Info().Msg("enabling SIGINT e SIGTERM")
+	shutdownChannel := make(chan error)
+	go func() {
+		c := make(chan os.Signal)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		shutdownChannel <- fmt.Errorf("signal received: %v", <-c)
+	}()
+
+	for {
+		select {
+		case <-shutdownChannel:
+			log.Info().Msg(semLogContext + " terminating")
+			c.Close()
+			require.NoError(t, err)
+			return
+		default:
+			evt, err := c.Poll()
+			require.NoError(t, err)
+			if evt != nil {
+				t.Log(evt)
+			}
+		}
+	}
 }
