@@ -94,6 +94,11 @@ func (svc *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) e
 	const semLogContext = "mongodb-checkpoint::save"
 	var err error
 
+	info, err := token.Parse()
+	if err != nil {
+		return err
+	}
+
 	f := checkpointcollection.Filter{}
 	f.Or().AndBidEqTo(watcherId)
 	opts := options.UpdateOptions{}
@@ -103,6 +108,8 @@ func (svc *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) e
 		checkpointcollection.UpdateWith_bid(watcherId),
 		checkpointcollection.UpdateWithResume_token(token.Value),
 		checkpointcollection.UpdateWithAt(token.At),
+		checkpointcollection.UpdateWithShort_token(token.ShortVersion()),
+		checkpointcollection.UpdateWithTxn_opn_index(info.TxnOpIndex),
 	)
 
 	resp, err := svc.coll.UpdateOne(context.Background(), f.Build(), ud.Build(), &opts)

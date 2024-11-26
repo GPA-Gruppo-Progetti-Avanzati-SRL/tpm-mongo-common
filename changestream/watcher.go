@@ -188,7 +188,7 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 
 		// log.Warn().Interface("data", data).Msg(semLogContext)
 
-		resumeToken, err := checkpoint.ParseResumeToken(s.chgStream.ResumeToken())
+		resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return prevToken, err
@@ -202,7 +202,7 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 			}
 		}
 
-		evt, err := events.ParseEvent(data)
+		evt, err := events.ParseEvent(resumeToken, data)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return prevToken, err
@@ -211,7 +211,7 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 		allSynchs := true
 		for _, l := range s.listeners {
 			var synchronous bool
-			synchronous, err = l.Consume(resumeToken, evt)
+			synchronous, err = l.Consume(evt)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
 				return prevToken, err
@@ -275,7 +275,7 @@ func (s *watcherImpl) processChangeStreamV1(token string, batchSize int) (string
 			log.Error().Err(err).Msg(semLogContext)
 		}
 
-		resumeToken, err := checkpoint.ParseResumeToken(s.chgStream.ResumeToken())
+		resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 		}
@@ -339,7 +339,7 @@ func (s *watcherImpl) setMetric(metricGroup *promutil.Group, metricId string, va
 	if metricGroup == nil {
 		g, err := promutil.GetGroup(s.cfg.RefMetrics.GId)
 		if err != nil {
-			log.Warn().Err(err).Msg(semLogContext)
+			log.Trace().Err(err).Msg(semLogContext)
 			return nil
 		}
 

@@ -1,4 +1,4 @@
-package producer
+package consumerproducer
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Producer interface {
+type ConsumerProducer interface {
 	Start() error
 	Close() error
 	SetParent(s Server)
@@ -16,7 +16,7 @@ type Producer interface {
 type Server interface {
 	Close()
 	Start()
-	ProducerTerminated(err error)
+	ConsumerProducerTerminated(err error)
 }
 
 type Processor interface {
@@ -27,38 +27,38 @@ type Processor interface {
 	BatchSize() int
 }
 
-type UnimplementedTransformerProducerProcessor struct {
+type UnimplementedConsumerProducerProcessor struct {
 }
 
-func (b *UnimplementedTransformerProducerProcessor) ProcessMessage(m *events.ChangeEvent) error {
+func (b *UnimplementedConsumerProducerProcessor) ProcessMessage(m *events.ChangeEvent) error {
 	const semLogContext = "t-prod-processor::process-message"
 	err := errors.New("not implemented")
 	log.Error().Err(err).Msg(semLogContext)
 	panic(err)
 }
 
-func (b *UnimplementedTransformerProducerProcessor) AddMessage2Batch(m *events.ChangeEvent) error {
+func (b *UnimplementedConsumerProducerProcessor) AddMessage2Batch(m *events.ChangeEvent) error {
 	const semLogContext = "t-prod-processor::add-to-batch"
 	err := errors.New("not implemented")
 	log.Error().Err(err).Msg(semLogContext)
 	panic(err)
 }
 
-func (b *UnimplementedTransformerProducerProcessor) ProcessBatch() error {
+func (b *UnimplementedConsumerProducerProcessor) ProcessBatch() error {
 	const semLogContext = "t-prod-processor::process-batch"
 	err := errors.New("not implemented")
 	log.Error().Err(err).Msg(semLogContext)
 	panic(err)
 }
 
-func (b *UnimplementedTransformerProducerProcessor) BatchSize() int {
+func (b *UnimplementedConsumerProducerProcessor) BatchSize() int {
 	const semLogContext = "t-prod-processor::batch-size"
 	err := errors.New("not implemented")
 	log.Error().Err(err).Msg(semLogContext)
 	panic(err)
 }
 
-func (b *UnimplementedTransformerProducerProcessor) Clear() {
+func (b *UnimplementedConsumerProducerProcessor) Clear() {
 	const semLogContext = "t-prod-processor::clear"
 	err := errors.New("not implemented")
 	log.Error().Err(err).Msg(semLogContext)

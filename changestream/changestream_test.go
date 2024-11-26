@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	TestDataSize     = 1000000
+	TestDataSize     = 20000
 	testDataTemplate = `{ "name": "hello world", "item": %d }`
 )
 
-func TestPrepareData2Load(t *testing.T) {
+func TestPrepareDataArray2Load(t *testing.T) {
 	f, err := os.Create("../local-files/change-stream-test-data.json")
 	require.NoError(t, err)
 	defer f.Close()
@@ -36,6 +36,17 @@ func TestPrepareData2Load(t *testing.T) {
 	_, err = f.WriteString("]")
 }
 
+func TestPrepareData2Load(t *testing.T) {
+	f, err := os.Create("../local-files/change-stream-test-data.json")
+	require.NoError(t, err)
+	defer f.Close()
+
+	for i := 0; i < TestDataSize; i++ {
+		_, err = f.WriteString(fmt.Sprintf(testDataTemplate+"\n", i))
+		require.NoError(t, err)
+	}
+}
+
 var yamlWatcherConfig = []byte(`
 id: my-watcher
 lks-name: default
@@ -46,13 +57,6 @@ ref-metrics:
    group-id: "change-stream"
    counter-id: "cdc-events"
    histogram-id: "cdc-event-duration"
-checkpoint-svc:
-   # mongo, file
-   type: mongo
-   file-name: resume-token-checkpoint.json
-   tick-interval: 10
-   mongo-db-instance: default
-   mongo-db-collection-id: checkpoint-collection
 change-stream-opts:
    # batch-size: 500
    # full-document: default
@@ -65,9 +69,22 @@ change-stream-opts:
      [{ "$match": { "operationType": "insert" } }]
 `)
 
+var yamlCheckPointSvcConfig = []byte(`
+# mongo, file
+type: mongo
+file-name: resume-token-checkpoint.json
+tick-interval: 10
+mongo-db-instance: default
+mongo-db-collection-id: checkpoint-collection
+`)
+
 func TestWatcher(t *testing.T) {
 	cfg := changestream.Config{}
 	err := yaml.Unmarshal(yamlWatcherConfig, &cfg)
+	require.NoError(t, err)
+
+	chkSvcCfg := factory.Config{}
+	err = yaml.Unmarshal(yamlCheckPointSvcConfig, &chkSvcCfg)
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
@@ -81,11 +98,10 @@ func TestWatcher(t *testing.T) {
 	}()
 
 	var opts []changestream.ConfigOption
-	if cfg.CheckPointServiceCfg != nil {
-		svc, err := factory.NewCheckPointSvc(*cfg.CheckPointServiceCfg)
-		require.NoError(t, err)
-		opts = append(opts, changestream.WithCheckpointSvc(svc))
-	}
+	svc, err := factory.NewCheckPointSvc(chkSvcCfg)
+	require.NoError(t, err)
+	opts = append(opts, changestream.WithCheckpointSvc(svc))
+
 	w, err := changestream.NewWatcher(&cfg, shutdownChannel, &wg, opts...)
 	require.NoError(t, err)
 
@@ -106,7 +122,16 @@ func TestConsumer(t *testing.T) {
 	err := yaml.Unmarshal(yamlWatcherConfig, &cfg)
 	require.NoError(t, err)
 
-	c, err := changestream.NewConsumer(&cfg)
+	chkSvcCfg := factory.Config{}
+	err = yaml.Unmarshal(yamlCheckPointSvcConfig, &chkSvcCfg)
+	require.NoError(t, err)
+
+	var opts []changestream.ConfigOption
+	svc, err := factory.NewCheckPointSvc(chkSvcCfg)
+	require.NoError(t, err)
+	opts = append(opts, changestream.WithCheckpointSvc(svc))
+
+	c, err := changestream.NewConsumer(&cfg, opts...)
 	require.NoError(t, err)
 
 	log.Info().Msg("enabling SIGINT e SIGTERM")
@@ -128,7 +153,7 @@ func TestConsumer(t *testing.T) {
 			evt, err := c.Poll()
 			require.NoError(t, err)
 			if evt != nil {
-				t.Log(evt)
+				t.Log((*evt).String())
 			}
 		}
 	}

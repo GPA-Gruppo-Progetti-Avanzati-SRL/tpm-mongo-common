@@ -1,0 +1,36 @@
+name: cp-echo
+work-mode: batch-mode
+tick-interval: 400ms
+tracing:
+  span-name: cp-echo-span
+ref-metrics:
+  group-id: "change-stream"
+  counter-id: "cdc-events"
+  histogram-id: "cdc-event-duration"
+checkpoint-svc:
+  # mongo, file
+  type: mongo
+  file-name: resume-token-checkpoint.json
+  tick-interval: 10
+  mongo-db-instance: default
+  mongo-db-collection-id: checkpoint-collection
+consumer:
+  id: my-watcher
+  lks-name: default
+  collection-id: watch-collection
+  out-of-seq-error: true
+  retry-count: 4
+  ref-metrics:
+    group-id: "change-stream"
+    counter-id: "cdc-events"
+    histogram-id: "cdc-event-duration"
+  change-stream-opts:
+    batch-size: 500
+    # full-document: default
+    # before-full-document: whenAvailable
+    # could result in a blocking call
+    # max-await-time: 1m
+    # show-expanded-events: true
+    # start-at-operation-time: now
+    pipeline: >
+      [{ "$match": { "operationType": "insert" } }]

@@ -2,6 +2,7 @@ package events
 
 import (
 	"encoding/json"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -11,6 +12,7 @@ import (
 // TODO: missing field collectionUUID
 
 type DeleteEvent struct {
+	changeEventImpl
 	OpType               string              `yaml:"operationType,omitempty" mapstructure:"operationType,omitempty" json:"operationType,omitempty"`
 	Id                   EventId             `yaml:"_id,omitempty" mapstructure:"_id,omitempty" json:"_id,omitempty"`
 	ClusterTime          primitive.Timestamp `yaml:"clusterTime,omitempty" mapstructure:"clusterTime,omitempty" json:"clusterTime,omitempty"`
@@ -38,12 +40,13 @@ func (e *DeleteEvent) IsZero() bool {
 	return e.OpType == ""
 }
 
-func parseDeleteOperationType(m bson.M) (*DeleteEvent, error) {
+func parseDeleteOperationType(tok checkpoint.ResumeToken, m bson.M) (*DeleteEvent, error) {
 	const semLogContext = "delete-event::parse"
 
 	var err error
 	e := &DeleteEvent{
-		OpType: OperationTypeDelete,
+		changeEventImpl: changeEventImpl{t: tok},
+		OpType:          OperationTypeDelete,
 	}
 
 	id, err := getDocument(m, "_id", true)

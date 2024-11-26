@@ -31,6 +31,8 @@ type UnsetOptions struct {
 	Et          UnsetMode
 	ResumeToken UnsetMode
 	At          UnsetMode
+	ShortToken  UnsetMode
+	TxnOpnIndex UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -66,6 +68,16 @@ func WithAtUnsetMode(m UnsetMode) UnsetOption {
 		uopt.At = m
 	}
 }
+func WithShortTokenUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.ShortToken = m
+	}
+}
+func WithTxnOpnIndexUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.TxnOpnIndex = m
+	}
+}
 
 type UpdateOption func(ud *UpdateDocument)
 type UpdateOptions []UpdateOption
@@ -96,6 +108,8 @@ func GetUpdateDocument(obj *Document, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetResume_token(obj.ResumeToken, uo.ResolveUnsetMode(uo.ResumeToken))
 	ud.setOrUnsetAt(obj.At, uo.ResolveUnsetMode(uo.At))
+	ud.setOrUnsetShort_token(obj.ShortToken, uo.ResolveUnsetMode(uo.ShortToken))
+	ud.setOrUnsetTxn_opn_index(obj.TxnOpnIndex, uo.ResolveUnsetMode(uo.TxnOpnIndex))
 
 	return ud
 }
@@ -283,6 +297,98 @@ func UpdateWithAt(p string) UpdateOption {
 
 // @tpm-schematics:start-region("at-field-update-section")
 // @tpm-schematics:end-region("at-field-update-section")
+
+// SetShort_token No Remarks
+func (ud *UpdateDocument) SetShort_token(p string) *UpdateDocument {
+	mName := fmt.Sprintf(ShortTokenFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetShort_token No Remarks
+func (ud *UpdateDocument) UnsetShort_token() *UpdateDocument {
+	mName := fmt.Sprintf(ShortTokenFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetShort_token No Remarks
+func (ud *UpdateDocument) setOrUnsetShort_token(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetShort_token(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetShort_token()
+		case SetData2Default:
+			ud.UnsetShort_token()
+		}
+	}
+}
+
+func UpdateWithShort_token(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetShort_token(p)
+		} else {
+			ud.UnsetShort_token()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("short-token-field-update-section")
+// @tpm-schematics:end-region("short-token-field-update-section")
+
+// SetTxn_opn_index No Remarks
+func (ud *UpdateDocument) SetTxn_opn_index(p string) *UpdateDocument {
+	mName := fmt.Sprintf(TxnOpnIndexFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetTxn_opn_index No Remarks
+func (ud *UpdateDocument) UnsetTxn_opn_index() *UpdateDocument {
+	mName := fmt.Sprintf(TxnOpnIndexFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetTxn_opn_index No Remarks
+func (ud *UpdateDocument) setOrUnsetTxn_opn_index(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetTxn_opn_index(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetTxn_opn_index()
+		case SetData2Default:
+			ud.UnsetTxn_opn_index()
+		}
+	}
+}
+
+func UpdateWithTxn_opn_index(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetTxn_opn_index(p)
+		} else {
+			ud.UnsetTxn_opn_index()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("txn-opn-index-field-update-section")
+// @tpm-schematics:end-region("txn-opn-index-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

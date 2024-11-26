@@ -2,6 +2,7 @@ package events
 
 import (
 	"encoding/json"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -11,6 +12,7 @@ import (
 // TODO: missing field collectionUUID
 
 type ReplaceEvent struct {
+	changeEventImpl
 	OpType                   string              `yaml:"operationType,omitempty" mapstructure:"operationType,omitempty" json:"operationType,omitempty"`
 	Id                       EventId             `yaml:"_id,omitempty" mapstructure:"_id,omitempty" json:"_id,omitempty"`
 	ClusterTime              primitive.Timestamp `yaml:"clusterTime,omitempty" mapstructure:"clusterTime,omitempty" json:"clusterTime,omitempty"`
@@ -39,12 +41,13 @@ func (e *ReplaceEvent) IsZero() bool {
 	return e.OpType == ""
 }
 
-func parseReplaceOperationType(m bson.M) (*ReplaceEvent, error) {
+func parseReplaceOperationType(tok checkpoint.ResumeToken, m bson.M) (*ReplaceEvent, error) {
 	const semLogContext = "replace-event::parse"
 
 	var err error
 	e := &ReplaceEvent{
-		OpType: OperationTypeReplace,
+		changeEventImpl: changeEventImpl{t: tok},
+		OpType:          OperationTypeReplace,
 	}
 
 	id, err := getDocument(m, "_id", true)

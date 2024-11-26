@@ -12,6 +12,8 @@ const (
 	EtFieldName          = "_et"
 	ResumeTokenFieldName = "resume_token"
 	AtFieldName          = "at"
+	ShortTokenFieldName  = "short_token"
+	TxnOpnIndexFieldName = "txn_opn_index"
 )
 
 // @tpm-schematics:start-region("bottom-file-section")

@@ -11,3 +11,7 @@ attributes:
     options: with-filter
   - name: at
     type: string
+  - name: short_token
+    type: string
+  - name: txn_opn_index
+    type: string

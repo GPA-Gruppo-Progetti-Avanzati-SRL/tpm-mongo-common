@@ -1,4 +1,4 @@
-package producer
+package consumerproducer
 
 import (
 	"errors"
@@ -8,12 +8,12 @@ import (
 
 type server struct {
 	cfg                     *ServerConfig
-	producers               []Producer
+	producers               []ConsumerProducer
 	numberOfActiveProducers int
 	quitc                   chan error
 }
 
-func NewServer(cfg *ServerConfig, tps []Producer, c chan error) (Server, error) {
+func NewServer(cfg *ServerConfig, tps []ConsumerProducer, c chan error) (Server, error) {
 	s := &server{
 		cfg:   cfg,
 		quitc: c,
@@ -29,7 +29,7 @@ func NewServer(cfg *ServerConfig, tps []Producer, c chan error) (Server, error) 
 }
 
 func (s *server) Close() {
-	const semLogContext = "t-prod-server::close"
+	const semLogContext = "change-stream-cp-srv::close"
 	if len(s.producers) > 0 {
 		log.Info().Msg(semLogContext + " closing transformer producer")
 		for _, tp := range s.producers {
@@ -41,13 +41,13 @@ func (s *server) Close() {
 	}
 }
 
-func (s *server) Add(tp Producer) {
+func (s *server) Add(tp ConsumerProducer) {
 	s.producers = append(s.producers, tp)
 	s.numberOfActiveProducers++
 }
 
 func (s *server) Start() {
-	const semLogContext = "t-prod-server::start"
+	const semLogContext = "change-stream-cp-srv::start"
 
 	var startDelay time.Duration
 	if s.cfg.StartDelay > 0 {
@@ -67,8 +67,8 @@ func (s *server) Start() {
 	}
 }
 
-func (s *server) ProducerTerminated(err error) {
-	const semLogContext = "t-prod-server::producer-terminated"
+func (s *server) ConsumerProducerTerminated(err error) {
+	const semLogContext = "change-stream-cp-srv::producer-terminated"
 	log.Info().Msg(semLogContext)
 	if err == nil {
 		return

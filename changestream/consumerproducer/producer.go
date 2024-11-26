@@ -1,9 +1,10 @@
-package producer
+package consumerproducer
 
 import (
 	"context"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/rs/zerolog/log"
 	"sync"
@@ -35,8 +36,8 @@ type producerImpl struct {
 	metricLabels map[string]string
 }
 
-func NewProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (Producer, error) {
-	const semLogContext = "t-prod-factory::new"
+func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (ConsumerProducer, error) {
+	const semLogContext = "change-stream-cs-factory::new"
 
 	if cfg.WorkMode != WorkModeBatch {
 		cfg.WorkMode = WorkModeMsg
@@ -64,16 +65,22 @@ func (tp *producerImpl) SetParent(s Server) {
 }
 
 func (tp *producerImpl) Start() error {
-	const semLogContext = "t-prod::start"
+	const semLogContext = "change-stream-cp::start"
 	var err error
-
-	if tp.cfg.StartDelay > 0 {
-		time.Sleep(time.Millisecond * time.Duration(tp.cfg.StartDelay))
-	}
 
 	log.Info().Msg(semLogContext)
 
-	tp.consumer, err = changestream.NewConsumer(&tp.cfg.Consumer)
+	var opts []changestream.ConfigOption
+	if tp.cfg.CheckPointSvcConfig.Typ != "" {
+		svc, err := factory.NewCheckPointSvc(tp.cfg.CheckPointSvcConfig)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+		opts = append(opts, changestream.WithCheckpointSvc(svc))
+	}
+
+	tp.consumer, err = changestream.NewConsumer(&tp.cfg.Consumer, opts...)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -89,15 +96,15 @@ func (tp *producerImpl) Start() error {
 }
 
 func (tp *producerImpl) Close() error {
-	const semLogContext = "t-prod::close"
+	const semLogContext = "change-stream-cp::close"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " signalling shutdown transformer producer")
 	close(tp.quitc)
 	return nil
 }
 
 func (tp *producerImpl) pollLoop() {
-	const semLogContext = "t-prod::poll-loop"
-	log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " starting polling loop")
+	const semLogContext = "change-stream-cp::poll-loop"
+	log.Info().Str("cs-prod-id", tp.cfg.Name).Float64("tick-interval", tp.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting polling loop")
 
 	ticker := time.NewTicker(tp.cfg.TickInterval)
 
@@ -131,7 +138,7 @@ func (tp *producerImpl) pollLoop() {
 }
 
 func (tp *producerImpl) poll() (bool, error) {
-	const semLogContext = "t-prod::poll"
+	const semLogContext = "change-stream-cp::poll"
 	var err error
 
 	ev, err := tp.consumer.Poll()
@@ -148,13 +155,16 @@ func (tp *producerImpl) poll() (bool, error) {
 		err = tp.addMessage2Batch(ev)
 	} else {
 		err = tp.processMessage(ev)
+		if err == nil {
+			err = tp.consumer.Commit()
+		}
 	}
 
 	return true, err
 }
 
 func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
-	const semLogContext = "t-prod::add-message-2-batch"
+	const semLogContext = "change-stream-cp::add-message-2-batch"
 	var err error
 
 	spanName := tp.cfg.Tracing.SpanName
@@ -170,11 +180,13 @@ func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
 	}
 
 	_ = tp.produceMetric(nil, MetricMessages, 1, tp.metricLabels)
-	return nil
+	err = tp.consumer.Commit()
+
+	return err
 }
 
 func (tp *producerImpl) processBatch(ctx context.Context) error {
-	const semLogContext = "t-prod::process-batch"
+	const semLogContext = "change-stream-cp::process-batch"
 
 	if tp.cfg.WorkMode != WorkModeBatch || tp.processor.BatchSize() == 0 {
 		return nil
@@ -201,7 +213,7 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 }
 
 func (tp *producerImpl) processMessage(e *events.ChangeEvent) error {
-	const semLogContext = "t-prod::process-message"
+	const semLogContext = "change-stream-cp::process-message"
 
 	var err error
 
@@ -226,7 +238,7 @@ func (tp *producerImpl) processMessage(e *events.ChangeEvent) error {
 }
 
 func (tp *producerImpl) shutDown(err error) {
-	const semLogContext = "t-prod::shutdown"
+	const semLogContext = "change-stream-cp::shutdown"
 
 	tp.shutdownSync.Do(func() {
 
@@ -240,7 +252,7 @@ func (tp *producerImpl) shutDown(err error) {
 		tp.consumer = nil
 
 		if tp.parent != nil {
-			tp.parent.ProducerTerminated(err)
+			tp.parent.ConsumerProducerTerminated(err)
 		} else {
 			log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " parent has not been set....")
 		}
@@ -249,13 +261,20 @@ func (tp *producerImpl) shutDown(err error) {
 }
 
 func (tp *producerImpl) produceMetric(metricGroup *promutil.Group, metricId string, value float64, labels map[string]string) *promutil.Group {
-	const semLogContext = "t-prod::produce-metric"
+	const semLogContext = "change-stream-cp::produce-metric"
+
+	// Unconfigured...
+
+	if metricGroup == nil && tp.cfg.RefMetrics == nil {
+		log.Trace().Msg(semLogContext + " - un-configured metrics")
+		return nil
+	}
 
 	var err error
 	if metricGroup == nil {
 		g, err := promutil.GetGroup(tp.cfg.RefMetrics.GId)
 		if err != nil {
-			log.Warn().Err(err).Msg(semLogContext)
+			log.Trace().Err(err).Msg(semLogContext)
 			return nil
 		}
 

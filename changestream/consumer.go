@@ -17,8 +17,9 @@ type Consumer struct {
 	cfg       *Config
 	chgStream *mongo.ChangeStream
 
-	token     checkpoint.ResumeToken
-	numEvents int
+	lastCommittedToken checkpoint.ResumeToken
+	lastPolledToken    checkpoint.ResumeToken
+	numEvents          int
 }
 
 func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
@@ -51,6 +52,34 @@ func (s *Consumer) Close() {
 	}
 }
 
+func (s *Consumer) Commit() error {
+	const semLogContext = "consumer::commit"
+
+	if s.cfg.checkPointSvc == nil {
+		err := errors.New("no checkpoint service configured to honour commit op")
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	if s.lastPolledToken.IsZero() {
+		log.Warn().Msg(semLogContext + " - transaction is empty")
+		return nil
+	}
+
+	err := s.cfg.checkPointSvc.Store(s.cfg.Id, s.lastPolledToken)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	return nil
+}
+
+func (s *Consumer) Abort() error {
+	const semLogContext = "consumer::abort"
+	return nil
+}
+
 func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	const semLogContext = "consumer::process-change-stream"
 
@@ -78,27 +107,27 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		log.Error().Err(err).Msg(semLogContext)
 	}
 
-	resumeToken, err := checkpoint.ParseResumeToken(s.chgStream.ResumeToken())
+	resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
 	}
 
 	if s.cfg.VerifyOutOfSequenceError {
-		if resumeToken.Value <= s.token.Value {
-			log.Error().Err(OutOfSequenceError).Str("current", resumeToken.Value).Str("prev", s.token.Value).Msg(semLogContext + " - out-of-sequence token")
+		if resumeToken.Value <= s.lastPolledToken.Value {
+			log.Error().Err(OutOfSequenceError).Str("current", resumeToken.Value).Str("prev", s.lastPolledToken.Value).Msg(semLogContext + " - out-of-sequence token")
 			g = s.setMetric(g, "cdc-event-errors", 1, nil)
 			return nil, OutOfSequenceError
 		}
 	}
 
-	evt, err := events.ParseEvent(data)
+	evt, err := events.ParseEvent(resumeToken, data)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return &evt, err
 	}
 
-	s.token = resumeToken
+	s.lastPolledToken = resumeToken
 	return &evt, nil
 }
 
@@ -178,7 +207,7 @@ func (s *Consumer) setMetric(metricGroup *promutil.Group, metricId string, value
 	if metricGroup == nil {
 		g, err := promutil.GetGroup(s.cfg.RefMetrics.GId)
 		if err != nil {
-			log.Warn().Err(err).Msg(semLogContext)
+			log.Trace().Err(err).Msg(semLogContext)
 			return nil
 		}
 
