@@ -1,54 +1,51 @@
 package events
 
 import (
-	"encoding/json"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
-	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // https://www.mongodb.com/docs/manual/reference/change-events/update/
 // TODO: missing field collectionUUID
 
-type UpdateEvent struct {
-	changeEventImpl
-	OpType                   string              `yaml:"operationType,omitempty" mapstructure:"operationType,omitempty" json:"operationType,omitempty"`
-	Id                       EventId             `yaml:"_id,omitempty" mapstructure:"_id,omitempty" json:"_id,omitempty"`
-	ClusterTime              primitive.Timestamp `yaml:"clusterTime,omitempty" mapstructure:"clusterTime,omitempty" json:"clusterTime,omitempty"`
-	FullDocument             primitive.M         `yaml:"fullDocument,omitempty" mapstructure:"fullDocument,omitempty" json:"fullDocument,omitempty"`
-	FullDocumentBeforeChange primitive.M         `yaml:"fullDocumentBeforeChange,omitempty" mapstructure:"fullDocumentBeforeChange,omitempty" json:"fullDocumentBeforeChange,omitempty"`
-	DocumentKey              primitive.M         `yaml:"documentKey,omitempty" mapstructure:"documentKey,omitempty" json:"documentKey,omitempty"`
-	UpdateDescription        primitive.M         `yaml:"updateDescription,omitempty" mapstructure:"updateDescription,omitempty" json:"updateDescription,omitempty"`
-	Lsid                     primitive.M         `yaml:"lsid,omitempty" mapstructure:"lsid,omitempty" json:"lsid,omitempty"`
-	Ns                       Namespace           `yaml:"ns,omitempty" mapstructure:"ns,omitempty" json:"ns,omitempty"`
-	TxnNumber                int64               `bson:"txnNumber,omitempty" mapstructure:"txnNumber,omitempty" json:"txnNumber,omitempty"`
-	WallTime                 primitive.DateTime  `bson:"wall-time,omitempty" mapstructure:"wall-time,omitempty" json:"wall-time,omitempty"`
-}
+//type UpdateEvent struct {
+//	changeEventImpl
+//	OpType                   string              `yaml:"operationType,omitempty" mapstructure:"operationType,omitempty" json:"operationType,omitempty"`
+//	Id                       EventId             `yaml:"_id,omitempty" mapstructure:"_id,omitempty" json:"_id,omitempty"`
+//	ClusterTime              primitive.Timestamp `yaml:"clusterTime,omitempty" mapstructure:"clusterTime,omitempty" json:"clusterTime,omitempty"`
+//	FullDocument             primitive.M         `yaml:"fullDocument,omitempty" mapstructure:"fullDocument,omitempty" json:"fullDocument,omitempty"`
+//	FullDocumentBeforeChange primitive.M         `yaml:"fullDocumentBeforeChange,omitempty" mapstructure:"fullDocumentBeforeChange,omitempty" json:"fullDocumentBeforeChange,omitempty"`
+//	DocumentKey              primitive.M         `yaml:"documentKey,omitempty" mapstructure:"documentKey,omitempty" json:"documentKey,omitempty"`
+//	UpdateDescription        primitive.M         `yaml:"updateDescription,omitempty" mapstructure:"updateDescription,omitempty" json:"updateDescription,omitempty"`
+//	Lsid                     primitive.M         `yaml:"lsid,omitempty" mapstructure:"lsid,omitempty" json:"lsid,omitempty"`
+//	Ns                       Namespace           `yaml:"ns,omitempty" mapstructure:"ns,omitempty" json:"ns,omitempty"`
+//	TxnNumber                int64               `bson:"txnNumber,omitempty" mapstructure:"txnNumber,omitempty" json:"txnNumber,omitempty"`
+//	WallTime                 primitive.DateTime  `bson:"wall-time,omitempty" mapstructure:"wall-time,omitempty" json:"wall-time,omitempty"`
+//}
+//
+//func (e *UpdateEvent) String() string {
+//	const semLogContext = "update-event::string"
+//
+//	b, err := json.Marshal(e)
+//	if err != nil {
+//		log.Error().Err(err).Msg(semLogContext)
+//		return ""
+//	}
+//
+//	return string(b)
+//}
+//
+//func (e *UpdateEvent) IsZero() bool {
+//	return e.OpType == ""
+//}
 
-func (e *UpdateEvent) String() string {
-	const semLogContext = "update-event::string"
-
-	b, err := json.Marshal(e)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return ""
-	}
-
-	return string(b)
-}
-
-func (e *UpdateEvent) IsZero() bool {
-	return e.OpType == ""
-}
-
-func parseUpdateOperationType(tok checkpoint.ResumeToken, m bson.M) (*UpdateEvent, error) {
+func parseUpdateOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent, error) {
 	const semLogContext = "update-event::parse"
 
 	var err error
-	e := &UpdateEvent{
-		changeEventImpl: changeEventImpl{t: tok},
-		OpType:          OperationTypeUpdate,
+	e := ChangeEvent{
+		t:      tok,
+		OpType: OperationTypeUpdate,
 	}
 
 	id, err := getDocument(m, "_id", true)

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
-	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -17,25 +16,6 @@ const (
 )
 
 var UnsupportedOperationType = errors.New("unsupported operation type")
-
-type EventId struct {
-	Data string `yaml:"_data,omitempty" mapstructure:"_data,omitempty" json:"_data,omitempty"`
-}
-
-type ChangeEvent interface {
-	ResumeToken() checkpoint.ResumeToken
-	String() string
-	IsZero() bool
-}
-
-type changeEventImpl struct {
-	t    checkpoint.ResumeToken
-	Span opentracing.Span
-}
-
-func (ce *changeEventImpl) ResumeToken() checkpoint.ResumeToken {
-	return ce.t
-}
 
 func ParseEvent(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent, error) {
 	const semLogContext = "event-factory::parse-event"
@@ -52,7 +32,7 @@ func ParseEvent(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent, error) {
 	opType, err := getString(m, "operationType", true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return nil, err
+		return ChangeEvent{}, err
 	}
 
 	var evt ChangeEvent
