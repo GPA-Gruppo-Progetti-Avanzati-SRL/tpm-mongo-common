@@ -13,9 +13,9 @@ type EventId struct {
 }
 
 type ChangeEvent struct {
-	t    checkpoint.ResumeToken
-	Span opentracing.Span
-
+	t                        checkpoint.ResumeToken
+	Span                     opentracing.Span
+	Headers                  map[string]string   `yaml:"headers,omitempty" mapstructure:"headers,omitempty" json:"headers,omitempty"`
 	OpType                   string              `yaml:"operationType,omitempty" mapstructure:"operationType,omitempty" json:"operationType,omitempty"`
 	Id                       EventId             `yaml:"_id,omitempty" mapstructure:"_id,omitempty" json:"_id,omitempty"`
 	ClusterTime              primitive.Timestamp `yaml:"clusterTime,omitempty" mapstructure:"clusterTime,omitempty" json:"clusterTime,omitempty"`
