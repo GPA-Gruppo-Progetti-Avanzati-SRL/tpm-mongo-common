@@ -154,6 +154,8 @@ func TestConsumer(t *testing.T) {
 			require.NoError(t, err)
 			if evt != nil {
 				t.Log((*evt).String())
+				err = c.Commit()
+				require.NoError(t, err)
 			}
 		}
 	}

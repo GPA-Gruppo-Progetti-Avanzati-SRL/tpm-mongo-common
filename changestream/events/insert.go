@@ -42,8 +42,8 @@ func parseInsertOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent
 
 	var err error
 	e := ChangeEvent{
-		t:      tok,
-		OpType: OperationTypeInsert,
+		ResumeTok: tok,
+		OpType:    OperationTypeInsert,
 	}
 
 	id, err := getDocument(m, "_id", true)

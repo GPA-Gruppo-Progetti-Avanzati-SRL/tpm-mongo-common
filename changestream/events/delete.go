@@ -42,8 +42,8 @@ func parseDeleteOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent
 
 	var err error
 	e := ChangeEvent{
-		t:      tok,
-		OpType: OperationTypeDelete,
+		ResumeTok: tok,
+		OpType:    OperationTypeDelete,
 	}
 
 	id, err := getDocument(m, "_id", true)

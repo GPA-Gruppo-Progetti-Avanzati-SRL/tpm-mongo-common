@@ -44,8 +44,8 @@ func parseUpdateOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent
 
 	var err error
 	e := ChangeEvent{
-		t:      tok,
-		OpType: OperationTypeUpdate,
+		ResumeTok: tok,
+		OpType:    OperationTypeUpdate,
 	}
 
 	id, err := getDocument(m, "_id", true)

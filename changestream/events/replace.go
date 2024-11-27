@@ -43,8 +43,8 @@ func parseReplaceOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEven
 
 	var err error
 	e := ChangeEvent{
-		t:      tok,
-		OpType: OperationTypeReplace,
+		ResumeTok: tok,
+		OpType:    OperationTypeReplace,
 	}
 
 	id, err := getDocument(m, "_id", true)
