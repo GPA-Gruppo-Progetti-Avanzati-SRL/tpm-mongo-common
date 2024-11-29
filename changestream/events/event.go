@@ -2,10 +2,12 @@ package events
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
 type EventId struct {
@@ -40,4 +42,25 @@ func (e *ChangeEvent) String() string {
 	}
 
 	return string(b)
+}
+
+func (e *ChangeEvent) DocumentKeyAsString() string {
+	var docKey string
+	if e.DocumentKey != nil {
+		if k, ok := e.DocumentKey["_id"]; ok {
+			switch tk := k.(type) {
+			case primitive.ObjectID:
+				docKey = tk.String()
+			default:
+				docKey = fmt.Sprint(tk)
+			}
+		}
+	}
+
+	return docKey
+}
+
+func (e *ChangeEvent) ClusterTimeAsString() string {
+	tm := time.Unix(int64(e.ClusterTime.T), 0)
+	return fmt.Sprintf("%s/%d", tm.Format(time.RFC3339), e.ClusterTime.I)
 }
