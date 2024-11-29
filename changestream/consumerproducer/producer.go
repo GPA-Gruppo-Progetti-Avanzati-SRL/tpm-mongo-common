@@ -180,7 +180,8 @@ func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
 	}
 
 	_ = tp.produceMetric(nil, MetricMessages, 1, tp.metricLabels)
-	err = tp.consumer.Commit()
+	// should not commit at this stage
+	// err = tp.consumer.Commit()
 
 	return err
 }
@@ -207,6 +208,8 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 			metricGroup = tp.produceMetric(metricGroup, MetricBatchSize, float64(batchSize), tp.metricLabels)
 			metricGroup = tp.produceMetric(metricGroup, MetricBatchDuration, time.Since(beginOfProcessing).Seconds(), tp.metricLabels)
 		}
+
+		err = tp.consumer.Commit()
 	}
 
 	return err
