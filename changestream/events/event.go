@@ -50,7 +50,7 @@ func (e *ChangeEvent) DocumentKeyAsString() string {
 		if k, ok := e.DocumentKey["_id"]; ok {
 			switch tk := k.(type) {
 			case primitive.ObjectID:
-				docKey = tk.String()
+				docKey = tk.Hex()
 			default:
 				docKey = fmt.Sprint(tk)
 			}
