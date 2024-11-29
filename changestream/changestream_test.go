@@ -73,7 +73,7 @@ var yamlCheckPointSvcConfig = []byte(`
 # mongo, file
 type: mongo
 file-name: resume-token-checkpoint.json
-tick-interval: 10
+stride: 10
 mongo-db-instance: default
 mongo-db-collection-id: checkpoint-collection
 `)

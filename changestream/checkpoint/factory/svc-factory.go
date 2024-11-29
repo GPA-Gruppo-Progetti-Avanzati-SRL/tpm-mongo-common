@@ -16,7 +16,7 @@ const (
 type Config struct {
 	Typ               string `yaml:"type,omitempty" mapstructure:"type,omitempty" json:"type,omitempty"`
 	Fn                string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
-	TickInterval      int    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
+	Stride            int    `yaml:"stride,omitempty" mapstructure:"stride,omitempty" json:"stride,omitempty"`
 	MongoInstance     string `yaml:"mongo-db-instance,omitempty" mapstructure:"mongo-db-instance,omitempty" json:"mongo-db-instance,omitempty"`
 	MongoCollectionId string `yaml:"mongo-db-collection-id,omitempty" mapstructure:"mongo-db-collection-id,omitempty" json:"mongo-db-collection-id,omitempty"`
 }
@@ -31,12 +31,12 @@ func NewCheckPointSvc(config Config) (checkpoint.ResumeTokenCheckpointSvc, error
 		svc, err = mdb.NewCheckpointSvc(mdb.CheckpointSvcConfig{
 			Instance:     config.MongoInstance,
 			CollectionId: config.MongoCollectionId,
-			TickInterval: config.TickInterval,
+			Stride:       config.Stride,
 		})
 	case SvcProviderFile:
 		svc = file.NewCheckpointSvc(file.CheckpointSvcConfig{
-			Fn:           config.Fn,
-			TickInterval: config.TickInterval,
+			Fn:     config.Fn,
+			Stride: config.Stride,
 		})
 	default:
 		err = fmt.Errorf("unknown checkpoint service type: %s", config.Typ)

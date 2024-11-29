@@ -14,7 +14,7 @@ import (
 type CheckpointSvcConfig struct {
 	Instance     string `yaml:"instance,omitempty" mapstructure:"instance,omitempty" json:"instance,omitempty"`
 	CollectionId string `yaml:"collection-id,omitempty" mapstructure:"collection-id,omitempty" json:"collection-id,omitempty"`
-	TickInterval int    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
+	Stride       int    `yaml:"stride,omitempty" mapstructure:"stride,omitempty" json:"stride,omitempty"`
 }
 
 type CheckpointSvc struct {
@@ -73,7 +73,7 @@ func (f *CheckpointSvc) Store(tokenId string, token checkpoint.ResumeToken) erro
 		doSave = true
 		f.NumberOfTicks = 0
 	} else {
-		if (f.NumberOfTicks + 1) >= f.cfg.TickInterval {
+		if (f.NumberOfTicks + 1) >= f.cfg.Stride {
 			doSave = true
 		}
 	}

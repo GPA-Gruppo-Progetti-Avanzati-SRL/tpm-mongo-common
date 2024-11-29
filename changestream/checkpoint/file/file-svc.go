@@ -20,8 +20,8 @@ type Document struct {
 }
 
 type CheckpointSvcConfig struct {
-	Fn           string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
-	TickInterval int    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
+	Fn     string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
+	Stride int    `yaml:"stride,omitempty" mapstructure:"stride,omitempty" json:"stride,omitempty"`
 }
 
 type CheckpointSvc struct {
@@ -76,7 +76,7 @@ func (f *CheckpointSvc) Store(watcherId string, token checkpoint.ResumeToken) er
 		doSave = true
 		f.NumberOfTicks = 0
 	} else {
-		if (f.NumberOfTicks + 1) >= f.cfg.TickInterval {
+		if (f.NumberOfTicks + 1) >= f.cfg.Stride {
 			doSave = true
 		}
 	}
