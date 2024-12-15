@@ -46,7 +46,7 @@ func (s *server) Add(tp ConsumerProducer) {
 	s.numberOfActiveProducers++
 }
 
-func (s *server) Start() {
+func (s *server) Start() error {
 	const semLogContext = "change-stream-cp-srv::start"
 
 	var startDelay time.Duration
@@ -66,9 +66,11 @@ func (s *server) Start() {
 		err := tp1.Start()
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext + " on worker not started.... server shutting down")
-			s.quitc <- errors.New("tprod-server shutting down")
+			return err
 		}
 	}
+
+	return nil
 }
 
 func (s *server) ConsumerProducerTerminated(err error) {

@@ -15,7 +15,7 @@ type ConsumerProducer interface {
 
 type Server interface {
 	Close()
-	Start()
+	Start() error
 	ConsumerProducerTerminated(err error)
 }
 
