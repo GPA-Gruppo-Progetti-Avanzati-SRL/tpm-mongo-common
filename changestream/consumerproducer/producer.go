@@ -2,6 +2,7 @@ package consumerproducer
 
 import (
 	"context"
+	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
@@ -105,6 +106,11 @@ func (tp *producerImpl) Close() error {
 func (tp *producerImpl) pollLoop() {
 	const semLogContext = "change-stream-cp::poll-loop"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Float64("tick-interval", tp.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting polling loop")
+
+	if tp.consumer == nil {
+		tp.shutDown(errors.New("consumer not initialized"))
+		return
+	}
 
 	ticker := time.NewTicker(tp.cfg.TickInterval)
 
