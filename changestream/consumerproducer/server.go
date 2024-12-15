@@ -63,7 +63,11 @@ func (s *server) Start() {
 		}
 
 		tp1 := tp
-		go tp1.Start()
+		err := tp1.Start()
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext + " on worker not started.... server shutting down")
+			s.quitc <- errors.New("tprod-server shutting down")
+		}
 	}
 }
 
