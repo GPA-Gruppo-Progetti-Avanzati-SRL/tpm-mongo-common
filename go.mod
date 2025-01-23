@@ -3,7 +3,7 @@ module github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
 go 1.21
 
 require (
-	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.71
+	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.72
 	github.com/feliixx/mongoextjson v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/rs/zerolog v1.33.0

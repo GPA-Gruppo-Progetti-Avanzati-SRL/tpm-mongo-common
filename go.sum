@@ -1,5 +1,5 @@
-github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.71 h1:1tnpVWHosJecMFfAurZoN9iuuBqCFkUFwPkGxioYIDk=
-github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.71/go.mod h1:vnI1W77dpctWxMspokeoSVbGAOaU66mKfnCOyyoEYWQ=
+github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.72 h1:TBo67VWhi7FxD51897iDcJ7h6bqr20evmFT8XuIenFE=
+github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.72/go.mod h1:vnI1W77dpctWxMspokeoSVbGAOaU66mKfnCOyyoEYWQ=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
