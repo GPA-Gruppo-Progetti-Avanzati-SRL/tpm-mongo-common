@@ -130,7 +130,7 @@ func Aggregate(lks *mongolks.LinkedService, collectionId string, pipeline []byte
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	statementQuery, err := util.UnmarshalJson2ArrayOfBsonD(pipeline)
+	statementQuery, err := util.UnmarshalJson2ArrayOfBsonD(pipeline, true)
 	if err != nil {
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}

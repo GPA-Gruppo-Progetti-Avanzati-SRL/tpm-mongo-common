@@ -108,7 +108,7 @@ func InsertOne(lks *mongolks.LinkedService, collectionId string, document []byte
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	opDocument, err := util.UnmarshalJson2BsonD(document)
+	opDocument, err := util.UnmarshalJson2BsonD(document, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
@@ -141,7 +141,7 @@ func InsertOne(lks *mongolks.LinkedService, collectionId string, document []byte
 func (op *InsertOneOperation) NewWriteModel() (mongo.WriteModel, error) {
 	const semLogContext = "json-ops::new-insert-one-model"
 
-	statementDocument, err := util.UnmarshalJson2BsonD(op.Document)
+	statementDocument, err := util.UnmarshalJson2BsonD(op.Document, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

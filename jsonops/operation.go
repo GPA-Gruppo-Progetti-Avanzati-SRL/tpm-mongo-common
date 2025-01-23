@@ -12,14 +12,15 @@ type MongoJsonOperationType string
 type MongoJsonOperationStatementPart string
 
 const (
-	FindOneOperationType      MongoJsonOperationType = "find-one"
-	ReplaceOneOperationType   MongoJsonOperationType = "replace-one"
-	AggregateOneOperationType MongoJsonOperationType = "aggregate-one"
-	UpdateOneOperationType    MongoJsonOperationType = "update-one"
-	DeleteOneOperationType    MongoJsonOperationType = "delete-one"
-	InsertOneOperationType    MongoJsonOperationType = "insert-one"
-	UpdateManyOperationType   MongoJsonOperationType = "update-many"
-	DeleteManyOperationType   MongoJsonOperationType = "delete-many"
+	FindOneOperationType          MongoJsonOperationType = "find-one"
+	FindOneAndUpdateOperationType MongoJsonOperationType = "find-one-and-update"
+	ReplaceOneOperationType       MongoJsonOperationType = "replace-one"
+	AggregateOneOperationType     MongoJsonOperationType = "aggregate-one"
+	UpdateOneOperationType        MongoJsonOperationType = "update-one"
+	DeleteOneOperationType        MongoJsonOperationType = "delete-one"
+	InsertOneOperationType        MongoJsonOperationType = "insert-one"
+	UpdateManyOperationType       MongoJsonOperationType = "update-many"
+	DeleteManyOperationType       MongoJsonOperationType = "delete-many"
 )
 
 type Operation interface {
@@ -37,6 +38,8 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 	switch opType {
 	case FindOneOperationType:
 		op, err = NewFindOneOperation(m)
+	case FindOneAndUpdateOperationType:
+		op, err = NewFindOneAndUpdateOperation(m)
 	case ReplaceOneOperationType:
 		op, err = NewReplaceOneOperation(m)
 	case UpdateOneOperationType:

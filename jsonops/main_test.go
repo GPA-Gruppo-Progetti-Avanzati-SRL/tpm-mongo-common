@@ -2,6 +2,8 @@ package jsonops_test
 
 import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"os"
 	"testing"
 )
@@ -49,6 +51,8 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	exitVal := m.Run()
 	os.Exit(exitVal)
 }

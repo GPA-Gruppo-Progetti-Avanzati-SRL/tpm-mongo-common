@@ -25,14 +25,14 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, sort [
 		return http.StatusInternalServerError, nil, err
 	}
 
-	statementQuery, err := util.UnmarshalJson2BsonD(query)
+	statementQuery, err := util.UnmarshalJson2BsonD(query, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err
 	}
 
 	fo := options.FindOptions{}
-	srt, err := util.UnmarshalJson2BsonD(sort)
+	srt, err := util.UnmarshalJson2BsonD(sort, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err
@@ -42,7 +42,7 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, sort [
 		fo.SetSort(srt)
 	}
 
-	prj, err := util.UnmarshalJson2BsonD(projection)
+	prj, err := util.UnmarshalJson2BsonD(projection, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return http.StatusInternalServerError, nil, err

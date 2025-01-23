@@ -105,11 +105,14 @@ func DeleteMany(lks *mongolks.LinkedService, collectionId string, filter []byte,
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	opFilter, err := util.UnmarshalJson2BsonD(filter)
+	opFilter, err := util.UnmarshalJson2BsonD(filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
+	//if opFilter == nil {
+	//	opFilter = bson.D{}
+	//}
 
 	uo := options.DeleteOptions{}
 	if len(opts) > 0 {
@@ -138,7 +141,7 @@ func DeleteMany(lks *mongolks.LinkedService, collectionId string, filter []byte,
 func (op *DeleteManyOperation) NewWriteModel() (mongo.WriteModel, error) {
 	const semLogContext = "json-ops::new-delete-one-model"
 
-	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter)
+	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

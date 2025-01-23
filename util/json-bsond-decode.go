@@ -37,15 +37,15 @@ func jsonIsBsonDOrBsonA(json string) string {
 	return res
 }
 
-func UnmarshalJson2Bson(b []byte) (any, error) {
+func UnmarshalJson2Bson(b []byte, createIfEmpty bool) (any, error) {
 	var res interface{}
 	var err error
 
 	switch jsonIsBsonDOrBsonA(string(b)) {
 	case jsonIsBsonD:
-		res, err = UnmarshalJson2BsonD(b)
+		res, err = UnmarshalJson2BsonD(b, createIfEmpty)
 	case jsonIsBsonA:
-		res, err = UnmarshalJson2ArrayOfBsonD(b)
+		res, err = UnmarshalJson2ArrayOfBsonD(b, createIfEmpty)
 	default:
 		err = errors.New("cannot determine if json is a map or array")
 	}
@@ -56,22 +56,28 @@ func UnmarshalJson2Bson(b []byte) (any, error) {
 	return res, err
 }
 
-func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
+func UnmarshalJson2BsonD(b []byte, createIfEmpty bool) (bson.D, error) {
 	const semLogContext = "mongo-json-util::unmarshal-json-2-bson-d"
+	var err error
 
 	o := New()
 
 	if len(b) == 0 {
+		if createIfEmpty {
+			return bson.D{}, nil
+		}
 		return nil, nil
 	}
 
-	doc := bson.M{}
-	err := json.Unmarshal(b, &doc)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		log.Error().Str("json", string(b)).Msg(semLogContext)
-		return nil, err
-	}
+	/*
+		doc := bson.M{}
+		err := json.Unmarshal(b, &doc)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			log.Error().Str("json", string(b)).Msg(semLogContext)
+			return nil, err
+		}
+	*/
 
 	err = json.Unmarshal(b, &o)
 	// err := json.Unmarshal(b, &o)
@@ -88,16 +94,24 @@ func UnmarshalJson2BsonD(b []byte) (bson.D, error) {
 		return nil, err
 	}
 
+	if d == nil && createIfEmpty {
+		return bson.D{}, nil
+	}
+
 	return d, nil
 }
 
-func UnmarshalJson2ArrayOfBsonD(b []byte) ([]bson.D, error) {
+func UnmarshalJson2ArrayOfBsonD(b []byte, createIfEmpty bool) ([]bson.D, error) {
 	const semLogContext = "mongo-json-util::unmarshal-json-2-bson-d-array"
 	var err error
 
 	if len(b) == 0 {
+		if createIfEmpty {
+			return []bson.D{}, nil
+		}
 		return nil, nil
 	}
+
 	var omaps []OrderedMap
 	err = json.Unmarshal(b, &omaps)
 	if err != nil {
@@ -115,6 +129,10 @@ func UnmarshalJson2ArrayOfBsonD(b []byte) ([]bson.D, error) {
 		}
 
 		resp = append(resp, d)
+	}
+
+	if resp == nil && createIfEmpty {
+		return []bson.D{}, nil
 	}
 
 	return resp, nil

@@ -16,31 +16,33 @@ import (
 )
 
 const (
-	MongoActivityFindOneOpProperty         MongoJsonOperationStatementPart = "$op"
-	MongoActivityFindOneQueryProperty      MongoJsonOperationStatementPart = "$query"
-	MongoActivityFindOneSortProperty       MongoJsonOperationStatementPart = "$sort"
-	MongoActivityFindOneProjectionProperty MongoJsonOperationStatementPart = "$projection"
-	MongoActivityFindOneOptsProperty       MongoJsonOperationStatementPart = "$opts"
+	MongoActivityFindOneAndUpdateOpProperty         MongoJsonOperationStatementPart = "$op"
+	MongoActivityFindOneAndUpdateQueryProperty      MongoJsonOperationStatementPart = "$query"
+	MongoActivityFindOneAndUpdateUpdateProperty     MongoJsonOperationStatementPart = "$update"
+	MongoActivityFindOneAndUpdateSortProperty       MongoJsonOperationStatementPart = "$sort"
+	MongoActivityFindOneAndUpdateProjectionProperty MongoJsonOperationStatementPart = "$projection"
+	MongoActivityFindOneAndUpdateOptsProperty       MongoJsonOperationStatementPart = "$opts"
 )
 
-type FindOneOperation struct {
+type FindOneAndUpdateOperation struct {
 	Query      []byte `yaml:"query,omitempty" json:"query,omitempty" mapstructure:"query,omitempty"`
 	Sort       []byte `yaml:"sort,omitempty" json:"sort,omitempty" mapstructure:"sort,omitempty"`
 	Projection []byte `yaml:"projection,omitempty" json:"projection,omitempty" mapstructure:"projection,omitempty"`
+	Update     []byte `yaml:"update,omitempty" json:"update,omitempty" mapstructure:"update,omitempty"`
 	Options    []byte `yaml:"options,omitempty" json:"options,omitempty" mapstructure:"options,omitempty"`
 }
 
-func (op *FindOneOperation) OpType() MongoJsonOperationType {
-	return FindOneOperationType
+func (op *FindOneAndUpdateOperation) OpType() MongoJsonOperationType {
+	return FindOneAndUpdateOperationType
 }
 
-func (op *FindOneOperation) ToString() string {
+func (op *FindOneAndUpdateOperation) ToString() string {
 	var sb strings.Builder
 	numberOfElements := 0
 	sb.WriteString("{")
 	if len(op.Query) > 0 {
 		numberOfElements++
-		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneQueryProperty))
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneAndUpdateQueryProperty))
 		sb.WriteString(string(op.Query))
 	}
 	if len(op.Sort) > 0 {
@@ -48,7 +50,7 @@ func (op *FindOneOperation) ToString() string {
 			sb.WriteString(",")
 		}
 		numberOfElements++
-		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneSortProperty))
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneAndUpdateSortProperty))
 		sb.WriteString(string(op.Sort))
 	}
 	if len(op.Projection) > 0 {
@@ -56,15 +58,23 @@ func (op *FindOneOperation) ToString() string {
 			sb.WriteString(",")
 		}
 		numberOfElements++
-		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneProjectionProperty))
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneAndUpdateProjectionProperty))
 		sb.WriteString(string(op.Projection))
+	}
+	if len(op.Update) > 0 {
+		if numberOfElements > 0 {
+			sb.WriteString(",")
+		}
+		numberOfElements++
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneAndUpdateUpdateProperty))
+		sb.WriteString(string(op.Update))
 	}
 	if len(op.Options) > 0 {
 		if numberOfElements > 0 {
 			sb.WriteString(",")
 		}
 		numberOfElements++
-		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneOptsProperty))
+		sb.WriteString(fmt.Sprintf("\"%s\": ", MongoActivityFindOneAndUpdateOptsProperty))
 		sb.WriteString(string(op.Options))
 	}
 
@@ -72,60 +82,65 @@ func (op *FindOneOperation) ToString() string {
 	return sb.String()
 }
 
-func NewFindOneOperation(m map[MongoJsonOperationStatementPart][]byte) (*FindOneOperation, error) {
-	foStmt, err := NewFindOneStatementConfigFromJson(m[MongoActivityFindOneOpProperty])
+func NewFindOneAndUpdateOperation(m map[MongoJsonOperationStatementPart][]byte) (*FindOneAndUpdateOperation, error) {
+	foStmt, err := NewFindOneAndUpdateStatementConfigFromJson(m[MongoActivityFindOneAndUpdateOpProperty])
 	if err != nil {
 		return nil, err
 	}
 
-	if data, ok := m[MongoActivityFindOneQueryProperty]; ok {
+	if data, ok := m[MongoActivityFindOneAndUpdateQueryProperty]; ok {
 		foStmt.Query = data
 	}
 
-	if data, ok := m[MongoActivityFindOneSortProperty]; ok {
+	if data, ok := m[MongoActivityFindOneAndUpdateSortProperty]; ok {
 		foStmt.Sort = data
 	}
 
-	if data, ok := m[MongoActivityFindOneProjectionProperty]; ok {
+	if data, ok := m[MongoActivityFindOneAndUpdateProjectionProperty]; ok {
 		foStmt.Projection = data
 	}
 
-	if data, ok := m[MongoActivityFindOneOptsProperty]; ok {
+	if data, ok := m[MongoActivityFindOneAndUpdateOptsProperty]; ok {
 		foStmt.Options = data
+	}
+
+	if data, ok := m[MongoActivityFindOneAndUpdateUpdateProperty]; ok {
+		foStmt.Update = data
 	}
 
 	return &foStmt, nil
 }
 
-func NewFindOneStatementConfigFromJson(data []byte) (FindOneOperation, error) {
+func NewFindOneAndUpdateStatementConfigFromJson(data []byte) (FindOneAndUpdateOperation, error) {
 
 	if len(data) == 0 {
-		return FindOneOperation{}, nil
+		return FindOneAndUpdateOperation{}, nil
 	}
 
 	var m map[MongoJsonOperationStatementPart]json.RawMessage
 	err := json.Unmarshal(data, &m)
 	if err != nil {
-		return FindOneOperation{}, err
+		return FindOneAndUpdateOperation{}, err
 	}
 
-	fo := FindOneOperation{
-		Query:      m[MongoActivityFindOneQueryProperty],
-		Sort:       m[MongoActivityFindOneSortProperty],
-		Projection: m[MongoActivityFindOneProjectionProperty],
-		Options:    m[MongoActivityFindOneOptsProperty],
+	fo := FindOneAndUpdateOperation{
+		Query:      m[MongoActivityFindOneAndUpdateQueryProperty],
+		Sort:       m[MongoActivityFindOneAndUpdateSortProperty],
+		Projection: m[MongoActivityFindOneAndUpdateProjectionProperty],
+		Options:    m[MongoActivityFindOneAndUpdateOptsProperty],
+		Update:     m[MongoActivityFindOneAndUpdateUpdateProperty],
 	}
 
 	return fo, nil
 }
 
-func (op *FindOneOperation) Execute(lks *mongolks.LinkedService, collectionId string) (OperationResult, []byte, error) {
-	sc, resp, err := FindOne(lks, collectionId, op.Query, op.Projection, op.Sort, op.Options)
+func (op *FindOneAndUpdateOperation) Execute(lks *mongolks.LinkedService, collectionId string) (OperationResult, []byte, error) {
+	sc, resp, err := FindOneAndUpdate(lks, collectionId, op.Query, op.Projection, op.Sort, op.Update, op.Options)
 	return sc, resp, err
 }
 
-func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, sort []byte, opts []byte) (OperationResult, []byte, error) {
-	const semLogContext = "json-ops::find-one"
+func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, sort []byte, update []byte, opts []byte) (OperationResult, []byte, error) {
+	const semLogContext = "json-ops::find-one-and-update"
 	var err error
 
 	c := lks.GetCollection(collectionId, "")
@@ -141,7 +156,13 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	fo := options.FindOneOptions{}
+	statementUpdate, err := util.UnmarshalJson2Bson(update, true)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
+	}
+
+	fo := options.FindOneAndUpdateOptions{}
 	srt, err := util.UnmarshalJson2BsonD(sort, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -162,7 +183,7 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 		fo.SetProjection(prj)
 	}
 
-	sc, body, err := executeFindOneOp(c, statementQuery, &fo)
+	sc, body, err := executeFindOneAndUpdateOp(c, statementQuery, statementUpdate, &fo)
 	if err != nil {
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
@@ -180,10 +201,10 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 	return sc, nil, nil
 }
 
-func executeFindOneOp(c *mongo.Collection, query bson.D, fo *options.FindOneOptions) (OperationResult, bson.M, error) {
-	const semLogContext = "mongo-operation::execute-find-one-op"
+func executeFindOneAndUpdateOp(c *mongo.Collection, query bson.D, update any, fo *options.FindOneAndUpdateOptions) (OperationResult, bson.M, error) {
+	const semLogContext = "mongo-operation::execute-find-one-and-update-op"
 
-	result := c.FindOne(context.Background(), query, fo)
+	result := c.FindOneAndUpdate(context.Background(), query, update, fo)
 	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
 		return OperationResult{StatusCode: http.StatusNotFound}, nil, nil
 	}
@@ -203,6 +224,6 @@ func executeFindOneOp(c *mongo.Collection, query bson.D, fo *options.FindOneOpti
 	return OperationResult{StatusCode: http.StatusOK}, body, nil
 }
 
-func (op *FindOneOperation) NewWriteModel() (mongo.WriteModel, error) {
+func (op *FindOneAndUpdateOperation) NewWriteModel() (mongo.WriteModel, error) {
 	panic("new write model not supported in find operations")
 }

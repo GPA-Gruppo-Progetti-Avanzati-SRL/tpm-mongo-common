@@ -9,6 +9,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jsonops"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/feliixx/mongoextjson"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
@@ -17,24 +18,90 @@ import (
 	"time"
 )
 
-var findOneQueryTest = []byte(`{ "year": 1939 }`)
-var findOneProjectionTest = []byte(`{ "year": 1 }`)
-var findSortTest = []byte(`{ "title": 1 }`)
+var insertOneTestDocument1 = []byte(`{ "year": 2030, "title": "the 2030 movie", "summary": "the 2030 movie summary", "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
+var insertOneTestDocument2 = []byte(`{ "year": 1939, "title": "the 1939 1st movie", "summary": "the 1939 1st movie summary", "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
+var insertOneTestDocument3 = []byte(`{ "year": 1939, "title": "the 1939 2nd movie", "summary": "the 1939 2nd movie summary", "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
+var insertOneTestOpts = []byte(`{  }`)
 
-func TestFindOne(t *testing.T) {
+func TestAll(t *testing.T) {
+	TestDeleteAll(t)
+	TestInsertOne(t)
+	TestFindOne(t)
+	TestFindOneAndUpdate(t)
+	TestFind(t)
+	TestUpdateOne(t)
+	TestFind(t)
+	TestReplaceOne(t)
+	TestFind(t)
+	TestAggregateOne(t)
+	TestAggregate(t)
+	TestDeleteOne(t)
+	TestFind(t)
+}
+
+func TestInsertOne(t *testing.T) {
+	log.Info().Msg("test-insert-one")
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	sc, body, err := jsonops.FindOne(lks, CollectionId, findOneQueryTest, findOneProjectionTest, nil)
+	sc, resp, err := jsonops.InsertOne(lks, CollectionId, insertOneTestDocument1, insertOneTestOpts)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(resp))
+
+	sc, resp, err = jsonops.InsertOne(lks, CollectionId, insertOneTestDocument2, insertOneTestOpts)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(resp))
+
+	sc, resp, err = jsonops.InsertOne(lks, CollectionId, insertOneTestDocument3, insertOneTestOpts)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(resp))
+}
+
+var findOneQueryTest = []byte(`{ "year": 1939 }`)
+var findOneProjectionTest = []byte(`{ "year": 1, "summary": 1 }`)
+var findOneSortTest = []byte(`{ "title": 1 }`)
+
+func TestFindOne(t *testing.T) {
+	log.Info().Msg("test-find-one")
+	lks, err := mongolks.GetLinkedService(context.Background(), "default")
+	require.NoError(t, err)
+
+	sc, body, err := jsonops.FindOne(lks, CollectionId, findOneQueryTest, findOneProjectionTest, findOneSortTest, nil)
 	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
 }
 
-func TestFind(t *testing.T) {
+var findOneAndUpdateQueryTest = []byte(`{ "year": 1939 }`)
+var findOneAndUpdateProjectionTest = []byte(`{ "year": 1, "summary": 1 }`)
+var findOneAndUpdateSortAscTest = []byte(`{ "title": 1 }`)
+var findOneAndUpdateSortDescTest = []byte(`{ "title": -1 }`)
+var findOneAndUpdateUpdateWithArray = []byte(`[{ "$set": { "year": 1940, "find-one-and-update-mode-array": "done", "aggregate-field" : { "$cond": [ false, "condition is true", "condition is false" ] } }}]`)
+var findOneAndUpdateUpdateWithMap = []byte(`{ "$set": { "year": 1941, "find-one-and-update-update-mode-map": "done" }}`)
+
+func TestFindOneAndUpdate(t *testing.T) {
+	log.Info().Msg("test-find-one-and-update")
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	sc, items, err := jsonops.Find(lks, CollectionId, findOneQueryTest, findSortTest, findOneProjectionTest, nil)
+	sc, body, err := jsonops.FindOneAndUpdate(lks, CollectionId, findOneAndUpdateQueryTest, findOneAndUpdateProjectionTest, findOneAndUpdateSortAscTest, findOneAndUpdateUpdateWithArray, nil)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(body))
+
+	sc, body, err = jsonops.FindOneAndUpdate(lks, CollectionId, findOneAndUpdateQueryTest, findOneAndUpdateProjectionTest, findOneAndUpdateSortDescTest, findOneAndUpdateUpdateWithMap, nil)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(body))
+}
+
+var findQueryTest = []byte(`{}`)
+var findProjectionTest = []byte(`{}`)
+var findSortTest = []byte(`{ }`)
+
+func TestFind(t *testing.T) {
+	log.Info().Msg("test-find")
+	lks, err := mongolks.GetLinkedService(context.Background(), "default")
+	require.NoError(t, err)
+
+	sc, items, err := jsonops.Find(lks, CollectionId, findQueryTest, findSortTest, findProjectionTest, nil)
 	require.NoError(t, err)
 	t.Log("status code:", sc, len(items))
 	for i, el := range items {
@@ -45,6 +112,8 @@ func TestFind(t *testing.T) {
 var aggregateTest = []byte(`[{ "$match": { "year": 1939 }}, { "$project": { "year": 1, "title": 1 }}]`)
 
 func TestAggregateOne(t *testing.T) {
+	log.Info().Msg("test-aggregate-one")
+
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
@@ -54,6 +123,7 @@ func TestAggregateOne(t *testing.T) {
 }
 
 func TestAggregate(t *testing.T) {
+	log.Info().Msg("test-aggregate")
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
@@ -65,29 +135,34 @@ func TestAggregate(t *testing.T) {
 	}
 }
 
-var updateOneTestFilter = []byte(`{ "year": 1939 }`)
-var updateOneTestUpdateWithArray = []byte(`[{ "$set": { "year-new": 1939, "update-mode-array": "done", "aggregate-field" : { "$cond": [ false, "condition is true", "condition is false" ] } }}]`)
-var updateOneTestUpdateWithMap = []byte(`{ "$set": { "year-new": 1939, "update-mode-map": "done" }}`)
+var updateOneTestFilterWithArray = []byte(`{ "year": 1940 }`)
+var updateOneTestUpdateWithArray = []byte(`[{ "$set": { "year": 1942, "update-mode-array": "done", "aggregate-field" : { "$cond": [ false, "condition is true", "condition is false" ] } }}]`)
+var updateOneTestFilterWithMap = []byte(`{ "year": 1941 }`)
+var updateOneTestUpdateWithMap = []byte(`{ "$set": { "year": 1943, "update-mode-map": "done" }}`)
 var updateOneTestOpts = []byte(`{ "upsert": true }`)
 
 func TestUpdateOne(t *testing.T) {
+	log.Info().Msg("test-update-one")
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	sc, resp, err := jsonops.UpdateOne(lks, CollectionId, updateOneTestFilter, updateOneTestUpdateWithMap, updateOneTestOpts)
+	sc, resp, err := jsonops.UpdateOne(lks, CollectionId, updateOneTestFilterWithArray, updateOneTestUpdateWithArray, updateOneTestOpts)
 	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
 
-	sc, resp, err = jsonops.UpdateOne(lks, CollectionId, updateOneTestFilter, updateOneTestUpdateWithArray, updateOneTestOpts)
+	sc, resp, err = jsonops.UpdateOne(lks, CollectionId, updateOneTestFilterWithMap, updateOneTestUpdateWithMap, updateOneTestOpts)
 	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+
 }
 
-var replaceOneTestFilter = []byte(`{ "year": 1939 }`)
-var replaceOneTestReplacement = []byte(`{ "year": 1939, "year-new": 1939, "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
+var replaceOneTestFilter = []byte(`{ "year": 1943 }`)
+var replaceOneTestReplacement = []byte(`{ "year": 1939, "update-mode-map": "done", "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
 var replaceOneTestOpts = []byte(`{ "upsert": true }`)
 
 func TestReplaceOne(t *testing.T) {
+	log.Info().Msg("test-replace-one")
+
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
@@ -96,10 +171,11 @@ func TestReplaceOne(t *testing.T) {
 	t.Log("status code:", sc, string(resp))
 }
 
-var deleteOneTestFilter = []byte(`{ "year": 1939 }`)
+var deleteOneTestFilter = []byte(`{ "year": 1942 }`)
 var deleteOneTestOpts = []byte(`{}`)
 
 func TestDeleteOne(t *testing.T) {
+	log.Info().Msg("test-delete-one")
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
@@ -108,14 +184,15 @@ func TestDeleteOne(t *testing.T) {
 	t.Log("status code:", sc, string(resp))
 }
 
-var insertOneTestDocument = []byte(`{ "year": 2030, "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
-var insertOneTestOpts = []byte(`{  }`)
+var deleteAllTestFilter = []byte(`{}`)
+var deleteAllTestOpts = []byte(`{}`)
 
-func TestInsertOne(t *testing.T) {
+func TestDeleteAll(t *testing.T) {
+	log.Info().Msg("test-delete-all")
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	sc, resp, err := jsonops.InsertOne(lks, CollectionId, insertOneTestDocument, insertOneTestOpts)
+	sc, resp, err := jsonops.DeleteMany(lks, CollectionId, deleteAllTestFilter, deleteAllTestOpts)
 	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
 }

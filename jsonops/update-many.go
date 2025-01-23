@@ -119,13 +119,13 @@ func UpdateMany(lks *mongolks.LinkedService, collectionId string, filter []byte,
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	statementFilter, err := util.UnmarshalJson2BsonD(filter)
+	statementFilter, err := util.UnmarshalJson2BsonD(filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	statementUpdate, err := util.UnmarshalJson2Bson(update)
+	statementUpdate, err := util.UnmarshalJson2Bson(update, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
@@ -158,13 +158,13 @@ func UpdateMany(lks *mongolks.LinkedService, collectionId string, filter []byte,
 func (op *UpdateManyOperation) NewWriteModel() (mongo.WriteModel, error) {
 	const semLogContext = "json-ops::new-update-one-model"
 
-	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter)
+	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
 	}
 
-	statementUpdate, err := util.UnmarshalJson2Bson(op.Update)
+	statementUpdate, err := util.UnmarshalJson2Bson(op.Update, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

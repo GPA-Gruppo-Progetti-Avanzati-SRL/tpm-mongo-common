@@ -118,7 +118,7 @@ func (cfg *Config) Pipeline() (mongo.Pipeline, error) {
 		return mongo.Pipeline{}, nil
 	}
 
-	pl, err := util.UnmarshalJson2ArrayOfBsonD([]byte(cfg.ChangeStream.Pl))
+	pl, err := util.UnmarshalJson2ArrayOfBsonD([]byte(cfg.ChangeStream.Pl), true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return mongo.Pipeline{}, err

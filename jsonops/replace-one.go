@@ -119,13 +119,13 @@ func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte,
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	opFilter, err := util.UnmarshalJson2BsonD(filter)
+	opFilter, err := util.UnmarshalJson2BsonD(filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	opReplacement, err := util.UnmarshalJson2BsonD(replacement)
+	opReplacement, err := util.UnmarshalJson2BsonD(replacement, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
@@ -158,13 +158,13 @@ func ReplaceOne(lks *mongolks.LinkedService, collectionId string, filter []byte,
 func (op *ReplaceOneOperation) NewWriteModel() (mongo.WriteModel, error) {
 	const semLogContext = "json-ops::new-update-one-model"
 
-	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter)
+	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
 	}
 
-	statementReplacement, err := util.UnmarshalJson2BsonD(op.Replacement)
+	statementReplacement, err := util.UnmarshalJson2BsonD(op.Replacement, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

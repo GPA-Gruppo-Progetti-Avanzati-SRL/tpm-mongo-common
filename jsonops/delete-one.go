@@ -105,7 +105,7 @@ func DeleteOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	opFilter, err := util.UnmarshalJson2BsonD(filter)
+	opFilter, err := util.UnmarshalJson2BsonD(filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
@@ -138,7 +138,7 @@ func DeleteOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 func (op *DeleteOneOperation) NewWriteModel() (mongo.WriteModel, error) {
 	const semLogContext = "json-ops::new-delete-one-model"
 
-	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter)
+	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter, true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
