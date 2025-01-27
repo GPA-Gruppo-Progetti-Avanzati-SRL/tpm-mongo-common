@@ -78,6 +78,10 @@ var findOneAndUpdateSortDescTest = []byte(`{ "title": -1 }`)
 var findOneAndUpdateUpdateWithArray = []byte(`[{ "$set": { "year": 1940, "find-one-and-update-mode-array": "done", "aggregate-field" : { "$cond": [ false, "condition is true", "condition is false" ] } }}]`)
 var findOneAndUpdateUpdateWithMap = []byte(`{ "$set": { "year": 1941, "find-one-and-update-update-mode-map": "done" }}`)
 
+var findOneAndUpdateWithUpsertQueryTest = []byte(`{ "year": 2025 }`)
+var findOneAndUpdateWithUpsertUpdateWithMap = []byte(`{ "$set": { "year": 2025, "find-one-and-update-update-mode-map": "done" }}`)
+var findOneAndUpdateWithUpsertOptionsTest = []byte(`{ "upsert": true, "returnDocument": "before" }`)
+
 func TestFindOneAndUpdate(t *testing.T) {
 	log.Info().Msg("test-find-one-and-update")
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
@@ -88,6 +92,10 @@ func TestFindOneAndUpdate(t *testing.T) {
 	t.Log("status code:", sc, string(body))
 
 	sc, body, err = jsonops.FindOneAndUpdate(lks, CollectionId, findOneAndUpdateQueryTest, findOneAndUpdateProjectionTest, findOneAndUpdateSortDescTest, findOneAndUpdateUpdateWithMap, nil)
+	require.NoError(t, err)
+	t.Log("status code:", sc, string(body))
+
+	sc, body, err = jsonops.FindOneAndUpdate(lks, CollectionId, findOneAndUpdateWithUpsertQueryTest, nil, nil, findOneAndUpdateWithUpsertUpdateWithMap, findOneAndUpdateWithUpsertOptionsTest)
 	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
 }

@@ -139,6 +139,44 @@ func (op *FindOneAndUpdateOperation) Execute(lks *mongolks.LinkedService, collec
 	return sc, resp, err
 }
 
+func newFineOneAndUpdateOptions(opts []byte) (options.FindOneAndUpdateOptions, error) {
+	const semLogContext = "json-ops::new-find-one-and-update-options"
+	fo := options.FindOneAndUpdateOptions{}
+	if len(opts) > 0 {
+		var m map[string]interface{}
+		err := json.Unmarshal(opts, &m)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return fo, err
+		}
+
+		if upsert, ok := m["upsert"]; ok {
+			if b, ok := upsert.(bool); ok {
+				fo.SetUpsert(b)
+			} else {
+				err = errors.New("unrecognized upsert flag")
+				log.Error().Msg(semLogContext)
+			}
+		}
+
+		if rd, ok := m["returnDocument"]; ok {
+			if s, ok := rd.(string); ok {
+				switch s {
+				case "before":
+					fo.SetReturnDocument(options.Before)
+				case "after":
+					fo.SetReturnDocument(options.After)
+				default:
+					err = errors.New("unrecognized returnDocument")
+					log.Error().Err(err).Str("returnDocument", s).Msg(semLogContext)
+				}
+			}
+		}
+	}
+
+	return fo, nil
+}
+
 func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, sort []byte, update []byte, opts []byte) (OperationResult, []byte, error) {
 	const semLogContext = "json-ops::find-one-and-update"
 	var err error
@@ -162,7 +200,12 @@ func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	fo := options.FindOneAndUpdateOptions{}
+	fo, err := newFineOneAndUpdateOptions(opts)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
+	}
+
 	srt, err := util.UnmarshalJson2BsonD(sort, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -206,6 +249,9 @@ func executeFindOneAndUpdateOp(c *mongo.Collection, query bson.D, update any, fo
 
 	result := c.FindOneAndUpdate(context.Background(), query, update, fo)
 	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
+		if fo.Upsert != nil && *fo.Upsert {
+			return OperationResult{StatusCode: http.StatusNoContent}, nil, nil
+		}
 		return OperationResult{StatusCode: http.StatusNotFound}, nil, nil
 	}
 
