@@ -95,9 +95,12 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 			return nil, s.chgStream.Err()
 		}
 
-		fictitiousErr := errors.New("fictitious error")
-		log.Error().Err(fictitiousErr).Msg(semLogContext)
+		return nil, nil
+	}
 
+	fictitiousErr := errors.New("fictitious error")
+	log.Error().Err(fictitiousErr).Msg(semLogContext)
+	if fictitiousErr != nil {
 		return nil, fictitiousErr
 	}
 
