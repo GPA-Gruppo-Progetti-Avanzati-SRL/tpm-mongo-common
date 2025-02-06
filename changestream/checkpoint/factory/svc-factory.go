@@ -14,11 +14,12 @@ const (
 )
 
 type Config struct {
-	Typ               string `yaml:"type,omitempty" mapstructure:"type,omitempty" json:"type,omitempty"`
-	Fn                string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
-	Stride            int    `yaml:"stride,omitempty" mapstructure:"stride,omitempty" json:"stride,omitempty"`
-	MongoInstance     string `yaml:"mongo-db-instance,omitempty" mapstructure:"mongo-db-instance,omitempty" json:"mongo-db-instance,omitempty"`
-	MongoCollectionId string `yaml:"mongo-db-collection-id,omitempty" mapstructure:"mongo-db-collection-id,omitempty" json:"mongo-db-collection-id,omitempty"`
+	Typ                string `yaml:"type,omitempty" mapstructure:"type,omitempty" json:"type,omitempty"`
+	Fn                 string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
+	Stride             int    `yaml:"stride,omitempty" mapstructure:"stride,omitempty" json:"stride,omitempty"`
+	MongoInstance      string `yaml:"mongo-db-instance,omitempty" mapstructure:"mongo-db-instance,omitempty" json:"mongo-db-instance,omitempty"`
+	MongoCollectionId  string `yaml:"mongo-db-collection-id,omitempty" mapstructure:"mongo-db-collection-id,omitempty" json:"mongo-db-collection-id,omitempty"`
+	ClearOnHistoryLost bool   `yaml:"clear-on-history-lost,omitempty" mapstructure:"clear-on-history-lost,omitempty" json:"clear-on-history-lost,omitempty"`
 }
 
 func NewCheckPointSvc(config Config) (checkpoint.ResumeTokenCheckpointSvc, error) {
@@ -29,14 +30,16 @@ func NewCheckPointSvc(config Config) (checkpoint.ResumeTokenCheckpointSvc, error
 	switch config.Typ {
 	case SvcProviderMongo:
 		svc, err = mdb.NewCheckpointSvc(mdb.CheckpointSvcConfig{
-			Instance:     config.MongoInstance,
-			CollectionId: config.MongoCollectionId,
-			Stride:       config.Stride,
+			Instance:           config.MongoInstance,
+			CollectionId:       config.MongoCollectionId,
+			Stride:             config.Stride,
+			ClearOnHistoryLost: config.ClearOnHistoryLost,
 		})
 	case SvcProviderFile:
 		svc = file.NewCheckpointSvc(file.CheckpointSvcConfig{
-			Fn:     config.Fn,
-			Stride: config.Stride,
+			Fn:                 config.Fn,
+			Stride:             config.Stride,
+			ClearOnHistoryLost: config.ClearOnHistoryLost,
 		})
 	default:
 		err = fmt.Errorf("unknown checkpoint service type: %s", config.Typ)

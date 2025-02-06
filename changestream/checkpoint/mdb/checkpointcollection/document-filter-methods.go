@@ -151,5 +151,46 @@ func (ca *Criteria) AndResumeTokenIn(p []string) *Criteria {
 // @tpm-schematics:start-region("resume-token-field-filter-section")
 // @tpm-schematics:end-region("resume-token-field-filter-section")
 
+/*
+ * filter-string template: status
+ */
+
+// AndStatusEqTo No Remarks
+func (ca *Criteria) AndStatusEqTo(p string) *Criteria {
+
+	if p == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(StatusFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: p} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// AndStatusIsNullOrUnset No Remarks
+func (ca *Criteria) AndStatusIsNullOrUnset() *Criteria {
+
+	mName := fmt.Sprintf(StatusFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndStatusIn(p []string) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(StatusFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("status-field-filter-section")
+// @tpm-schematics:end-region("status-field-filter-section")
+
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

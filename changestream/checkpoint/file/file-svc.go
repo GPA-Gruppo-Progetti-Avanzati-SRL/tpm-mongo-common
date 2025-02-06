@@ -20,8 +20,9 @@ type Document struct {
 }
 
 type CheckpointSvcConfig struct {
-	Fn     string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
-	Stride int    `yaml:"stride,omitempty" mapstructure:"stride,omitempty" json:"stride,omitempty"`
+	Fn                 string `yaml:"file-name,omitempty" mapstructure:"file-name,omitempty" json:"file-name,omitempty"`
+	Stride             int    `yaml:"stride,omitempty" mapstructure:"stride,omitempty" json:"stride,omitempty"`
+	ClearOnHistoryLost bool   `yaml:"clear-on-history-lost,omitempty" mapstructure:"clear-on-history-lost,omitempty" json:"clear-on-history-lost,omitempty"`
 }
 
 type CheckpointSvc struct {
@@ -122,6 +123,21 @@ func (f *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) err
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
+	}
+
+	return nil
+}
+
+func (f *CheckpointSvc) Clear(watcherId string) error {
+	const semLogContext = "file-checkpoint::clear"
+	err := errors.New("clearing not implemented on file checkpoint svc")
+	log.Warn().Err(err).Msg(semLogContext)
+	return nil
+}
+
+func (f *CheckpointSvc) OnHistoryLost(watcherId string) error {
+	if f.cfg.ClearOnHistoryLost {
+		return f.Clear(watcherId)
 	}
 
 	return nil

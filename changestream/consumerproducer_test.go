@@ -44,7 +44,8 @@ func TestConsumerProducer(t *testing.T) {
 		[]consumerproducer.ConsumerProducer{cp},
 		nil)
 	require.NoError(t, err)
-	cps.Start()
+	err = cps.Start()
+	require.NoError(t, err)
 
 	log.Info().Msg(semLogContext + " wait 4 termination signal")
 	sig := <-shutdownChannel

@@ -91,18 +91,22 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		}
 
 		if s.chgStream.Err() != nil {
-			log.Error().Err(s.chgStream.Err()).Msg(semLogContext)
+			ec, en := util.MongoError(s.chgStream.Err())
+			log.Error().Err(s.chgStream.Err()).Int32("error-code", ec).Interface("error", en).Msg(semLogContext)
 			return nil, s.chgStream.Err()
 		}
 
 		return nil, nil
 	}
 
-	fictitiousErr := errors.New("fictitious error")
-	log.Error().Err(fictitiousErr).Msg(semLogContext)
-	if fictitiousErr != nil {
-		return nil, fictitiousErr
-	}
+	/*
+		    Errore fittizio generato per motivi di test
+			fictitiousErr := errors.New("fictitious error")
+			log.Error().Err(fictitiousErr).Msg(semLogContext)
+			if fictitiousErr != nil {
+				return nil, fictitiousErr
+			}
+	*/
 
 	var g *promutil.Group
 
@@ -171,7 +175,14 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 	collStream, err := coll.Watch(context.TODO(), pipeline, &opts)
 	for err != nil && counter < s.cfg.RetryCount {
 		mongoCode, _ := util.MongoError(err)
+		// TODO add logic to retry with the start after time depending on config
 		if mongoCode == util.MongoErrChangeStreamHistoryLost {
+			if s.cfg.checkPointSvc != nil {
+				errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
+				if errHl != nil {
+					log.Error().Err(errHl).Msg(semLogContext + " - history lost")
+				}
+			}
 			log.Error().Err(err).Msg(semLogContext + " - history lost")
 			return nil, err
 		}

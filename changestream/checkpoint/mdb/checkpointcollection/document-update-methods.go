@@ -33,6 +33,7 @@ type UnsetOptions struct {
 	At          UnsetMode
 	ShortToken  UnsetMode
 	TxnOpnIndex UnsetMode
+	Status      UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -78,6 +79,11 @@ func WithTxnOpnIndexUnsetMode(m UnsetMode) UnsetOption {
 		uopt.TxnOpnIndex = m
 	}
 }
+func WithStatusUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Status = m
+	}
+}
 
 type UpdateOption func(ud *UpdateDocument)
 type UpdateOptions []UpdateOption
@@ -110,6 +116,7 @@ func GetUpdateDocument(obj *Document, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnsetAt(obj.At, uo.ResolveUnsetMode(uo.At))
 	ud.setOrUnsetShort_token(obj.ShortToken, uo.ResolveUnsetMode(uo.ShortToken))
 	ud.setOrUnsetTxn_opn_index(obj.TxnOpnIndex, uo.ResolveUnsetMode(uo.TxnOpnIndex))
+	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
 
 	return ud
 }
@@ -389,6 +396,52 @@ func UpdateWithTxn_opn_index(p string) UpdateOption {
 
 // @tpm-schematics:start-region("txn-opn-index-field-update-section")
 // @tpm-schematics:end-region("txn-opn-index-field-update-section")
+
+// SetStatus No Remarks
+func (ud *UpdateDocument) SetStatus(p string) *UpdateDocument {
+	mName := fmt.Sprintf(StatusFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetStatus No Remarks
+func (ud *UpdateDocument) UnsetStatus() *UpdateDocument {
+	mName := fmt.Sprintf(StatusFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetStatus No Remarks
+func (ud *UpdateDocument) setOrUnsetStatus(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetStatus(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetStatus()
+		case SetData2Default:
+			ud.UnsetStatus()
+		}
+	}
+}
+
+func UpdateWithStatus(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetStatus(p)
+		} else {
+			ud.UnsetStatus()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("status-field-update-section")
+// @tpm-schematics:end-region("status-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

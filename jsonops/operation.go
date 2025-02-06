@@ -21,6 +21,7 @@ const (
 	InsertOneOperationType        MongoJsonOperationType = "insert-one"
 	UpdateManyOperationType       MongoJsonOperationType = "update-many"
 	DeleteManyOperationType       MongoJsonOperationType = "delete-many"
+	FindManyOperationType         MongoJsonOperationType = "find"
 )
 
 type Operation interface {
@@ -36,6 +37,8 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 	var err error
 
 	switch opType {
+	case FindManyOperationType:
+		op, err = NewFindOneOperation(m)
 	case FindOneOperationType:
 		op, err = NewFindOneOperation(m)
 	case FindOneAndUpdateOperationType:

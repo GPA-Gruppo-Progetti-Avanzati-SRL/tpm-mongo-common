@@ -14,8 +14,9 @@ checkpoint-svc:
   tick-interval: 10
   mongo-db-instance: default
   mongo-db-collection-id: checkpoint-collection
+  clear-on-history-lost: true
 consumer:
-  id: my-watcher
+  id: cdc-test-cp
   lks-name: default
   collection-id: watch-collection
   out-of-seq-error: true

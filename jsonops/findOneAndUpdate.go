@@ -139,7 +139,7 @@ func (op *FindOneAndUpdateOperation) Execute(lks *mongolks.LinkedService, collec
 	return sc, resp, err
 }
 
-func newFineOneAndUpdateOptions(opts []byte) (options.FindOneAndUpdateOptions, error) {
+func newFindOneAndUpdateOptions(opts []byte) (options.FindOneAndUpdateOptions, error) {
 	const semLogContext = "json-ops::new-find-one-and-update-options"
 	fo := options.FindOneAndUpdateOptions{}
 	if len(opts) > 0 {
@@ -200,7 +200,7 @@ func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	fo, err := newFineOneAndUpdateOptions(opts)
+	fo, err := newFindOneAndUpdateOptions(opts)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err

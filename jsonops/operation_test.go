@@ -109,12 +109,9 @@ func TestFind(t *testing.T) {
 	lks, err := mongolks.GetLinkedService(context.Background(), "default")
 	require.NoError(t, err)
 
-	sc, items, err := jsonops.Find(lks, CollectionId, findQueryTest, findSortTest, findProjectionTest, nil)
+	sc, body, err := jsonops.Find(lks, CollectionId, findQueryTest, findSortTest, findProjectionTest, nil)
 	require.NoError(t, err)
-	t.Log("status code:", sc, len(items))
-	for i, el := range items {
-		t.Log("item:", i, string(el))
-	}
+	t.Log("status code:", sc, string(body))
 }
 
 var aggregateTest = []byte(`[{ "$match": { "year": 1939 }}, { "$project": { "year": 1, "title": 1 }}]`)

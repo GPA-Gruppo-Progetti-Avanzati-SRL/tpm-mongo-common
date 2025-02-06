@@ -11,7 +11,7 @@ type EchoConsumerProducer struct {
 
 func (e *EchoConsumerProducer) ProcessMessage(evt *events.ChangeEvent) error {
 	const semLogContext = "echo-producer::process-message"
-	log.Trace().Interface("evt", evt).Msg(semLogContext)
+	log.Info().Interface("evt", evt).Msg(semLogContext)
 	return nil
 }
 
@@ -24,13 +24,13 @@ func (e *EchoConsumerProducer) AddMessage2Batch(evt *events.ChangeEvent) error {
 
 func (e *EchoConsumerProducer) ProcessBatch() error {
 	const semLogContext = "echo-producer::process-batch"
-	log.Trace().Msg(semLogContext)
+	log.Info().Msg(semLogContext)
 	return nil
 }
 
 func (e *EchoConsumerProducer) Clear() {
 	const semLogContext = "echo-producer::clear-batch"
-	log.Trace().Msg(semLogContext)
+	log.Info().Msg(semLogContext)
 	e.evts = nil
 }
 

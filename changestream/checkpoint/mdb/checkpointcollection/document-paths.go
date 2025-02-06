@@ -14,6 +14,7 @@ const (
 	AtFieldName          = "at"
 	ShortTokenFieldName  = "short_token"
 	TxnOpnIndexFieldName = "txn_opn_index"
+	StatusFieldName      = "status"
 )
 
 // @tpm-schematics:start-region("bottom-file-section")
