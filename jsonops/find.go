@@ -181,7 +181,10 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, projec
 		//}
 		var bb bytes.Buffer
 		bb.WriteString(`{ "to_array": [`)
-		for _, b := range body {
+		for i, b := range body {
+			if i > 0 {
+				bb.WriteString(",")
+			}
 			bb.Write(b)
 		}
 		bb.WriteString(`]}`)
