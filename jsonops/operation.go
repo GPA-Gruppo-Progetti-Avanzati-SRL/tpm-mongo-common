@@ -38,7 +38,7 @@ func NewOperation(opType MongoJsonOperationType, m map[MongoJsonOperationStateme
 
 	switch opType {
 	case FindManyOperationType:
-		op, err = NewFindOneOperation(m)
+		op, err = NewFindOperation(m)
 	case FindOneOperationType:
 		op, err = NewFindOneOperation(m)
 	case FindOneAndUpdateOperationType:
