@@ -27,6 +27,7 @@ type CheckpointSvcConfig struct {
 
 type CheckpointSvc struct {
 	cfg           CheckpointSvcConfig
+	LastCommitted checkpoint.ResumeToken
 	LastSaved     checkpoint.ResumeToken
 	NumberOfTicks int
 }
@@ -69,8 +70,27 @@ func (f *CheckpointSvc) Retrieve(watcherId string) (checkpoint.ResumeToken, erro
 	return token, nil
 }
 
+func (f *CheckpointSvc) Synch(watcherId string) error {
+	const semLogContext = "file-checkpoint::synch"
+
+	// level is warn since this is called in cases when you want to force the update of synchpoint in case of errors
+	if !f.LastCommitted.IsZero() {
+		log.Warn().Str("last-committed", f.LastCommitted.String()).Msg(semLogContext)
+		err := f.save(watcherId, f.LastCommitted)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (f *CheckpointSvc) Store(watcherId string, token checkpoint.ResumeToken) error {
 	var err error
+
+	// last committed contains the last token that's been stored or not.
+	f.LastCommitted = token
 
 	doSave := false
 	if f.NumberOfTicks < 0 {

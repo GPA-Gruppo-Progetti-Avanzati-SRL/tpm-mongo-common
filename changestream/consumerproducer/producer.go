@@ -163,6 +163,9 @@ func (tp *producerImpl) poll() (bool, error) {
 		err = tp.processMessage(ev)
 		if err == nil {
 			err = tp.consumer.Commit()
+		} else {
+			// the error is anyway logged but the one propagated is the prev one.
+			_ = tp.consumer.SynchPoint()
 		}
 	}
 

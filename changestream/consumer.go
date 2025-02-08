@@ -53,6 +53,24 @@ func (s *Consumer) Close() {
 	}
 }
 
+func (s *Consumer) SynchPoint() error {
+	const semLogContext = "consumer::synch-point"
+
+	if s.cfg.checkPointSvc == nil {
+		err := errors.New("no checkpoint service configured to honour commit op")
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	err := s.cfg.checkPointSvc.Synch(s.cfg.Id)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	return nil
+}
+
 func (s *Consumer) Commit() error {
 	const semLogContext = "consumer::commit"
 
