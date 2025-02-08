@@ -166,6 +166,7 @@ func (tp *producerImpl) poll() (bool, error) {
 			err = tp.consumer.Commit()
 		} else {
 			// the error is anyway logged but the one propagated is the prev one.
+			log.Warn().Msg(semLogContext + " synch on last committed message")
 			_ = tp.consumer.SynchPoint(checkpoint.ResumeToken{})
 		}
 	}
@@ -213,8 +214,10 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 		log.Error().Err(err).Msg(semLogContext)
 		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)
 		if !lastCommittableResumeToken.IsZero() {
-			log.Warn().Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
+			log.Warn().Str("rt", lastCommittableResumeToken.String()).Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
 			_ = tp.consumer.SynchPoint(lastCommittableResumeToken)
+		} else {
+			log.Warn().Msg(semLogContext + " no last committable resume token")
 		}
 	} else {
 		if batchSize > 0 {
