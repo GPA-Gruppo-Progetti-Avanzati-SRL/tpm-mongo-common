@@ -1,6 +1,7 @@
 package consumerproducer
 
 import (
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/rs/zerolog/log"
 )
@@ -22,10 +23,10 @@ func (e *EchoConsumerProducer) AddMessage2Batch(evt *events.ChangeEvent) error {
 	return nil
 }
 
-func (e *EchoConsumerProducer) ProcessBatch() error {
+func (e *EchoConsumerProducer) ProcessBatch() (checkpoint.ResumeToken, error) {
 	const semLogContext = "echo-producer::process-batch"
 	log.Info().Msg(semLogContext)
-	return nil
+	return checkpoint.ResumeToken{}, nil
 }
 
 func (e *EchoConsumerProducer) Clear() {

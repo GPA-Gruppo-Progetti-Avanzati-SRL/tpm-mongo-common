@@ -2,6 +2,7 @@ package consumerproducer
 
 import (
 	"errors"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/rs/zerolog/log"
 )
@@ -22,7 +23,7 @@ type Server interface {
 type Processor interface {
 	ProcessMessage(evt *events.ChangeEvent) error
 	AddMessage2Batch(evt *events.ChangeEvent) error
-	ProcessBatch() error
+	ProcessBatch() (checkpoint.ResumeToken, error)
 	Clear()
 	BatchSize() int
 }

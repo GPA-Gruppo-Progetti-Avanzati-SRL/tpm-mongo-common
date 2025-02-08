@@ -70,17 +70,24 @@ func (f *CheckpointSvc) Retrieve(watcherId string) (checkpoint.ResumeToken, erro
 	return token, nil
 }
 
-func (f *CheckpointSvc) Synch(watcherId string) error {
+func (f *CheckpointSvc) Synch(watcherId string, rt checkpoint.ResumeToken) error {
 	const semLogContext = "file-checkpoint::synch"
+	var err error
 
 	// level is warn since this is called in cases when you want to force the update of synchpoint in case of errors
-	if !f.LastCommitted.IsZero() {
-		log.Warn().Str("last-committed", f.LastCommitted.String()).Msg(semLogContext)
-		err := f.save(watcherId, f.LastCommitted)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return err
+	if !rt.IsZero() {
+		log.Warn().Str("rt", rt.String()).Msg(semLogContext + " synch on last-delivered")
+		err = f.save(watcherId, rt)
+	} else {
+		if !f.LastCommitted.IsZero() {
+			log.Warn().Str("rt", f.LastCommitted.String()).Msg(semLogContext + " synch on last-committed")
+			err = f.save(watcherId, f.LastCommitted)
 		}
+	}
+
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
 	}
 
 	return nil

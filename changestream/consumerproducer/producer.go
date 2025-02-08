@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/rs/zerolog/log"
@@ -165,7 +166,7 @@ func (tp *producerImpl) poll() (bool, error) {
 			err = tp.consumer.Commit()
 		} else {
 			// the error is anyway logged but the one propagated is the prev one.
-			_ = tp.consumer.SynchPoint()
+			_ = tp.consumer.SynchPoint(checkpoint.ResumeToken{})
 		}
 	}
 
@@ -207,10 +208,14 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 	beginOfProcessing := time.Now()
 	batchSize := tp.processor.BatchSize()
 
-	err := tp.processor.ProcessBatch()
+	lastCommittableResumeToken, err := tp.processor.ProcessBatch()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)
+		if !lastCommittableResumeToken.IsZero() {
+			log.Warn().Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
+			_ = tp.consumer.SynchPoint(lastCommittableResumeToken)
+		}
 	} else {
 		if batchSize > 0 {
 			metricGroup := tp.produceMetric(nil, MetricBatches, 1, tp.metricLabels)

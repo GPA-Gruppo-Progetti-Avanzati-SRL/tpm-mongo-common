@@ -53,7 +53,7 @@ func (s *Consumer) Close() {
 	}
 }
 
-func (s *Consumer) SynchPoint() error {
+func (s *Consumer) SynchPoint(rt checkpoint.ResumeToken) error {
 	const semLogContext = "consumer::synch-point"
 
 	if s.cfg.checkPointSvc == nil {
@@ -62,7 +62,7 @@ func (s *Consumer) SynchPoint() error {
 		return err
 	}
 
-	err := s.cfg.checkPointSvc.Synch(s.cfg.Id)
+	err := s.cfg.checkPointSvc.Synch(s.cfg.Id, rt)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
