@@ -26,6 +26,7 @@ type Processor interface {
 	ProcessBatch() (checkpoint.ResumeToken, error)
 	Clear()
 	BatchSize() int
+	Reset() error
 }
 
 type UnimplementedConsumerProducerProcessor struct {

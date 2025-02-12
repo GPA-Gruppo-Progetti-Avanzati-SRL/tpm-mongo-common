@@ -1,5 +1,6 @@
 name: cp-echo
 work-mode: batch-mode
+on-error: rewind
 tick-interval: 400ms
 tracing:
   span-name: cp-echo-span

@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	MetricRewindsCounter  = "cdc-rewinds"
 	MetricBatchErrors     = "cdc-batch-errors"
 	MetricBatches         = "cdc-batches"
 	MetricBatchSize       = "cdc-batch-size"
@@ -72,17 +73,25 @@ func (tp *producerImpl) Start() error {
 
 	log.Info().Msg(semLogContext)
 
-	var opts []changestream.ConfigOption
-	if tp.cfg.CheckPointSvcConfig.Typ != "" {
-		svc, err := factory.NewCheckPointSvc(tp.cfg.CheckPointSvcConfig)
+	/*
+		var opts []changestream.ConfigOption
+		if tp.cfg.CheckPointSvcConfig.Typ != "" {
+			svc, err := factory.NewCheckPointSvc(tp.cfg.CheckPointSvcConfig)
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return err
+			}
+			opts = append(opts, changestream.WithCheckpointSvc(svc))
+		}
+
+		tp.consumer, err = changestream.NewConsumer(&tp.cfg.Consumer, opts...)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return err
 		}
-		opts = append(opts, changestream.WithCheckpointSvc(svc))
-	}
+	*/
 
-	tp.consumer, err = changestream.NewConsumer(&tp.cfg.Consumer, opts...)
+	tp.consumer, err = tp.newConsumer()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -97,11 +106,64 @@ func (tp *producerImpl) Start() error {
 	return nil
 }
 
+func (tp *producerImpl) newConsumer() (*changestream.Consumer, error) {
+	const semLogContext = "change-stream-cp::new-consumer"
+
+	var opts []changestream.ConfigOption
+	if tp.cfg.CheckPointSvcConfig.Typ != "" {
+		svc, err := factory.NewCheckPointSvc(tp.cfg.CheckPointSvcConfig)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return nil, err
+		}
+		opts = append(opts, changestream.WithCheckpointSvc(svc))
+	}
+
+	consumer, err := changestream.NewConsumer(&tp.cfg.Consumer, opts...)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	return consumer, nil
+}
+
 func (tp *producerImpl) Close() error {
 	const semLogContext = "change-stream-cp::close"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " signalling shutdown transformer producer")
 	close(tp.quitc)
 	return nil
+}
+
+func (tp *producerImpl) onError(errIn error) error {
+	const semLogContext = "change-stream-cp::on-error"
+	log.Warn().Err(errIn).Msg(semLogContext)
+
+	// Exit if not enabled
+	if !tp.cfg.RewindEnabled() {
+		log.Info().Msg(semLogContext + " rewinding disabled")
+		return errIn
+	}
+
+	// Increment number of rewinds
+	_ = tp.produceMetric(nil, MetricRewindsCounter, 1, tp.metricLabels)
+
+	tp.consumer.Close()
+
+	err := tp.processor.Reset()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	// Trying a restart. If not the policy is to exit
+	tp.consumer, err = tp.newConsumer()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	return err
 }
 
 func (tp *producerImpl) pollLoop() {
@@ -120,7 +182,7 @@ func (tp *producerImpl) pollLoop() {
 		case <-ticker.C:
 			if tp.cfg.WorkMode == WorkModeBatch {
 				err := tp.processBatch(context.Background())
-				if err != nil {
+				if err != nil && tp.onError(err) != nil {
 					ticker.Stop()
 					tp.shutDown(err)
 					return
@@ -134,9 +196,11 @@ func (tp *producerImpl) pollLoop() {
 
 		default:
 			if isMsg, err := tp.poll(); err != nil {
-				ticker.Stop()
-				tp.shutDown(err)
-				return
+				if tp.onError(err) != nil {
+					ticker.Stop()
+					tp.shutDown(err)
+					return
+				}
 			} else if isMsg {
 				tp.numberOfMessages++
 			}
