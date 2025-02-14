@@ -32,7 +32,6 @@ type TracingCfg struct {
 type Config struct {
 	Name                string                           `yaml:"name,omitempty" mapstructure:"name,omitempty" json:"name,omitempty"`
 	WorkMode            string                           `yaml:"work-mode,omitempty" mapstructure:"work-mode,omitempty" json:"work-mode,omitempty"`
-	OnError             string                           `yaml:"on-error,omitempty" mapstructure:"on-error,omitempty" json:"on-error,omitempty"`
 	Consumer            changestream.Config              `yaml:"consumer,omitempty" mapstructure:"consumer,omitempty" json:"consumer,omitempty"`
 	CheckPointSvcConfig factory.Config                   `yaml:"checkpoint-svc,omitempty" mapstructure:"checkpoint-svc,omitempty" json:"checkpoint-svc,omitempty"`
 	RefMetrics          *promutil.MetricsConfigReference `yaml:"ref-metrics,omitempty"  mapstructure:"ref-metrics,omitempty"  json:"ref-metrics,omitempty"`
@@ -42,7 +41,7 @@ type Config struct {
 
 func (c *Config) RewindEnabled() bool {
 	const semLogContext = "cs-consumer-producer::config"
-	switch c.OnError {
+	switch c.Consumer.OnErrorPolicy {
 	case OnErrorRewind:
 		return true
 	case OnErrorExit:
@@ -51,7 +50,7 @@ func (c *Config) RewindEnabled() bool {
 		log.Warn().Msg(semLogContext + " please explicitly assign the on-error parameter (rewind, exit)")
 		return false
 	default:
-		log.Error().Str("on-error", c.OnError).Msg(semLogContext + " - invalid on error parameter (rewind, exit)")
+		log.Error().Str("on-error", c.Consumer.OnErrorPolicy).Msg(semLogContext + " - invalid on error parameter (rewind, exit)")
 		return false
 	}
 }
