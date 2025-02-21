@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
+	"time"
 )
 
 type Consumer struct {
@@ -155,6 +156,10 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		log.Error().Err(err).Msg(semLogContext)
 		return &evt, err
 	}
+
+	clusterTime := time.Unix(int64(evt.ClusterTime.T), 0)
+	lag := time.Now().Sub(clusterTime)
+	g = s.setMetric(g, "milliseconds-behind-source", float64(lag.Milliseconds()), nil)
 
 	s.lastPolledToken = resumeToken
 	return &evt, nil
