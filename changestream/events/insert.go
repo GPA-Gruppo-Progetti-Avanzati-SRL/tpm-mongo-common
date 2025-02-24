@@ -80,7 +80,7 @@ func parseInsertOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent
 	}
 
 	if err == nil {
-		e.WallTime, err = getDateTime(m, "wallTime", true)
+		e.WallTime, err = getDateTime(m, "wallTime", false)
 	}
 
 	return e, err

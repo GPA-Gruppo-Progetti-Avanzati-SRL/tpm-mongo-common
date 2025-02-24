@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-var DefaultWriteConcern = writeconcern.New(writeconcern.WMajority())
+var DefaultWriteConcern = writeconcern.Majority()
 var DefaultWriteTimeout = 60 * time.Second
 
 type LinkedService struct {
@@ -121,6 +122,14 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 	if mdb.cfg.WriteTimeout != "" {
 		mdb.writeTimeout = util.ParseDuration(mdb.cfg.WriteTimeout, DefaultWriteTimeout)
 	}
+
+	buildInfoCmd := bson.D{bson.E{Key: "buildInfo", Value: 1}}
+	var buildInfoDoc bson.M
+	if err := mdb.db.RunCommand(ctx, buildInfoCmd).Decode(&buildInfoDoc); err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+	log.Info().Interface("mongo-db-version", buildInfoDoc["version"]).Msg(semLogContext)
 
 	return nil
 }
