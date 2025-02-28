@@ -1,0 +1,46 @@
+name: lease
+attributes:
+  - name: _bid
+    type: string
+    options: with-filter
+  - name: _et
+    type: string
+    options: with-filter
+  - name: _gid
+    type: string
+    options: with-filter
+  - name: leaseId
+    type: string
+    options: with-filter
+  - name: data
+    type: string
+  - name: status
+    type: string
+    options: with-filter
+  - name: etag
+    type: long
+    options: with-filter
+    tags:
+      - name: json
+        value: etag
+      - name: bson
+        value: etag
+      - name: yaml
+        value: etag
+  - name: duration
+    type: int
+    tags:
+      - name: json
+        value: duration-s
+        options: omitempty
+      - name: bson
+        value: duration-s
+        options: omitempty
+      - name: yaml
+        value: duration-s
+        options: omitempty
+  - name: ts
+    type: string
+  - name: ttl
+    type: int
+

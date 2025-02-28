@@ -1,0 +1,6 @@
+module: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
+package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease
+entities:
+- file-name: ./lease.yml
+  document: true
+  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease
