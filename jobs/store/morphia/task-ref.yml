@@ -1,0 +1,8 @@
+name: TaskReference
+attributes:
+  - name: id
+    type: string
+  - name: status
+    type: string
+  - name: typ
+    type: string

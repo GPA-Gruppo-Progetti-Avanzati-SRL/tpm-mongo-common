@@ -1,0 +1,4 @@
+name: JobInfo
+attributes:
+  - name: reserved
+    type: string

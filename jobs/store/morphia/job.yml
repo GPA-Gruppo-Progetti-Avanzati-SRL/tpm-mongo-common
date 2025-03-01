@@ -1,0 +1,24 @@
+name: job
+attributes:
+  - name: _bid
+    type: string
+    options: with-filter
+  - name: _et
+    type: string
+    options: with-filter
+  - name: typ
+    type: string
+    options: with-filter
+  - name: status
+    type: string
+    options: with-filter
+  - name: info
+    struct-ref:
+      name: JobInfo
+    type: struct
+  - name: tasks
+    type: array
+    item:
+      struct-ref:
+        name: taskReference
+      type: struct

@@ -1,0 +1,15 @@
+module: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
+package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans
+entities:
+- file-name: ./job.yml
+  document: true
+  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job
+- file-name: ./task.yml
+  document: true
+  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task
+- file-name: ./partition.yml
+  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition
+- file-name: ./job-info.yml
+- file-name: ./task-ref.yml
+- file-name: ./task-info.yml
+- file-name: ./partition-info.yml
