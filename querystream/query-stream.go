@@ -12,38 +12,60 @@ import (
 	"strings"
 )
 
-type StreamBatch struct {
+type ResumableFilter struct {
+	filter   string
+	resumeId string
+}
+
+func NewResumableFilter(filter, resumeId string) ResumableFilter {
+	if resumeId == "" {
+		resumeId = primitive.NilObjectID.Hex()
+	}
+
+	return ResumableFilter{filter, resumeId}
+}
+
+func (f ResumableFilter) Filter(resumeId string) string {
+	if resumeId == "" {
+		resumeId = primitive.NilObjectID.Hex()
+	}
+
+	return strings.Replace(f.filter, "{resumeObjectId}", resumeId, -1)
+}
+
+func (f ResumableFilter) UpdateResumeId(resumeId string) ResumableFilter {
+	if resumeId == "" {
+		resumeId = primitive.NilObjectID.String()
+	}
+
+	f.resumeId = resumeId
+	return f
+}
+
+type QueryStream struct {
 	coll      *mongo.Collection
 	batchSize int64
 
-	filter   string
-	resumeId string
-
+	filter     ResumableFilter
 	docs       []bson.M
 	currentDoc int
 	isEof      bool
 }
 
-func NewBatch(coll *mongo.Collection, maxSize int64) *StreamBatch {
-	return &StreamBatch{coll: coll, batchSize: maxSize, resumeId: primitive.NilObjectID.Hex()}
+func NewBatch(coll *mongo.Collection, maxSize int64) *QueryStream {
+	return &QueryStream{coll: coll, batchSize: maxSize}
 }
 
-func (sb *StreamBatch) Query(filter string, resumeId string) error {
+func (sb *QueryStream) Query(filter ResumableFilter) error {
 	sb.filter = filter
-	if resumeId == "" {
-		sb.resumeId = primitive.NilObjectID.Hex()
-	} else {
-		sb.resumeId = resumeId
-	}
-
 	sb.isEof = false
 	return sb.loadPage()
 }
 
-func (sb *StreamBatch) loadPage() error {
+func (sb *QueryStream) loadPage() error {
 	const semLogContext = "document-batch::load"
 
-	filter := strings.Replace(sb.filter, "{resumeObjectId}", sb.resumeId, -1)
+	filter := sb.filter.Filter(sb.filter.resumeId)
 	filterBsonObj, err := util.UnmarshalJson2Bson([]byte(filter), true)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -70,19 +92,19 @@ func (sb *StreamBatch) loadPage() error {
 	sb.currentDoc = -1
 	if len(docs) > 0 {
 		lastDoc := docs[len(docs)-1]
-		sb.resumeId = (lastDoc["_id"].(primitive.ObjectID)).Hex()
+		sb.filter = sb.filter.UpdateResumeId((lastDoc["_id"].(primitive.ObjectID)).Hex())
 	} else {
 		sb.isEof = true
 	}
 	return nil
 }
 
-func (sb *StreamBatch) Next() (Event, error) {
+func (sb *QueryStream) Next() (Event, error) {
 	const semLogContext = "document-batch::next"
 	var err error
 
 	if sb.isEof {
-		return ZeroEvent, io.EOF
+		return EofPartition, io.EOF
 	}
 
 	sb.currentDoc++
@@ -90,15 +112,18 @@ func (sb *StreamBatch) Next() (Event, error) {
 		err = sb.loadPage()
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
-			return ZeroEvent, err
+			return ErrEvent, err
 		}
 
 		if sb.isEof {
-			return ZeroEvent, io.EOF
+			return EofPartition, io.EOF
 		}
-
 		sb.currentDoc++
 	}
 
-	return NewEvent(sb.docs[sb.currentDoc]), nil
+	isEofBatch := false
+	if sb.currentDoc == len(sb.docs)-1 {
+		isEofBatch = true
+	}
+	return NewEvent(sb.docs[sb.currentDoc], isEofBatch), nil
 }

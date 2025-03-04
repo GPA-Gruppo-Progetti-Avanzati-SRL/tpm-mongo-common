@@ -3,7 +3,9 @@ package mongolks
 import (
 	"context"
 	"crypto/tls"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
+	mongoUtil "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -123,15 +125,35 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 		mdb.writeTimeout = util.ParseDuration(mdb.cfg.WriteTimeout, DefaultWriteTimeout)
 	}
 
-	buildInfoCmd := bson.D{bson.E{Key: "buildInfo", Value: 1}}
-	var buildInfoDoc bson.M
-	if err := mdb.db.RunCommand(ctx, buildInfoCmd).Decode(&buildInfoDoc); err != nil {
-		log.Error().Err(err).Msg(semLogContext)
+	_, err = mdb.ServerVersion()
+	if err != nil {
 		return err
 	}
-	log.Info().Interface("mongo-db-version", buildInfoDoc["version"]).Msg(semLogContext)
+
+	//buildInfoCmd := bson.D{bson.E{Key: "buildInfo", Value: 1}}
+	//var buildInfoDoc bson.M
+	//if err := mdb.db.RunCommand(ctx, buildInfoCmd).Decode(&buildInfoDoc); err != nil {
+	//	log.Error().Err(err).Msg(semLogContext)
+	//	return err
+	//}
+	//log.Info().Interface("mongo-db-version", buildInfoDoc["version"]).Msg(semLogContext)
 
 	return nil
+}
+
+func (mdb *LinkedService) ServerVersion() (mongoUtil.MongoDbVersion, error) {
+	const semLogContext = "mongo-lks::version"
+
+	buildInfoCmd := bson.D{bson.E{Key: "buildInfo", Value: 1}}
+	var buildInfoDoc bson.M
+	if err := mdb.db.RunCommand(context.Background(), buildInfoCmd).Decode(&buildInfoDoc); err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return mongoUtil.MongoDbVersion{}, err
+	}
+
+	v := buildInfoDoc["version"]
+	log.Info().Interface("mongo-db-version", v).Msg(semLogContext)
+	return mongoUtil.NewMongoDbVersion(v), nil
 }
 
 func (m *LinkedService) Disconnect(ctx context.Context) {

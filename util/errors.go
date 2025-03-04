@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -347,14 +348,17 @@ const (
 	MongoErrClientMarkedKilled                                          int32 = 46841
 )
 
-func MongoError(err error) (int32, mongo.CommandError) {
+func MongoError(err error, mongoDbVersion MongoDbVersion) (int32, mongo.CommandError) {
 	const semLogContext = "mongo::error"
 
 	var mongoErr mongo.CommandError
 	switch {
 	case errors.As(err, &mongoErr):
-		log.Error().Err(mongoErr).Int32("error-code", mongoErr.Code).Str("error-name", mongoErr.Name).Msg(semLogContext + "mongo.CommandError")
-		return mongoErr.Code, mongoErr
+		log.Error().Err(mongoErr).Int32("error-code", mongoErr.Code).Str("error-name", mongoErr.Name).Msg(semLogContext + " - mongo.CommandError")
+		code := mongoDbVersion.CommandErrorCode(mongoErr)
+		return code, mongoErr
+	default:
+		log.Error().Err(err).Str("error-type", fmt.Sprintf("%T", err)).Msg(semLogContext + " - !mongo.CommandError")
 	}
 
 	return -1, mongo.CommandError{}

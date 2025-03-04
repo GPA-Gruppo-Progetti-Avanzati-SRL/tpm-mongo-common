@@ -51,7 +51,7 @@ func UnmarshalJson2Bson(b []byte, createIfEmpty bool) (any, error) {
 	}
 
 	if err != nil {
-		log.Error().Err(err).Msg("error unmarshalling bson")
+		log.Error().Err(err).Str("json", string(b)).Msg("error unmarshalling bson")
 	}
 	return res, err
 }

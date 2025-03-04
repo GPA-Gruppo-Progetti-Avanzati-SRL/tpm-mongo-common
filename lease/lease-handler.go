@@ -22,7 +22,7 @@ func (lh *Handler) IsZero() bool {
 }
 
 // findLeaseByLeasedObjectId (ctx context.Context, client *mongo.Collection, lid string) (Lease, error) {
-func findLeaseByTypeAndGroupIdAndLeasedObjectId(coll *mongo.Collection, leaseGroupId string, leasedObjectId string) (Lease, error) {
+func findLeaseByGroupIdAndLeasedObjectId(coll *mongo.Collection, leaseGroupId string, leasedObjectId string) (Lease, error) {
 	const semLogContext = "lease::find-by-type-and-bid"
 	var doc Lease
 
@@ -44,7 +44,7 @@ func findLeaseByTypeAndGroupIdAndLeasedObjectId(coll *mongo.Collection, leaseGro
 
 func CanAcquireLease(coll *mongo.Collection, leaseGroupId, leasedObjectId string) (bool, error) {
 	const semLogContext = "lease::can-acquire-lease"
-	d, err := findLeaseByTypeAndGroupIdAndLeasedObjectId(coll, leaseGroupId, leasedObjectId)
+	d, err := findLeaseByGroupIdAndLeasedObjectId(coll, leaseGroupId, leasedObjectId)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return false, err
@@ -61,7 +61,7 @@ func AcquireLease(client *mongo.Collection, leaseGroupId, leasedObjectId string,
 
 	const semLogContext = "lease::acquire-lease"
 
-	l, err := findLeaseByTypeAndGroupIdAndLeasedObjectId(client, leaseGroupId, leasedObjectId)
+	l, err := findLeaseByGroupIdAndLeasedObjectId(client, leaseGroupId, leasedObjectId)
 	if err != nil {
 		return nil, false, err
 	}
@@ -129,7 +129,7 @@ func (lh *Handler) Release() error {
 
 	const semLogContext = "lease-handler::release"
 
-	d, err := findLeaseByTypeAndGroupIdAndLeasedObjectId(lh.cli, lh.Lease.Gid, lh.Lease.Bid)
+	d, err := findLeaseByGroupIdAndLeasedObjectId(lh.cli, lh.Lease.Gid, lh.Lease.Bid)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -194,7 +194,7 @@ func (lh *Handler) renewLoop() {
 func (lh *Handler) RenewLease() error {
 	const semLogContext = "lease-handler::renew"
 
-	d, err := findLeaseByTypeAndGroupIdAndLeasedObjectId(lh.cli, lh.Lease.Gid, lh.Lease.Bid)
+	d, err := findLeaseByGroupIdAndLeasedObjectId(lh.cli, lh.Lease.Gid, lh.Lease.Bid)
 	if err != nil {
 		return err
 	}

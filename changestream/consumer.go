@@ -16,8 +16,9 @@ import (
 )
 
 type Consumer struct {
-	cfg       *Config
-	chgStream *mongo.ChangeStream
+	cfg           *Config
+	serverVersion util.MongoDbVersion
+	chgStream     *mongo.ChangeStream
 
 	lastCommittedToken checkpoint.ResumeToken
 	lastPolledToken    checkpoint.ResumeToken
@@ -110,7 +111,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		}
 
 		if s.chgStream.Err() != nil {
-			ec, en := util.MongoError(s.chgStream.Err())
+			ec, en := util.MongoError(s.chgStream.Err(), s.serverVersion)
 			log.Error().Err(s.chgStream.Err()).Int32("error-code", ec).Interface("error", en).Msg(semLogContext)
 			return nil, s.chgStream.Err()
 		}
@@ -186,6 +187,12 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 		return nil, err
 	}
 
+	s.serverVersion, err = lks.ServerVersion()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
 	coll := lks.GetCollection(s.cfg.CollectionId, "")
 	if coll == nil {
 		err = errors.New("collection not found in config: " + s.cfg.CollectionId)
@@ -197,7 +204,7 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 	log.Info().Err(err).Int("retry-num", counter).Msg(semLogContext)
 	collStream, err := coll.Watch(context.TODO(), pipeline, &opts)
 	for err != nil && counter < s.cfg.RetryCount {
-		mongoCode, _ := util.MongoError(err)
+		mongoCode, _ := util.MongoError(err, s.serverVersion)
 		// TODO add logic to retry with the start after time depending on config
 		if mongoCode == util.MongoErrChangeStreamHistoryLost {
 			if s.cfg.checkPointSvc != nil {

@@ -1,8 +1,0 @@
-name: MongoPartition
-attributes:
-  - name: instance
-    type: string
-  - name: collection
-    type: string
-  - name: filter
-    type: string

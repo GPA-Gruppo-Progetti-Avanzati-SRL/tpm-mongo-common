@@ -1,7 +1,0 @@
-module: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
-package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/partition
-entities:
-- file-name: ./partition.yml
-  document: true
-  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/partition
-- file-name: ./mongoPartition.yml
