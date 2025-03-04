@@ -3,8 +3,12 @@ package util
 import (
 	"errors"
 	"fmt"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
+	"regexp"
+	"time"
 )
 
 // List of codes from https://www.mongodb.com/docs/manual/reference/error-codes/ retrieved on 2024-12-15 11:13:10
@@ -354,12 +358,40 @@ func MongoError(err error, mongoDbVersion MongoDbVersion) (int32, mongo.CommandE
 	var mongoErr mongo.CommandError
 	switch {
 	case errors.As(err, &mongoErr):
-		log.Error().Err(mongoErr).Int32("error-code", mongoErr.Code).Str("error-name", mongoErr.Name).Msg(semLogContext + " - mongo.CommandError")
-		code := mongoDbVersion.CommandErrorCode(mongoErr)
+		log.Error().Err(mongoErr).Interface("server-version", mongoDbVersion).Int32("error-code", mongoErr.Code).Str("error-name", mongoErr.Name).Str("error-msg", mongoErr.Message).Msg(semLogContext + " - mongo.CommandError")
+		code := CommandErrorCode(mongoErr, mongoDbVersion)
 		return code, mongoErr
 	default:
-		log.Error().Err(err).Str("error-type", fmt.Sprintf("%T", err)).Msg(semLogContext + " - !mongo.CommandError")
+		log.Error().Err(err).Interface("server-version", mongoDbVersion).Str("error-type", fmt.Sprintf("%T", err)).Msg(semLogContext + " - !mongo.CommandError")
 	}
 
 	return -1, mongo.CommandError{}
+}
+
+var Version4ResumeTokenExtractionRegexp = regexp.MustCompile("{_data: \\\"([A-Z0-9]*)\\\"}")
+
+func CommandErrorCode(err mongo.CommandError, mongoDbVersion MongoDbVersion) int32 {
+	const semLogContext = "mongo::error-command"
+	code := err.Code
+	switch {
+	case code == MongoErrChangeStreamFatalError && mongoDbVersion.IsVersion4():
+		code = MongoErrChangeStreamHistoryLost
+		data := util.ExtractCapturedGroupIfMatch(Version4ResumeTokenExtractionRegexp, err.Message)
+		if data != "" {
+			rt := checkpoint.ResumeToken{
+				Value: data,
+				At:    time.Now().Format(time.RFC3339Nano),
+			}
+			rti, err := rt.Parse()
+			if err == nil {
+				log.Warn().Interface("rti", rti).Msg(semLogContext)
+			} else {
+				log.Error().Err(err).Msg(semLogContext)
+			}
+		}
+	default:
+
+	}
+
+	return code
 }

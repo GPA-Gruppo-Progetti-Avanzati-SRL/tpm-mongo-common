@@ -112,7 +112,17 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 
 		if s.chgStream.Err() != nil {
 			ec, en := util.MongoError(s.chgStream.Err(), s.serverVersion)
-			log.Error().Err(s.chgStream.Err()).Int32("error-code", ec).Interface("error", en).Msg(semLogContext)
+			if ec == util.MongoErrChangeStreamHistoryLost {
+				if s.cfg.checkPointSvc != nil {
+					errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
+					if errHl != nil {
+						log.Error().Err(errHl).Msg(semLogContext + " - history lost")
+					}
+				}
+			} else {
+				log.Error().Err(s.chgStream.Err()).Int32("error-code", ec).Interface("error", en).Msg(semLogContext)
+			}
+
 			return nil, s.chgStream.Err()
 		}
 

@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
 )
 
@@ -17,13 +16,4 @@ func NewMongoDbVersion(serverVersion interface{}) MongoDbVersion {
 
 func (mv MongoDbVersion) IsVersion4() bool {
 	return strings.HasPrefix(mv.v, "4.")
-}
-
-func (mv MongoDbVersion) CommandErrorCode(err mongo.CommandError) int32 {
-	code := err.Code
-	if code == MongoErrChangeStreamFatalError && mv.IsVersion4() {
-		code = MongoErrChangeStreamHistoryLost
-	}
-
-	return code
 }
