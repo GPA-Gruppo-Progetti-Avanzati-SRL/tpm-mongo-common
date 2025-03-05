@@ -119,7 +119,6 @@ func (f *CheckpointSvc) Store(tokenId string, token checkpoint.ResumeToken) erro
 			doSave = true
 		}
 
-		// add logic to save a token if the previous one is distant in time.
 		lastSavedTm, err1 := time.Parse(time.RFC3339Nano, f.LastSaved.At)
 		currentTokenTm, err2 := time.Parse(time.RFC3339Nano, token.At)
 		if err1 == nil && err2 == nil {

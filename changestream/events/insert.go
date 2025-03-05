@@ -3,6 +3,7 @@ package events
 import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"go.mongodb.org/mongo-driver/bson"
+	"time"
 )
 
 // https://www.mongodb.com/docs/manual/reference/change-events/insert/#mongodb-data-insert
@@ -51,7 +52,7 @@ func parseInsertOperationType(m bson.M) (ChangeEvent, error) {
 		data, err = getString(id, "_data", true)
 		if err == nil {
 			e.Id.Data = data
-			e.ResumeTok = checkpoint.ResumeToken{Value: data}
+			e.ResumeTok = checkpoint.ResumeToken{Value: data, At: time.Now().Format(time.RFC3339Nano)}
 		}
 	}
 
