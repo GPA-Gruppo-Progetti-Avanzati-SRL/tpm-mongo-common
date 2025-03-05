@@ -158,7 +158,7 @@ func (s *watcherImpl) handleError(err error) string {
 		log.Error().Err(err).Msg(semLogContext)
 	}
 
-	policy := s.cfg.onErrorPolicy()
+	policy := s.cfg.onWatcherErrorPolicy()
 	if policy == OnErrorPolicyContinue {
 		s.chgStream, err = s.newChangeStream()
 		if err != nil {

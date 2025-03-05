@@ -114,7 +114,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	if !s.chgStream.TryNext(context.TODO()) {
 
 		s.numIdlesTryNext++
-		g = s.setMetric(g, MetricIdleTryNext, 1, nil)
+		g = s.setMetric(g, MetricIdleTryNext, float64(s.numIdlesTryNext), nil)
 
 		if s.chgStream.ID() == 0 {
 			log.Warn().Msg(semLogContext + " - stream EOF")
@@ -145,7 +145,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 
 	// clear the gauge
 	s.numIdlesTryNext = 0
-	g = s.setMetric(g, MetricIdleTryNext, 1, nil)
+	g = s.setMetric(g, MetricIdleTryNext, 0, nil)
 
 	/*
 		    Errore fittizio generato per motivi di test
@@ -271,7 +271,7 @@ func (s *Consumer) handleError(err error) string {
 		log.Error().Err(err).Msg(semLogContext)
 	}
 
-	policy := s.cfg.onErrorPolicy()
+	policy := s.cfg.onConsumerErrorPolicy()
 	if policy == OnErrorPolicyContinue {
 		s.chgStream, err = s.newChangeStream()
 		if err != nil {

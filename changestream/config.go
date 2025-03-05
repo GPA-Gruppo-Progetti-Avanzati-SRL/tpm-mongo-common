@@ -127,7 +127,14 @@ func (cfg *Config) Pipeline() (mongo.Pipeline, error) {
 	return pl, err
 }
 
-func (cfg *Config) onErrorPolicy() string {
+func (cfg *Config) onWatcherErrorPolicy() string {
+	if cfg.OnErrorPolicy == "" {
+		return OnErrorPolicyContinue
+	}
+	return cfg.OnErrorPolicy
+}
+
+func (cfg *Config) onConsumerErrorPolicy() string {
 	if cfg.OnErrorPolicy == "" {
 		return OnErrorPolicyContinue
 	}
