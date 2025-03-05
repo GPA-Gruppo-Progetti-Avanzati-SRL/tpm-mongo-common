@@ -8,6 +8,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"sync"
 	"time"
@@ -139,9 +140,9 @@ func (tp *producerImpl) onError(errIn error) error {
 	const semLogContext = "change-stream-cp::on-error"
 	log.Warn().Err(errIn).Msg(semLogContext)
 
-	// Exit if not enabled
-	if !tp.cfg.RewindEnabled() {
-		log.Info().Msg(semLogContext + " rewinding disabled")
+	changeStreamFatal := util.IsMongoErrorHistoryLost(errIn, tp.consumer.ServerVersion)
+	if changeStreamFatal || !tp.cfg.RewindEnabled() {
+		log.Info().Bool("rewind-enabled", tp.cfg.RewindEnabled()).Bool("change-stream-fatal", changeStreamFatal).Msg(semLogContext + " non resumable error")
 		return errIn
 	}
 

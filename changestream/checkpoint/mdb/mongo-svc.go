@@ -202,7 +202,7 @@ func (svc *CheckpointSvc) Clear(watcherId string) error {
 	}
 
 	rtInfo, err := rt.Parse()
-	if err != nil {
+	if err == nil {
 		log.Warn().Interface("rt-info", rtInfo).Msg(semLogContext + " checkpoint to clear")
 	} else {
 		log.Error().Err(err).Msg(semLogContext)

@@ -368,6 +368,13 @@ func MongoError(err error, mongoDbVersion MongoDbVersion) (int32, mongo.CommandE
 	return -1, mongo.CommandError{}
 }
 
+func IsMongoErrorHistoryLost(err error, mongoDbVersion MongoDbVersion) bool {
+	const semLogContext = "mongo::is-history-lost-error"
+
+	c, err := MongoError(err, mongoDbVersion)
+	return c == MongoErrChangeStreamHistoryLost
+}
+
 var Version4ResumeTokenExtractionRegexp = regexp.MustCompile("{_data: \\\"([A-Z0-9]*)\\\"}")
 
 func CommandErrorCode(err mongo.CommandError, mongoDbVersion MongoDbVersion) int32 {
