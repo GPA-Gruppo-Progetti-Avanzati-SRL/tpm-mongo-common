@@ -39,13 +39,12 @@ import (
 //	return e.OpType == ""
 //}
 
-func parseUpdateOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent, error) {
+func parseUpdateOperationType(m bson.M) (ChangeEvent, error) {
 	const semLogContext = "update-event::parse"
 
 	var err error
 	e := ChangeEvent{
-		ResumeTok: tok,
-		OpType:    OperationTypeUpdate,
+		OpType: OperationTypeUpdate,
 	}
 
 	id, err := getDocument(m, "_id", true)
@@ -54,6 +53,7 @@ func parseUpdateOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent
 		data, err = getString(id, "_data", true)
 		if err == nil {
 			e.Id.Data = data
+			e.ResumeTok = checkpoint.ResumeToken{Value: data}
 		}
 	}
 

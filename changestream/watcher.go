@@ -2,7 +2,6 @@ package changestream
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
@@ -187,25 +186,24 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 		}
 
 		// log.Warn().Interface("data", data).Msg(semLogContext)
-
-		resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
+		evt, err := events.ParseEvent(data)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return prevToken, err
 		}
 
+		//resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
+		//if err != nil {
+		//	log.Error().Err(err).Msg(semLogContext)
+		//	return prevToken, err
+		//}
+
 		if s.cfg.VerifyOutOfSequenceError {
-			if resumeToken.Value <= prevToken.Value {
-				log.Error().Err(OutOfSequenceError).Str("current", resumeToken.Value).Str("prev", prevToken.Value).Msg(semLogContext + " - out-of-sequence token")
+			if evt.ResumeTok.Value <= prevToken.Value {
+				log.Error().Err(OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", prevToken.Value).Msg(semLogContext + " - out-of-sequence token")
 				g = s.setMetric(g, "cdc-event-errors", 1, nil)
 				return prevToken, OutOfSequenceError
 			}
-		}
-
-		evt, err := events.ParseEvent(resumeToken, data)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return prevToken, err
 		}
 
 		allSynchs := true
@@ -221,14 +219,14 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 		}
 
 		if allSynchs && s.cfg.checkPointSvc != nil {
-			err = s.cfg.checkPointSvc.Store(s.cfg.Id, resumeToken)
+			err = s.cfg.checkPointSvc.Store(s.cfg.Id, evt.ResumeTok)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
-				return resumeToken, err
+				return evt.ResumeTok, err
 			}
 		}
 
-		prevToken = resumeToken
+		prevToken = evt.ResumeTok
 		if numEvents == batchSize {
 			break
 		}
@@ -252,68 +250,68 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 	return prevToken, nil
 }
 
-func (s *watcherImpl) processChangeStreamV1(token string, batchSize int) (string, error) {
-	const semLogContext = "watcher::work-loop"
-
-	// log.Info().Str("token", token).Msg(semLogContext + " - starting")
-	var beginOf time.Time
-
-	numEvents := 0
-	prevToken := token
-	var g *promutil.Group
-	for s.chgStream.TryNext(context.TODO()) {
-
-		numEvents++
-		if numEvents == 1 {
-			beginOf = time.Now()
-		}
-
-		g = s.setMetric(g, "cdc-events", 1, nil)
-
-		var data bson.M
-		if err := s.chgStream.Decode(&data); err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-		}
-
-		resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-		}
-
-		b, err := json.Marshal(data)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-		}
-
-		log.Trace().Str("current-token", resumeToken.Value).Str("data", string(b)).Msg(semLogContext)
-		if resumeToken.Value <= prevToken {
-			log.Error().Str("current", resumeToken.Value).Str("prev", prevToken).Msg(semLogContext + " - out-of-sequence token")
-			g = s.setMetric(g, "cdc-event-errors", 1, nil)
-		}
-
-		prevToken = resumeToken.Value
-		if numEvents == batchSize {
-			break
-		}
-	}
-
-	if numEvents > 0 {
-		log.Info().Str("last-batch-token", prevToken).Int("num-events", numEvents).Msg(semLogContext)
-		g = s.setMetric(g, "cdc-event-duration", time.Since(beginOf).Seconds(), nil)
-		g = s.setMetric(g, "cdc-events-batch-size", float64(numEvents), nil)
-	}
-
-	if s.chgStream.Err() != nil {
-		log.Error().Err(s.chgStream.Err()).Msg(semLogContext)
-		return prevToken, s.chgStream.Err()
-	}
-
-	if s.chgStream.ID() == 0 {
-		return prevToken, io.EOF
-	}
-
-	return prevToken, nil
-}
+//func (s *watcherImpl) processChangeStreamV1(token string, batchSize int) (string, error) {
+//	const semLogContext = "watcher::work-loop"
+//
+//	// log.Info().Str("token", token).Msg(semLogContext + " - starting")
+//	var beginOf time.Time
+//
+//	numEvents := 0
+//	prevToken := token
+//	var g *promutil.Group
+//	for s.chgStream.TryNext(context.TODO()) {
+//
+//		numEvents++
+//		if numEvents == 1 {
+//			beginOf = time.Now()
+//		}
+//
+//		g = s.setMetric(g, "cdc-events", 1, nil)
+//
+//		var data bson.M
+//		if err := s.chgStream.Decode(&data); err != nil {
+//			log.Error().Err(err).Msg(semLogContext)
+//		}
+//
+//		resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
+//		if err != nil {
+//			log.Error().Err(err).Msg(semLogContext)
+//		}
+//
+//		b, err := json.Marshal(data)
+//		if err != nil {
+//			log.Error().Err(err).Msg(semLogContext)
+//		}
+//
+//		log.Trace().Str("current-token", resumeToken.Value).Str("data", string(b)).Msg(semLogContext)
+//		if resumeToken.Value <= prevToken {
+//			log.Error().Str("current", resumeToken.Value).Str("prev", prevToken).Msg(semLogContext + " - out-of-sequence token")
+//			g = s.setMetric(g, "cdc-event-errors", 1, nil)
+//		}
+//
+//		prevToken = resumeToken.Value
+//		if numEvents == batchSize {
+//			break
+//		}
+//	}
+//
+//	if numEvents > 0 {
+//		log.Info().Str("last-batch-token", prevToken).Int("num-events", numEvents).Msg(semLogContext)
+//		g = s.setMetric(g, "cdc-event-duration", time.Since(beginOf).Seconds(), nil)
+//		g = s.setMetric(g, "cdc-events-batch-size", float64(numEvents), nil)
+//	}
+//
+//	if s.chgStream.Err() != nil {
+//		log.Error().Err(s.chgStream.Err()).Msg(semLogContext)
+//		return prevToken, s.chgStream.Err()
+//	}
+//
+//	if s.chgStream.ID() == 0 {
+//		return prevToken, io.EOF
+//	}
+//
+//	return prevToken, nil
+//}
 
 /*func (s *watcherImpl) ParseResumeToken(resumeToken bson.Raw) (string, error) {
 

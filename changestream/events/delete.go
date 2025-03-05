@@ -37,13 +37,12 @@ import (
 //	return e.OpType == ""
 //}
 
-func parseDeleteOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent, error) {
+func parseDeleteOperationType(m bson.M) (ChangeEvent, error) {
 	const semLogContext = "delete-event::parse"
 
 	var err error
 	e := ChangeEvent{
-		ResumeTok: tok,
-		OpType:    OperationTypeDelete,
+		OpType: OperationTypeDelete,
 	}
 
 	id, err := getDocument(m, "_id", true)
@@ -52,6 +51,7 @@ func parseDeleteOperationType(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent
 		data, err = getString(id, "_data", true)
 		if err == nil {
 			e.Id.Data = data
+			e.ResumeTok = checkpoint.ResumeToken{Value: data}
 		}
 	}
 

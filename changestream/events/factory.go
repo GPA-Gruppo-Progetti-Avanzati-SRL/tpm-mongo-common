@@ -3,7 +3,6 @@ package events
 import (
 	"encoding/json"
 	"errors"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -17,7 +16,7 @@ const (
 
 var UnsupportedOperationType = errors.New("unsupported operation type")
 
-func ParseEvent(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent, error) {
+func ParseEvent(m bson.M) (ChangeEvent, error) {
 	const semLogContext = "event-factory::parse-event"
 
 	/*
@@ -38,13 +37,13 @@ func ParseEvent(tok checkpoint.ResumeToken, m bson.M) (ChangeEvent, error) {
 	var evt ChangeEvent
 	switch opType {
 	case OperationTypeInsert:
-		evt, err = parseInsertOperationType(tok, m)
+		evt, err = parseInsertOperationType(m)
 	case OperationTypeDelete:
-		evt, err = parseDeleteOperationType(tok, m)
+		evt, err = parseDeleteOperationType(m)
 	case OperationTypeReplace:
-		evt, err = parseReplaceOperationType(tok, m)
+		evt, err = parseReplaceOperationType(m)
 	case OperationTypeUpdate:
-		evt, err = parseUpdateOperationType(tok, m)
+		evt, err = parseUpdateOperationType(m)
 	default:
 		log.Warn().Str("op-type", opType).Msg(semLogContext + " - unsupported operation type")
 		err = UnsupportedOperationType

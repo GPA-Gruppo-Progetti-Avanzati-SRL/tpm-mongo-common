@@ -164,31 +164,33 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		log.Error().Err(err).Msg(semLogContext)
 	}
 
-	resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return nil, err
-	}
-
-	if s.cfg.VerifyOutOfSequenceError {
-		if resumeToken.Value <= s.lastPolledToken.Value {
-			log.Error().Err(OutOfSequenceError).Str("current", resumeToken.Value).Str("prev", s.lastPolledToken.Value).Msg(semLogContext + " - out-of-sequence token")
-			g = s.setMetric(g, "cdc-event-errors", 1, nil)
-			return nil, OutOfSequenceError
-		}
-	}
-
-	evt, err := events.ParseEvent(resumeToken, data)
+	evt, err := events.ParseEvent(data)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return &evt, err
+	}
+
+	/*
+		resumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return nil, err
+		}
+	*/
+
+	if s.cfg.VerifyOutOfSequenceError {
+		if evt.ResumeTok.Value <= s.lastPolledToken.Value {
+			log.Error().Err(OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", s.lastPolledToken.Value).Msg(semLogContext + " - out-of-sequence token")
+			g = s.setMetric(g, "cdc-event-errors", 1, nil)
+			return nil, OutOfSequenceError
+		}
 	}
 
 	clusterTime := time.Unix(int64(evt.ClusterTime.T), 0)
 	lag := time.Now().Sub(clusterTime)
 	g = s.setMetric(g, "milliseconds-behind-source", float64(lag.Milliseconds()), nil)
 
-	s.lastPolledToken = resumeToken
+	s.lastPolledToken = evt.ResumeTok
 	return &evt, nil
 }
 
