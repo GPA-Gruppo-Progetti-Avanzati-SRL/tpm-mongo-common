@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+const (
+	MetricHistoryLostCounter = "cdc-history-lost"
+	MetricIdleTryNext        = "cdc-idle-try-next"
+)
+
 type Consumer struct {
 	cfg           *Config
 	serverVersion util.MongoDbVersion
@@ -23,6 +28,7 @@ type Consumer struct {
 	lastCommittedToken checkpoint.ResumeToken
 	lastPolledToken    checkpoint.ResumeToken
 	numEvents          int
+	numIdlesTryNext    int
 }
 
 func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
@@ -104,7 +110,12 @@ func (s *Consumer) Abort() error {
 func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	const semLogContext = "consumer::process-change-stream"
 
+	var g *promutil.Group
 	if !s.chgStream.TryNext(context.TODO()) {
+
+		s.numIdlesTryNext++
+		g = s.setMetric(g, MetricIdleTryNext, 1, nil)
+
 		if s.chgStream.ID() == 0 {
 			log.Warn().Msg(semLogContext + " - stream EOF")
 			return nil, io.EOF
@@ -113,6 +124,9 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		if s.chgStream.Err() != nil {
 			ec, en := util.MongoError(s.chgStream.Err(), s.serverVersion)
 			if ec == util.MongoErrChangeStreamHistoryLost {
+				var g *promutil.Group
+				g = s.setMetric(g, MetricHistoryLostCounter, 1, nil)
+
 				if s.cfg.checkPointSvc != nil {
 					errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
 					if errHl != nil {
@@ -129,6 +143,10 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		return nil, nil
 	}
 
+	// clear the gauge
+	s.numIdlesTryNext = 0
+	g = s.setMetric(g, MetricIdleTryNext, 1, nil)
+
 	/*
 		    Errore fittizio generato per motivi di test
 			fictitiousErr := errors.New("fictitious error")
@@ -137,8 +155,6 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 				return nil, fictitiousErr
 			}
 	*/
-
-	var g *promutil.Group
 
 	s.numEvents++
 	g = s.setMetric(g, "cdc-events", 1, nil)
@@ -217,6 +233,9 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 		mongoCode, _ := util.MongoError(err, s.serverVersion)
 		// TODO add logic to retry with the start after time depending on config
 		if mongoCode == util.MongoErrChangeStreamHistoryLost {
+			var g *promutil.Group
+			g = s.setMetric(g, MetricHistoryLostCounter, 1, nil)
+
 			if s.cfg.checkPointSvc != nil {
 				errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
 				if errHl != nil {

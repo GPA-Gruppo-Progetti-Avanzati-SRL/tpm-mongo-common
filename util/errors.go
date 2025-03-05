@@ -384,7 +384,7 @@ func CommandErrorCode(err mongo.CommandError, mongoDbVersion MongoDbVersion) int
 			}
 			rti, err := rt.Parse()
 			if err == nil {
-				log.Warn().Interface("rti", rti).Msg(semLogContext)
+				log.Error().Interface("resume-token-info", rti).Msg(semLogContext)
 			} else {
 				log.Error().Err(err).Msg(semLogContext)
 			}

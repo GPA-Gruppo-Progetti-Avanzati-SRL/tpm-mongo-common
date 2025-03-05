@@ -6,6 +6,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )
@@ -30,6 +31,18 @@ type ChangeEvent struct {
 	FullDocument             primitive.M            `yaml:"fullDocument,omitempty" mapstructure:"fullDocument,omitempty" json:"fullDocument,omitempty"`
 	FullDocumentBeforeChange primitive.M            `yaml:"fullDocumentBeforeChange,omitempty" mapstructure:"fullDocumentBeforeChange,omitempty" json:"fullDocumentBeforeChange,omitempty"`
 	UpdateDescription        primitive.M            `yaml:"updateDescription,omitempty" mapstructure:"updateDescription,omitempty" json:"updateDescription,omitempty"`
+}
+
+func (e *ChangeEvent) AsExtendedJson(canonical bool) string {
+	const semLogContext = "change-event::as-extended-json"
+
+	b, err := bson.MarshalExtJSON(e, canonical, true)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return ""
+	}
+
+	return string(b)
 }
 
 func (e *ChangeEvent) String() string {

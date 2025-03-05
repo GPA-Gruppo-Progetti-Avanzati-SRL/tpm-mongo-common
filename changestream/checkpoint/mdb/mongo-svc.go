@@ -196,6 +196,18 @@ func (svc *CheckpointSvc) Clear(watcherId string) error {
 		return nil
 	}
 
+	rt := checkpoint.ResumeToken{
+		Value: doc.ResumeToken,
+		At:    doc.At,
+	}
+
+	rtInfo, err := rt.Parse()
+	if err != nil {
+		log.Warn().Interface("rt-info", rtInfo).Msg(semLogContext + " checkpoint to clear")
+	} else {
+		log.Error().Err(err).Msg(semLogContext)
+	}
+
 	f := checkpointcollection.Filter{}
 	f.Or().AndBidEqTo(doc.Bid).AndStatusEqTo(doc.Status)
 	opts := options.UpdateOptions{}
