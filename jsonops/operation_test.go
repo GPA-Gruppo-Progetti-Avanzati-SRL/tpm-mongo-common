@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-var insertOneTestDocument1 = []byte(`{ "year": 2030, "title": "the 2030 movie", "summary": "the 2030 movie summary", "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
+var insertOneTestDocument1 = []byte(`{ "year": 2030, "title": "the 2030 movie", "summary": "the 2030 movie summary", "relaxed_date": {"$date":"2019-08-11T17:54:14.692Z"}, "canonical_date": {"$date": 1741089118537}}`)
 var insertOneTestDocument2 = []byte(`{ "year": 1939, "title": "the 1939 1st movie", "summary": "the 1939 1st movie summary", "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
 var insertOneTestDocument3 = []byte(`{ "year": 1939, "title": "the 1939 2nd movie", "summary": "the 1939 2nd movie summary", "my_date": {"$date":"2019-08-11T17:54:14.692Z"}}`)
 var insertOneTestOpts = []byte(`{  }`)
