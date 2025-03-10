@@ -6,14 +6,18 @@ import (
 )
 
 type MongoDbVersion struct {
-	v string
+	V string
 }
 
 func NewMongoDbVersion(serverVersion interface{}) MongoDbVersion {
 	s := fmt.Sprint(serverVersion)
-	return MongoDbVersion{v: s}
+	return MongoDbVersion{V: s}
 }
 
 func (mv MongoDbVersion) IsVersion4() bool {
-	return strings.HasPrefix(mv.v, "4.")
+	return strings.HasPrefix(mv.V, "4.")
+}
+
+func (mv MongoDbVersion) String() string {
+	return mv.V
 }

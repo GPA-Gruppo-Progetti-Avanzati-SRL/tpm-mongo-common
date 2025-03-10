@@ -358,11 +358,11 @@ func MongoError(err error, mongoDbVersion MongoDbVersion) (int32, mongo.CommandE
 	var mongoErr mongo.CommandError
 	switch {
 	case errors.As(err, &mongoErr):
-		log.Error().Err(mongoErr).Interface("server-version", mongoDbVersion).Int32("error-code", mongoErr.Code).Str("error-name", mongoErr.Name).Str("error-msg", mongoErr.Message).Msg(semLogContext + " - mongo.CommandError")
+		log.Error().Err(mongoErr).Str("server-version", mongoDbVersion.String()).Int32("error-code", mongoErr.Code).Str("error-name", mongoErr.Name).Str("error-msg", mongoErr.Message).Msg(semLogContext + " - mongo.CommandError")
 		code := CommandErrorCode(mongoErr, mongoDbVersion)
 		return code, mongoErr
 	default:
-		log.Error().Err(err).Interface("server-version", mongoDbVersion).Str("error-type", fmt.Sprintf("%T", err)).Msg(semLogContext + " - !mongo.CommandError")
+		log.Error().Err(err).Str("server-version", mongoDbVersion.String()).Str("error-type", fmt.Sprintf("%T", err)).Msg(semLogContext + " - !mongo.CommandError")
 	}
 
 	return -1, mongo.CommandError{}
