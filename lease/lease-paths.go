@@ -15,7 +15,7 @@ const (
 	DataFieldName     = "data"
 	StatusFieldName   = "status"
 	EtagFieldName     = "etag"
-	DurationFieldName = "duration-s"
+	DurationFieldName = "duration_sec"
 	TsFieldName       = "ts"
 	TtlFieldName      = "ttl"
 )

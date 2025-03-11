@@ -1,9 +1,14 @@
 package querystream_test
 
 import (
+	"context"
+	"fmt"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"os"
 	"testing"
 )
@@ -63,6 +68,42 @@ func TestMain(m *testing.M) {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	exitVal := m.Run()
 	os.Exit(exitVal)
+}
+
+func populatePartitionedDocuments(coll *mongo.Collection) error {
+
+	// it populates all partitions but one.
+	for i := 1; i <= NumPartitions-1; i++ {
+		for j := 1; j <= NumDocumentPerPartition; j++ {
+			doc := bson.M{
+				partition.QueryDocumentPartitionFieldName: int32(i),
+				"name": fmt.Sprintf("name-%d-%d", i, j),
+			}
+
+			insertResp, err := coll.InsertOne(context.Background(), doc)
+			if err != nil {
+				return err
+			}
+			log.Info().Interface("resp", insertResp).Msgf("inserted documents")
+		}
+	}
+	return nil
+}
+
+func clearPartitionedDocuments(coll *mongo.Collection) error {
+	log.Info().Msg("clear partitioned documents")
+	for i := 1; i <= NumPartitions; i++ {
+		filter := bson.M{
+			"_np": int32(i),
+		}
+		resp, err := coll.DeleteMany(context.Background(), filter)
+		if err != nil {
+			log.Error().Err(err).Msg("error deleting partitioned documents")
+			return err
+		}
+		log.Info().Interface("resp", resp).Msgf("deleted documents")
+	}
+	return nil
 }
 
 //

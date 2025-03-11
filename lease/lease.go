@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson"
 	"strings"
 	"time"
 )
@@ -21,10 +22,10 @@ type Lease struct {
 	Et       string `json:"_et,omitempty" bson:"_et,omitempty" yaml:"_et,omitempty"`
 	Gid      string `json:"_gid,omitempty" bson:"_gid,omitempty" yaml:"_gid,omitempty"`
 	LeaseId  string `json:"leaseId,omitempty" bson:"leaseId,omitempty" yaml:"leaseId,omitempty"`
-	Data     string `json:"data,omitempty" bson:"data,omitempty" yaml:"data,omitempty"`
+	Data     bson.M `json:"data,omitempty" bson:"data,omitempty" yaml:"data,omitempty"`
 	Status   string `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
 	Etag     int64  `json:"etag" bson:"etag" yaml:"etag"`
-	Duration int32  `json:"duration-s,omitempty" bson:"duration-s,omitempty" yaml:"duration-s,omitempty"`
+	Duration int32  `json:"duration_sec,omitempty" bson:"duration_sec,omitempty" yaml:"duration_sec,omitempty"`
 	Ts       string `json:"ts,omitempty" bson:"ts,omitempty" yaml:"ts,omitempty"`
 	Ttl      int32  `json:"ttl,omitempty" bson:"ttl,omitempty" yaml:"ttl,omitempty"`
 
@@ -33,7 +34,7 @@ type Lease struct {
 }
 
 func (s Lease) IsZero() bool {
-	return s.Bid == "" && s.Et == "" && s.Gid == "" && s.LeaseId == "" && s.Data == "" && s.Status == "" && s.Etag == 0 && s.Duration == 0 && s.Ts == "" && s.Ttl == 0
+	return s.Bid == "" && s.Et == "" && s.Gid == "" && s.LeaseId == "" && len(s.Data) == 0 && s.Status == "" && s.Etag == 0 && s.Duration == 0 && s.Ts == "" && s.Ttl == 0
 }
 
 // @tpm-schematics:start-region("bottom-file-section")

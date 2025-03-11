@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -115,14 +116,44 @@ func AcquireLease(client *mongo.Collection, leaseGroupId, leasedObjectId string,
 	return &lh, true, nil
 }
 
-func (lh *Handler) WithData(s string, forceRenew bool) error {
+func (lh *Handler) SetLeaseData(n string, s interface{}, forceRenew bool) error {
 	var err error
-	lh.Lease.Data = s
+	if lh.Lease.Data == nil {
+		lh.Lease.Data = make(bson.M)
+	}
+
+	lh.Lease.Data[n] = s
 	if forceRenew {
 		err = lh.RenewLease()
 	}
 
 	return err
+}
+
+func (lh *Handler) GetLeaseData(n string, defaultValue interface{}) interface{} {
+	if lh.Lease.Data == nil {
+		return defaultValue
+	}
+
+	v, ok := lh.Lease.Data[n]
+	if !ok {
+		return defaultValue
+	}
+
+	return v
+}
+
+func (lh *Handler) GetLeaseStringData(n string, defaultValue string) string {
+	if lh.Lease.Data == nil {
+		return defaultValue
+	}
+
+	v, ok := lh.Lease.Data[n]
+	if !ok {
+		return defaultValue
+	}
+
+	return fmt.Sprint(v)
 }
 
 func (lh *Handler) Release() error {
@@ -131,12 +162,12 @@ func (lh *Handler) Release() error {
 
 	d, err := findLeaseByGroupIdAndLeasedObjectId(lh.cli, lh.Lease.Gid, lh.Lease.Bid)
 	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
+		log.Error().Err(err).Interface("lease", lh.Lease).Msg(semLogContext)
 		return err
 	}
 
 	if d.LeaseId != lh.Lease.LeaseId {
-		log.Warn().Msg(semLogContext + " lease id already been released")
+		log.Warn().Interface("lease", lh.Lease).Msg(semLogContext + " lease id already been released")
 		return nil
 	}
 
@@ -156,12 +187,14 @@ func (lh *Handler) Release() error {
 	}
 
 	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
+		log.Error().Interface("lease", lh.Lease).Err(err).Msg(semLogContext)
 		return err
 	}
 
 	if res.ModifiedCount == 0 {
-		log.Error().Msg(semLogContext + " lease already released")
+		log.Error().Interface("lease", lh.Lease).Msg(semLogContext + " lease already released")
+	} else {
+		log.Info().Interface("lease", lh.Lease).Msg(semLogContext + " lease released")
 	}
 
 	return err

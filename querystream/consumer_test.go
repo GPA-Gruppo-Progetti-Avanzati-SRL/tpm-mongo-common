@@ -10,10 +10,21 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/querystream"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"testing"
+)
+
+const (
+	NumPartitions           = 5
+	NumDocumentPerPartition = 10
+	TotalDocs               = (NumPartitions - 1) * NumDocumentPerPartition
+	jobId                   = "my-job-id"
+	taskId                  = "jobId-t1"
 )
 
 func TestNewStreamBatch(t *testing.T) {
@@ -35,7 +46,27 @@ func TestNewStreamBatch(t *testing.T) {
 	t.Logf("num documents : %d", numDocs)
 }
 
+const (
+	WithPopulateData = false
+	WithClearData    = false
+)
+
 func TestNewQueryConsumer(t *testing.T) {
+
+	if WithPopulateData {
+		populateTaskAndData(t)
+	}
+
+	if WithClearData {
+		defer clearTaskAndData(t)
+	}
+
+	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
+	require.NoError(t, err)
+
+	tasks, err := task.FindByJobBidAndStatus(taskColl, jobId, task.StatusAvailable)
+	require.NoError(t, err)
+	require.Condition(t, func() bool { return len(tasks) > 0 }, "expected tasks to be available")
 
 	consumerCfg := querystream.Config{
 		Id: "my-consumer-group",
@@ -46,8 +77,63 @@ func TestNewQueryConsumer(t *testing.T) {
 		OnErrorPolicy: querystream.OnErrorPolicyExit,
 	}
 
-	jobId := "my-job-id"
-	taskId := fmt.Sprintf("%s-t%d", jobId, 1)
+	qs, err := querystream.NewQueryConsumer(&consumerCfg, tasks[0], taskColl)
+	require.NoError(t, err)
+	defer qs.Close(context.Background())
+
+	numDocs := 0
+	evt, err := qs.Poll()
+	for !evt.Eof && err == nil {
+		if evt.IsDocument() {
+			numDocs++
+			err = qs.Commit()
+			require.NoError(t, err)
+		}
+		t.Log(evt)
+		evt, err = qs.Poll()
+	}
+
+	t.Logf("num-documents: %d", numDocs)
+	if err != nil {
+		require.Condition(t, func() bool { return errors.Is(err, io.EOF) }, "expected EOF but found %s", err.Error())
+	}
+
+}
+
+func populateTaskAndData(t *testing.T) {
+	qcoll, err := mongolks.GetCollection(context.Background(), QueryInstanceId, QueryCollectionId)
+	if err != nil {
+		panic(err)
+	}
+
+	err = populatePartitionedDocuments(qcoll)
+	if err != nil {
+		panic(err)
+	}
+
+	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
+	require.NoError(t, err)
+
+	_, err = populateTask(t, taskColl)
+	require.NoError(t, err)
+}
+
+func clearTaskAndData(t *testing.T) {
+	qcoll, err := mongolks.GetCollection(context.Background(), QueryInstanceId, QueryCollectionId)
+	require.NoError(t, err)
+
+	err = clearPartitionedDocuments(qcoll)
+	require.NoError(t, err)
+
+	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
+	require.NoError(t, err)
+
+	err = clearTask(t, taskColl)
+	require.NoError(t, err)
+}
+
+func populateTask(t *testing.T, taskColl *mongo.Collection) (task.Task, error) {
+
 	aTask := task.Task{
 		Bid:    taskId,
 		Et:     task.EType,
@@ -60,7 +146,7 @@ func TestNewQueryConsumer(t *testing.T) {
 		},
 	}
 
-	for j := 1; j <= 5; j++ {
+	for j := 1; j <= NumPartitions; j++ {
 		aTask.Partitions = append(aTask.Partitions,
 			partition.Partition{
 				Bid:             partition.Id(taskId, int32(j)),
@@ -76,21 +162,23 @@ func TestNewQueryConsumer(t *testing.T) {
 		)
 	}
 
-	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
+	insertResp, err := taskColl.InsertOne(context.Background(), aTask)
 	require.NoError(t, err)
+	t.Log(insertResp)
+	return aTask, err
+}
 
-	qs, err := querystream.NewQueryConsumer(&consumerCfg, aTask, taskColl)
-	require.NoError(t, err)
-	defer qs.Close(context.Background())
-
-	numDocs := 0
-	evt, err := qs.Poll()
-	for err == nil {
-		numDocs++
-		t.Log(evt)
-		evt, err = qs.Next()
+func clearTask(t *testing.T, taskColl *mongo.Collection) error {
+	filter := bson.M{
+		"_bid": taskId,
+		"_et":  task.EType,
 	}
 
-	t.Logf("num-documents: %d", numDocs)
-	require.Equal(t, true, errors.Is(err, io.EOF))
+	resp, err := taskColl.DeleteOne(context.Background(), filter)
+	if err != nil {
+		return err
+	}
+	log.Info().Interface("resp", resp).Msgf("deleted documents")
+
+	return nil
 }

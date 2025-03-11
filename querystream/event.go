@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var NoEvent = Event{Key: primitive.NilObjectID}
 var ErrEvent = Event{Key: primitive.NilObjectID, IsErr: true}
 var EofPartition = Event{Key: primitive.NilObjectID, Eof: false, EofPartition: true, EofQueryBatch: true}
 var EofEvent = Event{Key: primitive.NilObjectID, Eof: true, EofPartition: true, EofQueryBatch: true}
@@ -27,7 +28,15 @@ func NewEvent(m bson.M, isEofBatch bool) Event {
 }
 
 func (evt Event) IsZero() bool {
-	return evt.Key == primitive.NilObjectID && evt.Document == nil
+	return evt.Key == primitive.NilObjectID && evt.Document == nil && !evt.Eof && !evt.EofQueryBatch && !evt.IsErr && !evt.EofPartition && evt.Partition == 0
+}
+
+func (evt Event) IsDocument() bool {
+	return evt.Key != primitive.NilObjectID
+}
+
+func (evt Event) IsBoundary() bool {
+	return evt.Key == primitive.NilObjectID && evt.Document == nil && (evt.Eof || evt.EofQueryBatch || evt.IsErr || evt.EofPartition)
 }
 
 func (evt Event) String() string {

@@ -327,7 +327,7 @@ func UpdateWithLeaseId(p string) UpdateOption {
 // @tpm-schematics:end-region("lease-id-field-update-section")
 
 // SetData No Remarks
-func (ud *UpdateDocument) SetData(p string) *UpdateDocument {
+func (ud *UpdateDocument) SetData(p bson.M) *UpdateDocument {
 	mName := fmt.Sprintf(DataFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
@@ -345,8 +345,8 @@ func (ud *UpdateDocument) UnsetData() *UpdateDocument {
 }
 
 // setOrUnsetData No Remarks
-func (ud *UpdateDocument) setOrUnsetData(p string, um UnsetMode) {
-	if p != "" {
+func (ud *UpdateDocument) setOrUnsetData(p bson.M, um UnsetMode) {
+	if len(p) != 0 {
 		ud.SetData(p)
 	} else {
 		switch um {
@@ -359,9 +359,9 @@ func (ud *UpdateDocument) setOrUnsetData(p string, um UnsetMode) {
 	}
 }
 
-func UpdateWithData(p string) UpdateOption {
+func UpdateWithData(p bson.M) UpdateOption {
 	return func(ud *UpdateDocument) {
-		if p != "" {
+		if len(p) != 0 {
 			ud.SetData(p)
 		} else {
 			ud.UnsetData()

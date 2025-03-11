@@ -13,7 +13,7 @@ attributes:
     type: string
     options: with-filter
   - name: data
-    type: string
+    type: document
   - name: status
     type: string
     options: with-filter
@@ -31,13 +31,13 @@ attributes:
     type: int
     tags:
       - name: json
-        value: duration-s
+        value: duration_sec
         options: omitempty
       - name: bson
-        value: duration-s
+        value: duration_sec
         options: omitempty
       - name: yaml
-        value: duration-s
+        value: duration_sec
         options: omitempty
   - name: ts
     type: string

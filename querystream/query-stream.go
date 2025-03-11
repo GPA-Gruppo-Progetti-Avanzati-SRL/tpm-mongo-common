@@ -63,7 +63,7 @@ func (sb *QueryStream) Query(filter ResumableFilter) error {
 }
 
 func (sb *QueryStream) loadPage() error {
-	const semLogContext = "document-batch::load"
+	const semLogContext = "query-stream::load-page"
 
 	filter := sb.filter.Filter(sb.filter.resumeId)
 	filterBsonObj, err := util.UnmarshalJson2Bson([]byte(filter), true)
@@ -100,7 +100,7 @@ func (sb *QueryStream) loadPage() error {
 }
 
 func (sb *QueryStream) Next() (Event, error) {
-	const semLogContext = "document-batch::next"
+	const semLogContext = "query-stream::next"
 	var err error
 
 	if sb.isEof {
