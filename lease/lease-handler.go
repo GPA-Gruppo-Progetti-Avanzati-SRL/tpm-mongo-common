@@ -116,18 +116,18 @@ func AcquireLease(client *mongo.Collection, leaseGroupId, leasedObjectId string,
 	return &lh, true, nil
 }
 
-func (lh *Handler) SetLeaseData(n string, s interface{}, forceRenew bool) error {
-	var err error
+func (lh *Handler) SetLeaseData(n string, s interface{}) {
+	//var err error
 	if lh.Lease.Data == nil {
 		lh.Lease.Data = make(bson.M)
 	}
 
 	lh.Lease.Data[n] = s
-	if forceRenew {
-		err = lh.RenewLease()
-	}
+	//if forceRenew {
+	//	err = lh.RenewLease()
+	//}
 
-	return err
+	//return err
 }
 
 func (lh *Handler) GetLeaseData(n string, defaultValue interface{}) interface{} {

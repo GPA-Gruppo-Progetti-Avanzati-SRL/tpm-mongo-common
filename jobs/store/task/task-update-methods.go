@@ -29,14 +29,15 @@ const (
 type UnsetOption func(uopt *UnsetOptions)
 
 type UnsetOptions struct {
-	DefaultMode UnsetMode
-	Bid         UnsetMode
-	Et          UnsetMode
-	Status      UnsetMode
-	Typ         UnsetMode
-	JobBid      UnsetMode
-	Info        UnsetMode
-	Partitions  UnsetMode
+	DefaultMode    UnsetMode
+	Bid            UnsetMode
+	Et             UnsetMode
+	Status         UnsetMode
+	Typ            UnsetMode
+	DataStreamType UnsetMode
+	JobBid         UnsetMode
+	Info           UnsetMode
+	Partitions     UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -70,6 +71,11 @@ func WithStatusUnsetMode(m UnsetMode) UnsetOption {
 func WithTypUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.Typ = m
+	}
+}
+func WithDataStreamTypeUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.DataStreamType = m
 	}
 }
 func WithJobBidUnsetMode(m UnsetMode) UnsetOption {
@@ -117,6 +123,7 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
 	ud.setOrUnsetTyp(obj.Typ, uo.ResolveUnsetMode(uo.Typ))
+	ud.setOrUnsetData_stream_type(obj.DataStreamType, uo.ResolveUnsetMode(uo.DataStreamType))
 	ud.setOrUnsetJobBid(obj.JobBid, uo.ResolveUnsetMode(uo.JobBid))
 	ud.setOrUnsetInfo(&obj.Info, uo.ResolveUnsetMode(uo.Info))
 	ud.setOrUnsetPartitions(obj.Partitions, uo.ResolveUnsetMode(uo.Partitions))
@@ -308,6 +315,52 @@ func UpdateWithTyp(p string) UpdateOption {
 // @tpm-schematics:start-region("typ-field-update-section")
 // @tpm-schematics:end-region("typ-field-update-section")
 
+// SetData_stream_type No Remarks
+func (ud *UpdateDocument) SetData_stream_type(p string) *UpdateDocument {
+	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetData_stream_type No Remarks
+func (ud *UpdateDocument) UnsetData_stream_type() *UpdateDocument {
+	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetData_stream_type No Remarks
+func (ud *UpdateDocument) setOrUnsetData_stream_type(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetData_stream_type(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetData_stream_type()
+		case SetData2Default:
+			ud.UnsetData_stream_type()
+		}
+	}
+}
+
+func UpdateWithData_stream_type(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetData_stream_type(p)
+		} else {
+			ud.UnsetData_stream_type()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("data-stream-type-field-update-section")
+// @tpm-schematics:end-region("data-stream-type-field-update-section")
+
 // SetJobBid No Remarks
 func (ud *UpdateDocument) SetJobBid(p string) *UpdateDocument {
 	mName := fmt.Sprintf(JobBidFieldName)
@@ -444,6 +497,17 @@ func UpdateWithPartitions(p []partition.Partition) UpdateOption {
 }
 
 // @tpm-schematics:start-region("partitions-field-update-section")
+
+func UpdateWithPartitionStatus(prt int32, status string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		// partitions are numbered from 1 but array is indexed from 0.
+		mName := fmt.Sprintf(PartitionsIStatusFieldName, prt-1)
+		ud.Set().Add(func() bson.E {
+			return bson.E{Key: mName, Value: status}
+		})
+	}
+}
+
 // @tpm-schematics:end-region("partitions-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")

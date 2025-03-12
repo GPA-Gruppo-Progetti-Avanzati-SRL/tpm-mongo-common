@@ -13,6 +13,10 @@ import (
 
 const (
 	EntityType = "lease"
+
+	StatusLeased    = "leased"
+	StatusAvailable = "available"
+	StatusError     = "error"
 )
 
 // @tpm-schematics:end-region("top-file-section")
@@ -65,7 +69,7 @@ func LeasedObjectId(leaseType string, objId string) string {
 }
 
 func (l Lease) Acquirable() bool {
-	return l.Status == "available" || (l.Status == "leased" && l.Expired())
+	return l.Status == StatusAvailable || (l.Status == StatusLeased && l.Expired())
 	// return !(l.Status == "leased" && !l.Expired())
 }
 
@@ -94,7 +98,7 @@ func (l Lease) Acquired() Lease {
 	const semLogContext = "lease::acquired"
 
 	l.LeaseId = strings.Join([]string{l.Gid, l.Bid, util.NewObjectId().String()}, ":")
-	l.Status = "leased"
+	l.Status = StatusLeased
 	l.Ts = time.Now().Format(time.RFC3339Nano)
 	l.Etag++
 
@@ -104,7 +108,7 @@ func (l Lease) Acquired() Lease {
 func (l Lease) Renewed() Lease {
 	const semLogContext = "lease::renewed"
 
-	l.Status = "leased"
+	l.Status = StatusLeased
 	l.Ts = time.Now().Format(time.RFC3339Nano)
 	l.Etag++
 
@@ -114,7 +118,8 @@ func (l Lease) Renewed() Lease {
 func (l Lease) Cleared() Lease {
 	const semLogContext = "lease::cleared"
 
-	l.Status = "available"
+	l.Status = StatusAvailable
+
 	l.Ts = time.Now().Format(time.RFC3339Nano)
 	l.Etag++
 

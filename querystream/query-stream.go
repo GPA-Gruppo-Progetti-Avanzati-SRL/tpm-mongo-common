@@ -13,16 +13,17 @@ import (
 )
 
 type ResumableFilter struct {
-	filter   string
-	resumeId string
+	filter    string
+	prtNumber int32
+	resumeId  string
 }
 
-func NewResumableFilter(filter, resumeId string) ResumableFilter {
+func NewResumableFilter(filter string, prtNumber int32, resumeId string) ResumableFilter {
 	if resumeId == "" {
 		resumeId = primitive.NilObjectID.Hex()
 	}
 
-	return ResumableFilter{filter, resumeId}
+	return ResumableFilter{filter, prtNumber, resumeId}
 }
 
 func (f ResumableFilter) Filter(resumeId string) string {
@@ -52,7 +53,7 @@ type QueryStream struct {
 	isEof      bool
 }
 
-func NewBatch(coll *mongo.Collection, maxSize int64) *QueryStream {
+func NewQueryStream(coll *mongo.Collection, maxSize int64) *QueryStream {
 	return &QueryStream{coll: coll, batchSize: maxSize}
 }
 

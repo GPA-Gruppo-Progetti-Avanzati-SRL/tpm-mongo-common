@@ -29,3 +29,23 @@ func FindByJobBidAndStatus(coll *mongo.Collection, jobBid string, status string)
 
 	return tasks, nil
 }
+
+func (tsk *Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string, prtNdx int32, st string) error {
+	const semLogContext = "task::update-partition-status"
+	updOpts := UpdateOptions{
+		UpdateWithPartitionStatus(prtNdx, st),
+	}
+
+	f := Filter{}
+	f.Or().AndEtEqTo(EType).AndBidEqTo(taskId).AndEtEqTo(EType)
+
+	updDoc := GetUpdateDocumentFromOptions(updOpts...)
+	resp, err := taskColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	log.Info().Interface("resp", resp).Msg(semLogContext)
+	return nil
+}

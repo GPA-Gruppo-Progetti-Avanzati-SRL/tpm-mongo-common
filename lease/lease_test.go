@@ -76,7 +76,8 @@ func TestLease(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, true, ok)
 
-	err = lh.SetLeaseData("my-user-property", "My-User-Specific-data", true)
+	lh.SetLeaseData("my-user-property", "My-User-Specific-data")
+	err = lh.RenewLease()
 	require.NoError(t, err)
 
 	t.Logf("release lease on object %s", LeaseObjectId)
@@ -102,7 +103,8 @@ func TestLease(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, true, ok)
 
-	err = lh.SetLeaseData("my-user-property-2", "My-User-Specific-data", true)
+	lh.SetLeaseData("my-user-property-2", "My-User-Specific-data")
+	err = lh.RenewLease()
 	require.NoError(t, err)
 
 	t.Log("waiting 100 secs before release...")

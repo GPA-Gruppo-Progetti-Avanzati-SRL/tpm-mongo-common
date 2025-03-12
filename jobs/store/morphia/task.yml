@@ -12,6 +12,9 @@ attributes:
   - name: typ
     type: string
     options: with-filter
+  - name: data_stream_type
+    type: string
+    options: with-filter
   - name: jobBid
     type: string
     options: with-filter

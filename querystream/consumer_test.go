@@ -31,8 +31,8 @@ func TestNewStreamBatch(t *testing.T) {
 	coll, err := mongolks.GetCollection(context.Background(), "default", QueryCollectionId)
 	require.NoError(t, err)
 
-	batch := querystream.NewBatch(coll, 20)
-	err = batch.Query(querystream.NewResumableFilter(`{ "_id": { "$gt": { "$oid": "{resumeObjectId}" } } }`, primitive.NilObjectID.Hex()))
+	batch := querystream.NewQueryStream(coll, 20)
+	err = batch.Query(querystream.NewResumableFilter(`{ "_id": { "$gt": { "$oid": "{resumeObjectId}" } } }`, 1, primitive.NilObjectID.Hex()))
 	require.NoError(t, err)
 
 	numDocs := 0
@@ -47,7 +47,7 @@ func TestNewStreamBatch(t *testing.T) {
 }
 
 const (
-	WithPopulateData = false
+	WithPopulateData = true
 	WithClearData    = false
 )
 
@@ -74,7 +74,7 @@ func TestNewQueryConsumer(t *testing.T) {
 		RefMetrics: &promutil.MetricsConfigReference{
 			GId: "qstream-events",
 		},
-		OnErrorPolicy: querystream.OnErrorPolicyExit,
+		//OnErrorPolicy: querystream.OnErrorPolicyExit,
 	}
 
 	qs, err := querystream.NewQueryConsumer(&consumerCfg, tasks[0], taskColl)
@@ -135,11 +135,12 @@ func clearTaskAndData(t *testing.T) {
 func populateTask(t *testing.T, taskColl *mongo.Collection) (task.Task, error) {
 
 	aTask := task.Task{
-		Bid:    taskId,
-		Et:     task.EType,
-		JobBid: jobId,
-		Status: task.StatusAvailable,
-		Typ:    task.TypeQMongo,
+		Bid:            taskId,
+		Et:             task.EType,
+		JobBid:         jobId,
+		Status:         task.StatusAvailable,
+		Typ:            task.TypeQMongo,
+		DataStreamType: task.DataStreamTypeFinite,
 		Info: beans.TaskInfo{
 			MdbInstance:   JobsInstanceId,
 			MdbCollection: QueryCollectionId,

@@ -33,6 +33,11 @@ import (
 //	QuerySource QuerySource   `yaml:"query-source,omitempty" mapstructure:"query-source,omitempty" json:"query-source,omitempty"`
 //}
 
+const (
+	LeaseDataResumeId        = "resume_id"
+	LeaseDataPartitionStatus = "partition_status"
+)
+
 type Consumer struct {
 	cfg                      *Config
 	task                     task.Task
@@ -44,10 +49,11 @@ type Consumer struct {
 
 	// prts []partition.Partition
 
-	curPrtNdx    int
-	curPrtIsEof  bool
-	qStream      *QueryStream
-	leaseHandler *lease.Handler
+	curPrtNdx       int
+	curPrtIsEof     bool
+	curPrtWithFails int
+	qStream         *QueryStream
+	leaseHandler    *lease.Handler
 
 	uncommittedEvents  int
 	lastCommittedEvent Event
@@ -101,23 +107,62 @@ func NewQueryConsumer(cfg *Config, task task.Task, taskColl *mongo.Collection, o
 		shuffledPartitionIndexes: shuffledPartitionIndexes,
 		curPrtNdx:                -1,
 		curPrtIsEof:              true,
-		qStream:                  NewBatch(qColl, 10),
+		qStream:                  NewQueryStream(qColl, 10),
 		leaseHandler:             nil,
 		lastPolledEvent:          NoEvent,
 		lastCommittedEvent:       NoEvent,
 	}, nil
 }
 
-func (s *Consumer) CommitEvent(evt Event, doIt bool) error {
+func (s *Consumer) UpdateLeaseData(evt Event, status string) error {
+	const semLogContext = "consumer::update-lease"
+	var err error
+
+	if s.leaseHandler != nil {
+		renew := false
+		if evt.Key != primitive.NilObjectID {
+			if s.leaseHandler.Lease.Bid == partition.Id(s.task.Bid, evt.Partition) {
+				s.lastCommittedEvent = evt
+				s.leaseHandler.SetLeaseData(LeaseDataResumeId, evt.Key.Hex())
+				s.uncommittedEvents = 0
+				renew = true
+			} else {
+				err = errors.New("lease not acquired by consumer")
+				log.Warn().Err(err).Interface("evt", evt).Msg(semLogContext)
+				return nil
+			}
+		}
+
+		if status != "" {
+			s.leaseHandler.SetLeaseData(LeaseDataPartitionStatus, status)
+			renew = true
+		}
+
+		if renew {
+			err = s.leaseHandler.RenewLease()
+		}
+	} else {
+		log.Warn().Msg(semLogContext + " - cannot update not owned lease")
+	}
+
+	return err
+}
+
+func (s *Consumer) CommitEvent(evt Event, forceSync bool) error {
 	const semLogContext = "consumer::commit"
 	var err error
+
+	if s.curPrtWithFails > 0 {
+		log.Info().Err(err).Interface("fails", s.curPrtWithFails).Msg(semLogContext + " - current partition with fails")
+		return nil
+	}
+
 	if evt.Key != primitive.NilObjectID {
 		if s.leaseHandler != nil && s.leaseHandler.Lease.Bid == partition.Id(s.task.Bid, evt.Partition) {
 			s.lastCommittedEvent = evt
 			s.uncommittedEvents++
-			if s.uncommittedEvents == 3 || doIt {
-				log.Info().Msg(semLogContext + ": synch lease")
-				err = s.leaseHandler.SetLeaseData("resume_id", evt.Key.Hex(), true)
+			if s.uncommittedEvents == 3 || forceSync {
+				err = s.UpdateLeaseData(evt, "")
 				s.uncommittedEvents = 0
 			}
 		} else {
@@ -152,13 +197,34 @@ func (s *Consumer) Commit() error {
 	//return err
 }
 
+func (s *Consumer) CommitsPending() bool {
+	return s.uncommittedEvents > 0
+}
+
 func (s *Consumer) Abort() error {
 	const semLogContext = "consumer::abort"
-	return nil
+	return s.AbortPartial(NoEvent)
+}
+
+func (s *Consumer) AbortPartial(lastCommittableEvent Event) error {
+	const semLogContext = "consumer::abort-partial"
+	var err error
+
+	if lastCommittableEvent.IsDocument() {
+		err = s.CommitEvent(lastCommittableEvent, true)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+		}
+	} else if s.CommitsPending() {
+		err = s.CommitEvent(s.lastCommittedEvent, true)
+	}
+
+	s.curPrtWithFails++
+	return err
 }
 
 func (qs *Consumer) Close(cts context.Context) error {
-	const semLogContext = "query-stream::close"
+	const semLogContext = "consumer::close"
 	if qs.leaseHandler != nil {
 		_ = qs.leaseHandler.Release()
 	}
@@ -187,19 +253,26 @@ func (s *Consumer) Poll() (Event, error) {
 		evt, err = s.Next()
 	}
 
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return evt, err
+	}
+
 	if evt.IsDocument() {
 		s.lastPolledEvent = evt
-	} else if evt.EofPartition && !s.lastCommittedEvent.IsZero() {
-		err = s.CommitEvent(s.lastCommittedEvent, true)
+	} else {
+		err = s.handleBoundaryEvent(evt)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 		}
 	}
 
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return evt, err
-	}
+	//} else if evt.EofPartition && !s.lastCommittedEvent.IsZero() {
+	//	err = s.CommitEvent("", s.lastCommittedEvent, true)
+	//	if err != nil {
+	//		log.Error().Err(err).Msg(semLogContext)
+	//	}
+	//}
 
 	var g *promutil.Group
 
@@ -221,40 +294,83 @@ func (s *Consumer) Poll() (Event, error) {
 }
 
 func (s *Consumer) handleBoundaryEvent(evt Event) error {
+	const semLogContext = "consumer::handle-boundary-event"
 
 	var err error
-	if evt.EofPartition {
-		if s.leaseHandler != nil && s.leaseHandler.Lease.Bid == partition.Id(s.task.Bid, evt.Partition) {
-			err = s.leaseHandler.SetLeaseData("is-eof", true, true)
+	if evt.EofPartition && s.curPrtWithFails == 0 {
+		var st string
+		if s.task.DataStreamType == task.DataStreamTypeFinite {
+			st = "EOF"
+		}
+
+		if s.uncommittedEvents > 0 || st != "" {
+			evt1 := NoEvent
+			if s.lastCommittedEvent.Key != primitive.NilObjectID {
+				if s.leaseHandler != nil && s.leaseHandler.Lease.Bid == partition.Id(s.task.Bid, s.lastCommittedEvent.Partition) {
+					evt1 = s.lastCommittedEvent
+				} else {
+					err = errors.New("lease not acquired by consumer")
+					log.Error().Err(err).Interface("evt", evt).Msg(semLogContext)
+					return err
+				}
+			}
+
+			err = s.UpdateLeaseData(evt1, st)
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return err
+			}
+
+			s.uncommittedEvents = 0
+		}
+
+		if s.task.DataStreamType == task.DataStreamTypeFinite {
+			err = s.task.UpdatePartitionStatus(s.taskCollection, s.task.Bid, evt.Partition, "EOF")
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return err
+			}
 		}
 	}
 
 	return err
 }
 
-func (s *Consumer) handleError(err error) string {
-	const semLogContext = "consumer::handle-error"
+func (s *Consumer) CommitOnEof() error {
+	const semLogContext = "consumer::commit"
+	var err error
 
-	if err == io.EOF {
-		log.Info().Msg(semLogContext + " query stream closed")
+	if s.curPrtWithFails > 0 {
+		log.Info().Err(err).Interface("fails", s.curPrtWithFails).Msg(semLogContext + " - current partition with fails")
+		return nil
 	}
 
-	err = s.Close(context.Background())
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-	}
-
-	policy := s.cfg.onErrorPolicy()
-	if policy == OnErrorPolicyContinue {
-		// s.qs, err = NewQueryStream(s.cfg.Consumer)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			policy = OnErrorPolicyExit
-		}
-	}
-
-	return policy
+	return err
 }
+
+//func (s *Consumer) handleError(err error) string {
+//	const semLogContext = "consumer::handle-error"
+//
+//	if err == io.EOF {
+//		log.Info().Msg(semLogContext + " query stream closed")
+//	}
+//
+//	err = s.Close(context.Background())
+//	if err != nil {
+//		log.Error().Err(err).Msg(semLogContext)
+//	}
+//
+//	policy := s.cfg.onErrorPolicy()
+//	if policy == OnErrorPolicyContinueCurrentPartition {
+//		// s.qs, err = NewQueryStream(s.cfg.Consumer)
+//		if err != nil {
+//			log.Error().Err(err).Msg(semLogContext)
+//			policy = OnErrorPolicyExit
+//		}
+//	}
+//
+//	return policy
+//}
 
 func (qs *Consumer) Next() (Event, error) {
 	const semLogContext = "consumer::next"
@@ -294,6 +410,7 @@ func (qs *Consumer) NextPartition() (Event, error) {
 	}
 
 	qs.curPrtIsEof = false
+	qs.curPrtWithFails = 0
 	evt, err = qs.qStream.Next()
 	evt.Partition = qs.task.Partitions[qs.shuffledPartitionIndexes[qs.curPrtNdx]].PartitionNumber
 	return evt, err
@@ -352,26 +469,28 @@ func (qs *Consumer) acquirePartition() (int, error) {
 
 		prtNdx = prtNdx + 1
 		prt := qs.task.Partitions[qs.shuffledPartitionIndexes[prtNdx]]
-		lh, ok, err := lease.AcquireLease(qs.taskCollection, qs.cfg.Id, partition.Id(qs.task.Bid, prt.PartitionNumber), false)
-		if ok {
-			log.Info().Str("partition-id", partition.Id(qs.task.Bid, prt.PartitionNumber)).Msg(semLogContext + " - acquired partition")
-			err = qs.qStream.Query(NewResumableFilter(prt.Info.MdbFilter, lh.GetLeaseStringData("resume_id", "")))
-			if err != nil {
-				log.Error().Err(err).Msg(semLogContext)
-				_ = lh.Release()
-				return -1, err
-			}
+		if prt.Status == partition.StatusAvailable {
+			lh, ok, err := lease.AcquireLease(qs.taskCollection, qs.cfg.Id, partition.Id(qs.task.Bid, prt.PartitionNumber), false)
+			if ok {
+				log.Info().Str("partition-id", partition.Id(qs.task.Bid, prt.PartitionNumber)).Msg(semLogContext + " - acquired partition")
+				err = qs.qStream.Query(NewResumableFilter(prt.Info.MdbFilter, prt.PartitionNumber, lh.GetLeaseStringData(LeaseDataResumeId, "")))
+				if err != nil {
+					log.Error().Err(err).Msg(semLogContext)
+					_ = lh.Release()
+					return -1, err
+				}
 
-			if qs.qStream.isEof {
-				log.Info().Int32("partition-number", prt.PartitionNumber).Msg(semLogContext + " - partition is eof")
-				_ = lh.Release()
+				if qs.qStream.isEof {
+					log.Info().Int32("partition-number", prt.PartitionNumber).Msg(semLogContext + " - partition is eof")
+					_ = lh.Release()
+				} else {
+					qs.leaseHandler = lh
+					return prtNdx, nil
+				}
 			} else {
-				qs.leaseHandler = lh
-				return prtNdx, nil
-			}
-		} else {
-			if err != nil {
-				log.Error().Err(err).Msg(semLogContext)
+				if err != nil {
+					log.Error().Err(err).Msg(semLogContext)
+				}
 			}
 		}
 	}

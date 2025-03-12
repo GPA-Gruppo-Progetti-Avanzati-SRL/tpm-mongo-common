@@ -193,6 +193,47 @@ func (ca *Criteria) AndTypIn(p []string) *Criteria {
 // @tpm-schematics:end-region("typ-field-filter-section")
 
 /*
+ * filter-string template: data_stream_type
+ */
+
+// AndDataStreamTypeEqTo No Remarks
+func (ca *Criteria) AndDataStreamTypeEqTo(p string) *Criteria {
+
+	if p == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: p} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// AndDataStreamTypeIsNullOrUnset No Remarks
+func (ca *Criteria) AndDataStreamTypeIsNullOrUnset() *Criteria {
+
+	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndDataStreamTypeIn(p []string) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("data-stream-type-field-filter-section")
+// @tpm-schematics:end-region("data-stream-type-field-filter-section")
+
+/*
  * filter-string template: jobBid
  */
 
