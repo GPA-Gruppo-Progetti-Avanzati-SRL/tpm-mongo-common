@@ -105,6 +105,7 @@ func (f *CheckpointSvc) Synch(watcherId string, rt checkpoint.ResumeToken) error
 }
 
 const (
+	LastIdle5MinsStoreInterval   = 1 * time.Minute
 	LastIdle24HoursStoreInterval = 24 * time.Hour
 	LastIdle1HourStoreInterval   = 1 * time.Hour
 )
@@ -136,7 +137,7 @@ func (f *CheckpointSvc) StoreIdle(tokenId string, token checkpoint.ResumeToken) 
 		log.Error().Err(err).Msg(semLogContext)
 	}
 
-	if elapsed > LastIdle1HourStoreInterval.Seconds() {
+	if elapsed > LastIdle5MinsStoreInterval.Seconds() {
 		err = f.save(tokenId, token)
 		if err == nil {
 			f.NumberOfTicks = 0
