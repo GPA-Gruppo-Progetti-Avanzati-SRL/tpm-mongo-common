@@ -1,4 +1,4 @@
-package querystream_test
+package taskconsumer_test
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer/datasource"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/querystream"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"testing"
@@ -27,31 +27,12 @@ const (
 	taskId                  = "jobId-t1"
 )
 
-func TestNewStreamBatch(t *testing.T) {
-	coll, err := mongolks.GetCollection(context.Background(), "default", QueryCollectionId)
-	require.NoError(t, err)
-
-	batch := querystream.NewQueryStream(coll, 20)
-	err = batch.Query(querystream.NewResumableFilter(`{ "_id": { "$gt": { "$oid": "{resumeObjectId}" } } }`, 1, primitive.NilObjectID.Hex()))
-	require.NoError(t, err)
-
-	numDocs := 0
-	doc, err := batch.Next()
-	for err == nil {
-		t.Log(doc)
-		numDocs++
-		doc, err = batch.Next()
-	}
-	require.Equal(t, true, err == io.EOF)
-	t.Logf("num documents : %d", numDocs)
-}
-
 const (
-	WithPopulateData = true
+	WithPopulateData = false
 	WithClearData    = false
 )
 
-func TestNewQueryConsumer(t *testing.T) {
+func TestNewConsumer(t *testing.T) {
 
 	if WithPopulateData {
 		populateTaskAndData(t)
@@ -68,7 +49,7 @@ func TestNewQueryConsumer(t *testing.T) {
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(tasks) > 0 }, "expected tasks to be available")
 
-	consumerCfg := querystream.Config{
+	consumerCfg := taskconsumer.Config{
 		Id: "my-consumer-group",
 		// to-do: configure a metric. This generates an error in trace mode.
 		RefMetrics: &promutil.MetricsConfigReference{
@@ -77,7 +58,10 @@ func TestNewQueryConsumer(t *testing.T) {
 		//OnErrorPolicy: querystream.OnErrorPolicyExit,
 	}
 
-	qs, err := querystream.NewQueryConsumer(&consumerCfg, tasks[0], taskColl)
+	ds, err := datasource.NewMongoDbConnectorForTask(tasks[0].Info)
+	require.NoError(t, err)
+
+	qs, err := taskconsumer.NewConsumer(taskColl, tasks[0], ds, &consumerCfg)
 	require.NoError(t, err)
 	defer qs.Close(context.Background())
 

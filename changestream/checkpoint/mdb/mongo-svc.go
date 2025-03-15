@@ -22,6 +22,7 @@ type CheckpointSvc struct {
 	cfg           CheckpointSvcConfig
 	LastSaved     checkpoint.ResumeToken
 	LastCommitted checkpoint.ResumeToken
+	LastIdle      checkpoint.ResumeToken
 	NumberOfTicks int
 
 	coll *mongo.Collection
@@ -101,6 +102,49 @@ func (f *CheckpointSvc) Synch(watcherId string, rt checkpoint.ResumeToken) error
 	}
 
 	return nil
+}
+
+const (
+	LastIdle24HoursStoreInterval = 24 * time.Hour
+	LastIdle1HourStoreInterval   = 1 * time.Hour
+)
+
+func (f *CheckpointSvc) ClearIdle() {
+	f.LastIdle = checkpoint.ResumeToken{}
+}
+
+func (f *CheckpointSvc) StoreIdle(tokenId string, token checkpoint.ResumeToken) error {
+	const semLogContext = "mongodb-checkpoint::store-idle"
+	var err error
+
+	if f.LastIdle.IsZero() {
+		f.LastIdle = token
+		return nil
+	}
+
+	if f.LastIdle.Value != token.Value {
+		log.Info().Str("", f.LastIdle.Value).Str("", token.Value).Msg(semLogContext + " - last idle changed")
+	}
+
+	// Check if a save happened in the last hour (either for an event or for an idle resume token.
+	elapsed := LastIdle24HoursStoreInterval.Seconds()
+	var lastIdleTm time.Time
+	lastIdleTm, err = time.Parse(time.RFC3339Nano, f.LastIdle.At)
+	if err == nil {
+		elapsed = time.Now().Sub(lastIdleTm).Seconds()
+	} else {
+		log.Error().Err(err).Msg(semLogContext)
+	}
+
+	if elapsed > LastIdle1HourStoreInterval.Seconds() {
+		err = f.save(tokenId, token)
+		if err == nil {
+			f.NumberOfTicks = 0
+			f.LastIdle = token
+		}
+	}
+
+	return err
 }
 
 func (f *CheckpointSvc) Store(tokenId string, token checkpoint.ResumeToken) error {

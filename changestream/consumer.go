@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	MetricHistoryLostCounter = "cdc-history-lost"
-	MetricIdleTryNext        = "cdc-idle-try-next"
+	MetricHistoryLostCounter       = "cdc-history-lost"
+	MetricIdleTryNext              = "cdc-idle-try-next"
+	MetricMillisecondsBehindSource = "milliseconds-behind-source"
 )
 
 type Consumer struct {
@@ -116,6 +117,9 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		s.numIdlesTryNext++
 		g = s.setMetric(g, MetricIdleTryNext, float64(s.numIdlesTryNext), nil)
 
+		// with no events assume there is no lag..... reset this gauge
+		g = s.setMetric(g, MetricMillisecondsBehindSource, 0, nil)
+
 		if s.chgStream.ID() == 0 {
 			log.Warn().Msg(semLogContext + " - stream EOF")
 			return nil, io.EOF
@@ -140,7 +144,25 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 			return nil, s.chgStream.Err()
 		}
 
+		if s.cfg.checkPointSvc != nil {
+			idleResumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return nil, err
+			}
+
+			err = s.cfg.checkPointSvc.StoreIdle(s.cfg.Id, idleResumeToken)
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return nil, err
+			}
+		}
+
 		return nil, nil
+	}
+
+	if s.cfg.checkPointSvc != nil {
+		s.cfg.checkPointSvc.ClearIdle()
 	}
 
 	// clear the gauge
@@ -188,7 +210,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 
 	clusterTime := time.Unix(int64(evt.ClusterTime.T), 0)
 	lag := time.Now().Sub(clusterTime)
-	g = s.setMetric(g, "milliseconds-behind-source", float64(lag.Milliseconds()), nil)
+	g = s.setMetric(g, MetricMillisecondsBehindSource, float64(lag.Milliseconds()), nil)
 
 	s.lastPolledToken = evt.ResumeTok
 	return &evt, nil

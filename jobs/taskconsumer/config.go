@@ -1,4 +1,4 @@
-package querystream
+package taskconsumer
 
 import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"

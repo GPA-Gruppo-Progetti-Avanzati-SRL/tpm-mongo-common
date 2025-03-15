@@ -93,6 +93,16 @@ func (f *CheckpointSvc) Synch(watcherId string, rt checkpoint.ResumeToken) error
 	return nil
 }
 
+func (f *CheckpointSvc) StoreIdle(watcherId string, token checkpoint.ResumeToken) error {
+	return errors.New("still not implemented for file checkpoint svc")
+}
+
+func (f *CheckpointSvc) ClearIdle() {
+	const semLogContext = "file-checkpoint::clear-idle"
+	err := errors.New("still not implemented for file checkpoint svc")
+	log.Error().Err(err).Msg(semLogContext)
+}
+
 func (f *CheckpointSvc) Store(watcherId string, token checkpoint.ResumeToken) error {
 	var err error
 

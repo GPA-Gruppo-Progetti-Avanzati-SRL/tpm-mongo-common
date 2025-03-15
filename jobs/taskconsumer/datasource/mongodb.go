@@ -1,7 +1,10 @@
-package querystream
+package datasource
 
 import (
 	"context"
+	"errors"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
@@ -43,7 +46,7 @@ func (f ResumableFilter) UpdateResumeId(resumeId string) ResumableFilter {
 	return f
 }
 
-type QueryStream struct {
+type MongoDbConnector struct {
 	coll      *mongo.Collection
 	batchSize int64
 
@@ -53,17 +56,41 @@ type QueryStream struct {
 	isEof      bool
 }
 
-func NewQueryStream(coll *mongo.Collection, maxSize int64) *QueryStream {
-	return &QueryStream{coll: coll, batchSize: maxSize}
+func NewMongoDbConnector(coll *mongo.Collection, batchSize int64) (*MongoDbConnector, error) {
+	return &MongoDbConnector{coll: coll, batchSize: batchSize}, nil
 }
 
-func (sb *QueryStream) Query(filter ResumableFilter) error {
+func NewMongoDbConnectorForTask(aTask beans.TaskInfo) (*MongoDbConnector, error) {
+	const semLogContext = "new-mongo-db-data-source"
+	var err error
+
+	queryLksInstance := aTask.MdbInstance
+	queryCollectionId := aTask.MdbCollection
+	if queryLksInstance == "" || queryCollectionId == "" {
+		err = errors.New("missing or empty query-collection-instance/query-collection-id")
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	qColl, err := mongolks.GetCollection(context.Background(), queryLksInstance, queryCollectionId)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+	return &MongoDbConnector{coll: qColl, batchSize: 10}, nil
+}
+
+func (sb *MongoDbConnector) IsEOF() bool {
+	return sb.isEof
+}
+
+func (sb *MongoDbConnector) Query(filter ResumableFilter) error {
 	sb.filter = filter
 	sb.isEof = false
 	return sb.loadPage()
 }
 
-func (sb *QueryStream) loadPage() error {
+func (sb *MongoDbConnector) loadPage() error {
 	const semLogContext = "query-stream::load-page"
 
 	filter := sb.filter.Filter(sb.filter.resumeId)
@@ -100,7 +127,7 @@ func (sb *QueryStream) loadPage() error {
 	return nil
 }
 
-func (sb *QueryStream) Next() (Event, error) {
+func (sb *MongoDbConnector) Next() (Event, error) {
 	const semLogContext = "query-stream::next"
 	var err error
 

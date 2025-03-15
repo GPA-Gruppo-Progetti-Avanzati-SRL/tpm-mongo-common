@@ -1,4 +1,4 @@
-package querystream_test
+package taskconsumer_test
 
 import (
 	"context"

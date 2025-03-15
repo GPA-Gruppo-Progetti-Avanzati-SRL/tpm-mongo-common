@@ -1,4 +1,4 @@
-package querystream
+package datasource
 
 import (
 	"encoding/json"
