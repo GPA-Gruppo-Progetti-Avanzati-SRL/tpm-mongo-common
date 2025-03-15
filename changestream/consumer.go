@@ -18,7 +18,7 @@ import (
 const (
 	MetricHistoryLostCounter       = "cdc-history-lost"
 	MetricIdleTryNext              = "cdc-idle-try-next"
-	MetricMillisecondsBehindSource = "milliseconds-behind-source"
+	MetricMillisecondsBehindSource = "cdc-milliseconds-behind-source"
 )
 
 type Consumer struct {

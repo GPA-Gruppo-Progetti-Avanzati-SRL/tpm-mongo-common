@@ -123,9 +123,9 @@ func (f *CheckpointSvc) StoreIdle(tokenId string, token checkpoint.ResumeToken) 
 		return nil
 	}
 
-	if f.LastIdle.Value != token.Value {
-		log.Info().Str("", f.LastIdle.Value).Str("", token.Value).Msg(semLogContext + " - last idle changed")
-	}
+	//if f.LastIdle.Value != token.Value {
+	//	log.Info().Str("", f.LastIdle.Value).Str("", token.Value).Msg(semLogContext + " - last idle changed")
+	//}
 
 	// Check if a save happened in the last hour (either for an event or for an idle resume token.
 	elapsed := LastIdle24HoursStoreInterval.Seconds()
