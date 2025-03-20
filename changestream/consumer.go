@@ -8,6 +8,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,6 +17,7 @@ import (
 )
 
 const (
+	MetricLabelName                = "name"
 	MetricHistoryLostCounter       = "cdc-history-lost"
 	MetricIdleTryNext              = "cdc-idle-try-next"
 	MetricMillisecondsBehindSource = "cdc-milliseconds-behind-source"
@@ -30,6 +32,8 @@ type Consumer struct {
 	lastPolledToken    checkpoint.ResumeToken
 	numEvents          int
 	numIdlesTryNext    int
+
+	metricsLabels prometheus.Labels
 }
 
 func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
@@ -42,6 +46,9 @@ func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
 
 	s := &Consumer{
 		cfg: cfg,
+		metricsLabels: prometheus.Labels{
+			MetricLabelName: cfg.Id,
+		},
 	}
 
 	s.chgStream, err = s.newChangeStream()
@@ -319,6 +326,10 @@ func (s *Consumer) setMetric(metricGroup *promutil.Group, metricId string, value
 		}
 
 		metricGroup = &g
+	}
+
+	if labels == nil {
+		labels = s.metricsLabels
 	}
 
 	err = metricGroup.SetMetricValueById(metricId, value, labels)
