@@ -109,7 +109,7 @@ func (op *UpdateManyOperation) Execute(lks *mongolks.LinkedService, collectionId
 }
 
 func UpdateMany(lks *mongolks.LinkedService, collectionId string, filter []byte, update []byte, opts []byte) (OperationResult, []byte, error) {
-	const semLogContext = "json-ops::update-one"
+	const semLogContext = "json-ops::update-many"
 	var err error
 
 	c := lks.GetCollection(collectionId, "")
@@ -156,7 +156,7 @@ func UpdateMany(lks *mongolks.LinkedService, collectionId string, filter []byte,
 }
 
 func (op *UpdateManyOperation) NewWriteModel() (mongo.WriteModel, error) {
-	const semLogContext = "json-ops::new-update-one-model"
+	const semLogContext = "json-ops::new-update-many-model"
 
 	statementFilter, err := util.UnmarshalJson2BsonD(op.Filter, true)
 	if err != nil {
