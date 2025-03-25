@@ -178,7 +178,7 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 	for s.chgStream.TryNext(context.TODO()) {
 
 		numEvents++
-		g = s.setMetric(g, "cdc-events", 1, nil)
+		g = s.setMetric(g, MetricChangeStreamNumEvents, 1, nil)
 
 		var data bson.M
 		if err := s.chgStream.Decode(&data); err != nil {

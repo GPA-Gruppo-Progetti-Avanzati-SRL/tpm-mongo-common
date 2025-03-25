@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	MetricLabelName                = "name"
-	MetricHistoryLostCounter       = "cdc-history-lost"
-	MetricIdleTryNext              = "cdc-idle-try-next"
-	MetricMillisecondsBehindSource = "cdc-milliseconds-behind-source"
+	MetricLabelName                            = "name"
+	MetricChangeStreamHistoryLostCounter       = "cdc-cs-history-lost"
+	MetricChangeStreamIdleTryNext              = "cdc-cs-idle-try-next"
+	MetricChangeStreamMillisecondsBehindSource = "cdc-cs-milliseconds-behind-source"
+	MetricChangeStreamNumEvents                = "cdc-cs-events"
 )
 
 type Consumer struct {
@@ -122,10 +123,10 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	if !s.chgStream.TryNext(context.TODO()) {
 
 		s.numIdlesTryNext++
-		g = s.setMetric(g, MetricIdleTryNext, float64(s.numIdlesTryNext), nil)
+		g = s.setMetric(g, MetricChangeStreamIdleTryNext, float64(s.numIdlesTryNext), nil)
 
 		// with no events assume there is no lag..... reset this gauge
-		g = s.setMetric(g, MetricMillisecondsBehindSource, 0, nil)
+		g = s.setMetric(g, MetricChangeStreamMillisecondsBehindSource, 0, nil)
 
 		if s.chgStream.ID() == 0 {
 			log.Warn().Msg(semLogContext + " - stream EOF")
@@ -136,7 +137,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 			ec, en := util.MongoError(s.chgStream.Err(), s.ServerVersion)
 			if ec == util.MongoErrChangeStreamHistoryLost {
 				var g *promutil.Group
-				g = s.setMetric(g, MetricHistoryLostCounter, 1, nil)
+				g = s.setMetric(g, MetricChangeStreamHistoryLostCounter, 1, nil)
 
 				if s.cfg.checkPointSvc != nil {
 					errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
@@ -174,7 +175,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 
 	// clear the gauge
 	s.numIdlesTryNext = 0
-	g = s.setMetric(g, MetricIdleTryNext, 0, nil)
+	g = s.setMetric(g, MetricChangeStreamIdleTryNext, 0, nil)
 
 	/*
 		    Errore fittizio generato per motivi di test
@@ -186,7 +187,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	*/
 
 	s.numEvents++
-	g = s.setMetric(g, "cdc-events", 1, nil)
+	g = s.setMetric(g, MetricChangeStreamNumEvents, 1, nil)
 
 	var data bson.M
 	if err := s.chgStream.Decode(&data); err != nil {
@@ -217,7 +218,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 
 	clusterTime := time.Unix(int64(evt.ClusterTime.T), 0)
 	lag := time.Now().Sub(clusterTime)
-	g = s.setMetric(g, MetricMillisecondsBehindSource, float64(lag.Milliseconds()), nil)
+	g = s.setMetric(g, MetricChangeStreamMillisecondsBehindSource, float64(lag.Milliseconds()), nil)
 
 	s.lastPolledToken = evt.ResumeTok
 	return &evt, nil
@@ -265,7 +266,7 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 		// TODO add logic to retry with the start after time depending on config
 		if mongoCode == util.MongoErrChangeStreamHistoryLost {
 			var g *promutil.Group
-			g = s.setMetric(g, MetricHistoryLostCounter, 1, nil)
+			g = s.setMetric(g, MetricChangeStreamHistoryLostCounter, 1, nil)
 
 			if s.cfg.checkPointSvc != nil {
 				errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
