@@ -57,6 +57,18 @@ func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (
 		},
 	}
 
+	if cfg.WorkMode == WorkModeBatch {
+		if cfg.MaxBatchSize > 0 {
+			cfg.TickInterval = 0
+			log.Info().Int("max-batch-size", cfg.MaxBatchSize).Msg(semLogContext + " - working in batch-size mode")
+		} else {
+			if cfg.TickInterval == 0 {
+				err := errors.New("max-batch-size or tick-interval have to be set")
+				return nil, err
+			}
+			log.Info().Int64("tick-interval-ms", cfg.TickInterval.Milliseconds()).Msg(semLogContext + " - working in tick-interval mode")
+		}
+	}
 	return &t, nil
 }
 
@@ -103,7 +115,12 @@ func (tp *producerImpl) Start() error {
 		tp.wg.Add(1)
 	}
 
-	go tp.pollLoop()
+	if tp.cfg.MaxBatchSize > 0 {
+		go tp.maxBatchSizePollLoop()
+	} else {
+		go tp.tickIntervalPollLoop()
+	}
+
 	return nil
 }
 
@@ -167,7 +184,56 @@ func (tp *producerImpl) onError(errIn error) error {
 	return err
 }
 
-func (tp *producerImpl) pollLoop() {
+func (tp *producerImpl) maxBatchSizePollLoop() {
+	const semLogContext = "change-stream-cp::poll-loop"
+	log.Info().Str("cs-prod-id", tp.cfg.Name).Int("batch-size", tp.cfg.MaxBatchSize).Msg(semLogContext + " starting polling loop")
+
+	if tp.consumer == nil {
+		tp.shutDown(errors.New("consumer not initialized"))
+		return
+	}
+
+	for {
+		select {
+		case <-tp.quitc:
+			log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " terminating poll loop")
+
+			tp.shutDown(nil)
+			return
+
+		default:
+			isMsg, err := tp.poll()
+			if err != nil {
+				if tp.onError(err) != nil {
+					tp.shutDown(err)
+					return
+				}
+			}
+
+			shouldProcessBatch := false
+			if isMsg {
+				tp.numberOfMessages++
+				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.BatchSize() == tp.cfg.MaxBatchSize {
+					shouldProcessBatch = true
+				}
+			} else {
+				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.BatchSize() > 0 {
+					shouldProcessBatch = true
+				}
+			}
+
+			if shouldProcessBatch {
+				err = tp.processBatch(context.Background())
+				if err != nil && tp.onError(err) != nil {
+					tp.shutDown(err)
+					return
+				}
+			}
+		}
+	}
+}
+
+func (tp *producerImpl) tickIntervalPollLoop() {
 	const semLogContext = "change-stream-cp::poll-loop"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Float64("tick-interval", tp.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting polling loop")
 
