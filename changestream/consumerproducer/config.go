@@ -36,6 +36,7 @@ type Config struct {
 	CheckPointSvcConfig factory.Config                   `yaml:"checkpoint-svc,omitempty" mapstructure:"checkpoint-svc,omitempty" json:"checkpoint-svc,omitempty"`
 	RefMetrics          *promutil.MetricsConfigReference `yaml:"ref-metrics,omitempty"  mapstructure:"ref-metrics,omitempty"  json:"ref-metrics,omitempty"`
 	TickInterval        time.Duration                    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
+	MaxBatchSize        int                              `yaml:"batch-size,omitempty" mapstructure:"batch-size,omitempty" json:"batch-size,omitempty"`
 	Tracing             TracingCfg                       `yaml:"tracing,omitempty" mapstructure:"tracing,omitempty" json:"tracing,omitempty"`
 }
 
