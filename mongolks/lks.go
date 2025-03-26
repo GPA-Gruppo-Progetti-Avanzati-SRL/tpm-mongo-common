@@ -20,6 +20,7 @@ var DefaultWriteTimeout = 60 * time.Second
 
 type LinkedService struct {
 	cfg          Config
+	version      mongoUtil.MongoDbVersion
 	mongoClient  *mongo.Client
 	db           *mongo.Database
 	writeConcern *writeconcern.WriteConcern
@@ -125,7 +126,7 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 		mdb.writeTimeout = util.ParseDuration(mdb.cfg.WriteTimeout, DefaultWriteTimeout)
 	}
 
-	_, err = mdb.ServerVersion()
+	mdb.version, err = mdb.ServerVersion()
 	if err != nil {
 		return err
 	}
@@ -143,6 +144,10 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 
 func (mdb *LinkedService) ServerVersion() (mongoUtil.MongoDbVersion, error) {
 	const semLogContext = "mongo-lks::version"
+
+	if !mdb.version.IsZero() {
+		return mdb.version, nil
+	}
 
 	buildInfoCmd := bson.D{bson.E{Key: "buildInfo", Value: 1}}
 	var buildInfoDoc bson.M

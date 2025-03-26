@@ -14,6 +14,10 @@ func NewMongoDbVersion(serverVersion interface{}) MongoDbVersion {
 	return MongoDbVersion{V: s}
 }
 
+func (mv MongoDbVersion) IsZero() bool {
+	return mv.V == ""
+}
+
 func (mv MongoDbVersion) IsVersion4() bool {
 	return strings.HasPrefix(mv.V, "4.")
 }

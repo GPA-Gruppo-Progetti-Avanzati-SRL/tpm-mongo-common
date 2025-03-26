@@ -45,16 +45,16 @@ func TestInsertOne(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, resp, err := jsonops.InsertOne(lks, CollectionId, insertOneTestDocument1, insertOneTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
 
 	sc, resp, err = jsonops.InsertOne(lks, CollectionId, insertOneTestDocument2, insertOneTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
 
 	sc, resp, err = jsonops.InsertOne(lks, CollectionId, insertOneTestDocument3, insertOneTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
 }
 
 var findOneQueryTest = []byte(`{ "year": 1939 }`)
@@ -67,8 +67,8 @@ func TestFindOne(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, body, err := jsonops.FindOne(lks, CollectionId, findOneQueryTest, findOneProjectionTest, findOneSortTest, nil)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
+	require.NoError(t, err)
 }
 
 var findOneAndUpdateQueryTest = []byte(`{ "year": 1939 }`)
@@ -88,16 +88,17 @@ func TestFindOneAndUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, body, err := jsonops.FindOneAndUpdate(lks, CollectionId, findOneAndUpdateQueryTest, findOneAndUpdateProjectionTest, findOneAndUpdateSortAscTest, findOneAndUpdateUpdateWithArray, nil)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
+	require.NoError(t, err)
 
 	sc, body, err = jsonops.FindOneAndUpdate(lks, CollectionId, findOneAndUpdateQueryTest, findOneAndUpdateProjectionTest, findOneAndUpdateSortDescTest, findOneAndUpdateUpdateWithMap, nil)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
+	require.NoError(t, err)
 
 	sc, body, err = jsonops.FindOneAndUpdate(lks, CollectionId, findOneAndUpdateWithUpsertQueryTest, nil, nil, findOneAndUpdateWithUpsertUpdateWithMap, findOneAndUpdateWithUpsertOptionsTest)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
+	require.NoError(t, err)
+
 }
 
 var findQueryTest = []byte(`{}`)
@@ -110,8 +111,9 @@ func TestFind(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, body, err := jsonops.Find(lks, CollectionId, findQueryTest, findSortTest, findProjectionTest, nil)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
+	require.NoError(t, err)
+
 }
 
 var aggregateTest = []byte(`[{ "$match": { "year": 1939 }}, { "$project": { "year": 1, "title": 1 }}]`)
@@ -123,8 +125,9 @@ func TestAggregateOne(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, body, err := jsonops.AggregateOne(lks, CollectionId, aggregateTest, nil)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(body))
+	require.NoError(t, err)
+
 }
 
 func TestAggregate(t *testing.T) {
@@ -133,8 +136,8 @@ func TestAggregate(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, items, err := jsonops.Aggregate(lks, CollectionId, aggregateTest, nil)
-	require.NoError(t, err)
 	t.Log("status code:", sc, len(items))
+	require.NoError(t, err)
 	for i, el := range items {
 		t.Log("item:", i, string(el))
 	}
@@ -152,12 +155,12 @@ func TestUpdateOne(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, resp, err := jsonops.UpdateOne(lks, CollectionId, updateOneTestFilterWithArray, updateOneTestUpdateWithArray, updateOneTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
 
 	sc, resp, err = jsonops.UpdateOne(lks, CollectionId, updateOneTestFilterWithMap, updateOneTestUpdateWithMap, updateOneTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
 
 }
 
@@ -172,8 +175,9 @@ func TestReplaceOne(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, resp, err := jsonops.ReplaceOne(lks, CollectionId, replaceOneTestFilter, replaceOneTestReplacement, replaceOneTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
+
 }
 
 var deleteOneTestFilter = []byte(`{ "year": 1942 }`)
@@ -185,8 +189,9 @@ func TestDeleteOne(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, resp, err := jsonops.DeleteOne(lks, CollectionId, deleteOneTestFilter, deleteOneTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
+
 }
 
 var deleteAllTestFilter = []byte(`{}`)
@@ -198,8 +203,9 @@ func TestDeleteAll(t *testing.T) {
 	require.NoError(t, err)
 
 	sc, resp, err := jsonops.DeleteMany(lks, CollectionId, deleteAllTestFilter, deleteAllTestOpts)
-	require.NoError(t, err)
 	t.Log("status code:", sc, string(resp))
+	require.NoError(t, err)
+
 }
 
 func TestExampleUnmarshal(t *testing.T) {

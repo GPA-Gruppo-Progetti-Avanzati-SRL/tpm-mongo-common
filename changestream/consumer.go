@@ -134,7 +134,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		}
 
 		if s.chgStream.Err() != nil {
-			ec, en := util.MongoError(s.chgStream.Err(), s.ServerVersion)
+			ec := util.MongoErrorCode(s.chgStream.Err(), s.ServerVersion)
 			if ec == util.MongoErrChangeStreamHistoryLost {
 				var g *promutil.Group
 				g = s.setMetric(g, MetricChangeStreamHistoryLostCounter, 1, nil)
@@ -146,7 +146,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 					}
 				}
 			} else {
-				log.Error().Err(s.chgStream.Err()).Int32("error-code", ec).Interface("error", en).Msg(semLogContext)
+				log.Error().Err(s.chgStream.Err()).Int32("error-code", ec).Interface("error", s.chgStream.Err()).Msg(semLogContext)
 			}
 
 			return nil, s.chgStream.Err()
@@ -262,7 +262,7 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 	log.Info().Err(err).Int("retry-num", counter).Msg(semLogContext)
 	collStream, err := coll.Watch(context.TODO(), pipeline, &opts)
 	for err != nil && counter < s.cfg.RetryCount {
-		mongoCode, _ := util.MongoError(err, s.ServerVersion)
+		mongoCode := util.MongoErrorCode(err, s.ServerVersion)
 		// TODO add logic to retry with the start after time depending on config
 		if mongoCode == util.MongoErrChangeStreamHistoryLost {
 			var g *promutil.Group

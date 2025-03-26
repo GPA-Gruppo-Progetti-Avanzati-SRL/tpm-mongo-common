@@ -256,8 +256,10 @@ func executeFindOneAndUpdateOp(c *mongo.Collection, query bson.D, update any, fo
 	}
 
 	if result.Err() != nil {
-		log.Error().Err(result.Err()).Msg(semLogContext)
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, result.Err()
+		err := result.Err()
+		mongoErrorCode := util.MongoErrorCode(err, util.MongoDbVersion{})
+		log.Error().Err(err).Int32("mongo-error", mongoErrorCode).Msg(semLogContext)
+		return OperationResult{StatusCode: int(-mongoErrorCode)}, nil, err
 	}
 
 	var body bson.M

@@ -224,8 +224,9 @@ func executeFindOp(c *mongo.Collection, query bson.D, fo *options.FindOptions) (
 
 	crs, err := c.Find(context.Background(), query, fo)
 	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
+		mongoErrorCode := util.MongoErrorCode(err, util.MongoDbVersion{})
+		log.Error().Err(err).Int32("mongo-error", mongoErrorCode).Msg(semLogContext)
+		return OperationResult{StatusCode: int(-mongoErrorCode)}, nil, err
 	}
 
 	var resp [][]byte

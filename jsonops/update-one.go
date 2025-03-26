@@ -141,8 +141,9 @@ func UpdateOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 	}
 	res, err := c.UpdateOne(context.Background(), statementFilter, statementUpdate, &uo)
 	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
+		mongoErrorCode := util.MongoErrorCode(err, util.MongoDbVersion{})
+		log.Error().Err(err).Int32("mongo-error", mongoErrorCode).Msg(semLogContext)
+		return OperationResult{StatusCode: int(-mongoErrorCode)}, nil, err
 	}
 
 	var b []byte

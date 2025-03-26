@@ -352,15 +352,61 @@ const (
 	MongoErrClientMarkedKilled                                          int32 = 46841
 )
 
+func MongoErrorCode(err error, mongoDbVersion MongoDbVersion) int32 {
+	const semLogContext = "mongo::error-code"
+
+	mcode := MongoErrInternalError
+
+	var mongoCmdErr mongo.CommandError
+	var writeExcErr mongo.WriteException
+	switch {
+	case errors.As(err, &mongoCmdErr):
+		log.Error().Err(mongoCmdErr).Str("server-version", mongoDbVersion.String()).Int32("error-code", mongoCmdErr.Code).Str("error-name", mongoCmdErr.Name).Str("error-msg", mongoCmdErr.Message).Msg(semLogContext + " - mongo.CommandError")
+		mcode = CommandErrorCode(mongoCmdErr, mongoDbVersion)
+	case errors.As(err, &writeExcErr):
+		log.Error().Msg(semLogContext + " - mongo.WriteException")
+		if writeExcErr.WriteConcernError != nil {
+			log.Error().Err(err).Int("code", writeExcErr.WriteConcernError.Code).Msg(semLogContext + " - mongo.WriteException with write concern error")
+			mcode = int32(writeExcErr.WriteConcernError.Code)
+		} else if len(writeExcErr.WriteErrors) > 0 {
+			log.Error().Err(err).Int("code", writeExcErr.WriteErrors[0].Code).Msg(semLogContext + " - mongo.WriteException with write errors error")
+			mcode = int32(writeExcErr.WriteErrors[0].Code)
+		}
+		// log.Info().Bool("code-11000", writeExcErr.HasErrorCode(11000)).Bool("msg-11000", writeExcErr.HasErrorMessage("E11000 duplicate key error collection")).Msg(semLogContext)
+	default:
+		log.Error().Err(err).Str("server-version", mongoDbVersion.String()).Str("error-type", fmt.Sprintf("%T", err)).Msg(semLogContext + " - !mongo.CommandError")
+	}
+
+	return mcode
+}
+
 func MongoError(err error, mongoDbVersion MongoDbVersion) (int32, mongo.CommandError) {
 	const semLogContext = "mongo::error"
 
-	var mongoErr mongo.CommandError
+	/*
+		var wce mongo.WriteConcernError
+		ok := errors.As(err, &wce)
+		if !ok {
+			log.Error().Err(err).Msg(semLogContext)
+		} else {
+			log.Info().Bool("dup", wce.Code == 11000 || wce.Code == 11001 || wce.Code == 12582 || wce.Code == 16460 && strings.Contains(wce.Message, " E11000 ")).Msg(semLogContext)
+		}
+
+		var wre mongo.WriteErrors
+		ok = errors.As(err, &wre)
+		if !ok {
+			log.Error().Err(err).Msg(semLogContext)
+		} else {
+			log.Info().Msg(semLogContext)
+		}
+	*/
+
+	var mongoCmdErr mongo.CommandError
 	switch {
-	case errors.As(err, &mongoErr):
-		log.Error().Err(mongoErr).Str("server-version", mongoDbVersion.String()).Int32("error-code", mongoErr.Code).Str("error-name", mongoErr.Name).Str("error-msg", mongoErr.Message).Msg(semLogContext + " - mongo.CommandError")
-		code := CommandErrorCode(mongoErr, mongoDbVersion)
-		return code, mongoErr
+	case errors.As(err, &mongoCmdErr):
+		log.Error().Err(mongoCmdErr).Str("server-version", mongoDbVersion.String()).Int32("error-code", mongoCmdErr.Code).Str("error-name", mongoCmdErr.Name).Str("error-msg", mongoCmdErr.Message).Msg(semLogContext + " - mongo.CommandError")
+		code := CommandErrorCode(mongoCmdErr, mongoDbVersion)
+		return code, mongoCmdErr
 	default:
 		log.Error().Err(err).Str("server-version", mongoDbVersion.String()).Str("error-type", fmt.Sprintf("%T", err)).Msg(semLogContext + " - !mongo.CommandError")
 	}
@@ -371,7 +417,7 @@ func MongoError(err error, mongoDbVersion MongoDbVersion) (int32, mongo.CommandE
 func IsMongoErrorHistoryLost(err error, mongoDbVersion MongoDbVersion) bool {
 	const semLogContext = "mongo::is-history-lost-error"
 
-	c, err := MongoError(err, mongoDbVersion)
+	c := MongoErrorCode(err, mongoDbVersion)
 	return c == MongoErrChangeStreamHistoryLost
 }
 
