@@ -119,7 +119,7 @@ func (tp *producerImpl) Start() error {
 		tp.wg.Add(1)
 	}
 
-	tp.processor.Start()
+	tp.processor.StartProcessor()
 
 	if tp.cfg.MaxBatchSize > 0 {
 		go tp.maxBatchSizePollLoop()
@@ -156,7 +156,7 @@ func (tp *producerImpl) Close() error {
 	const semLogContext = "change-stream-cp::close"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " signalling shutdown transformer producer")
 	close(tp.quitc)
-	tp.processor.Close()
+	tp.processor.CloseProcessor()
 	return nil
 }
 

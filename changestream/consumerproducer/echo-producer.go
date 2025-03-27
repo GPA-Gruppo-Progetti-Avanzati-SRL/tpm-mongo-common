@@ -30,7 +30,7 @@ func NewEchoConsumerProducer() *EchoConsumerProducer {
 	return &EchoConsumerProducer{}
 }
 
-func (p *EchoConsumerProducer) Start() {
+func (p *EchoConsumerProducer) StartProcessor() {
 	const semLogContext = "echo-producer::start"
 	log.Info().Msg(semLogContext)
 
@@ -39,7 +39,7 @@ func (p *EchoConsumerProducer) Start() {
 	}
 }
 
-func (p *EchoConsumerProducer) Close() {
+func (p *EchoConsumerProducer) CloseProcessor() {
 	const semLogContext = "echo-producer::close"
 	log.Info().Msg(semLogContext)
 

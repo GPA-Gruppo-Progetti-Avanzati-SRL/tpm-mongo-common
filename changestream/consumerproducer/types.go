@@ -27,8 +27,8 @@ type Server interface {
 type Processor interface {
 	WithBatchProcessedCallback(commitCb BatchProcessedCb)
 	IsDeferred() bool
-	Start()
-	Close()
+	StartProcessor()
+	CloseProcessor()
 
 	ProcessMessage(evt *events.ChangeEvent) error
 	AddMessage2Batch(evt *events.ChangeEvent) error
