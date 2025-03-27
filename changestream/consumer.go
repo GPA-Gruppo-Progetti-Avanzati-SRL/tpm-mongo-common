@@ -70,8 +70,8 @@ func (s *Consumer) Close() {
 	}
 }
 
-func (s *Consumer) SynchPoint(rt checkpoint.ResumeToken) error {
-	const semLogContext = "consumer::synch-point"
+func (s *Consumer) CommitAt(rt checkpoint.ResumeToken, syncRequired bool) error {
+	const semLogContext = "consumer::commit-at"
 
 	if s.cfg.checkPointSvc == nil {
 		err := errors.New("no checkpoint service configured to honour commit op")
@@ -79,7 +79,7 @@ func (s *Consumer) SynchPoint(rt checkpoint.ResumeToken) error {
 		return err
 	}
 
-	err := s.cfg.checkPointSvc.Synch(s.cfg.Id, rt)
+	err := s.cfg.checkPointSvc.CommitAt(s.cfg.Id, rt, syncRequired)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -102,7 +102,7 @@ func (s *Consumer) Commit() error {
 		return nil
 	}
 
-	err := s.cfg.checkPointSvc.Store(s.cfg.Id, s.lastPolledToken)
+	err := s.cfg.checkPointSvc.CommitAt(s.cfg.Id, s.lastPolledToken, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err

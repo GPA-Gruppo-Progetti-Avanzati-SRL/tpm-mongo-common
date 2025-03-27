@@ -219,7 +219,7 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 		}
 
 		if allSynchs && s.cfg.checkPointSvc != nil {
-			err = s.cfg.checkPointSvc.Store(s.cfg.Id, evt.ResumeTok)
+			err = s.cfg.checkPointSvc.CommitAt(s.cfg.Id, evt.ResumeTok, false)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
 				return evt.ResumeTok, err

@@ -33,7 +33,7 @@ func TestConsumerProducer(t *testing.T) {
 	}()
 
 	var wg sync.WaitGroup
-	cp, err := consumerproducer.NewConsumerProducer(&cfg, &wg, &consumerproducer.EchoConsumerProducer{})
+	cp, err := consumerproducer.NewConsumerProducer(&cfg, &wg, consumerproducer.NewEchoConsumerProducer())
 	require.NoError(t, err)
 
 	cps, err := consumerproducer.NewServer(

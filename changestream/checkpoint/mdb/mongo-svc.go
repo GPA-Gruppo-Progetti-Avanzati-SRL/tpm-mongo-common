@@ -81,28 +81,28 @@ func (svc *CheckpointSvc) Retrieve(watcherId string) (checkpoint.ResumeToken, er
 	return token, nil
 }
 
-func (f *CheckpointSvc) Synch(watcherId string, rt checkpoint.ResumeToken) error {
-	const semLogContext = "mongodb-checkpoint::synch"
-	var err error
-
-	// level is warn since this is called in cases when you want to force the update of synchpoint in case of errors
-	if !rt.IsZero() {
-		log.Warn().Str("rt", rt.String()).Msg(semLogContext + " synch on last-delivered")
-		err = f.save(watcherId, rt)
-	} else {
-		if !f.LastCommitted.IsZero() {
-			log.Warn().Str("rt", f.LastCommitted.String()).Msg(semLogContext + " synch on last-committed")
-			err = f.save(watcherId, f.LastCommitted)
-		}
-	}
-
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return err
-	}
-
-	return nil
-}
+//func (f *CheckpointSvc) CommitAt(watcherId string, rt checkpoint.ResumeToken, sync bool) error {
+//	const semLogContext = "mongodb-checkpoint::sync"
+//	var err error
+//
+//	// level is warn since this is called in cases when you want to force the update of synchpoint in case of errors
+//	if !rt.IsZero() {
+//		log.Warn().Str("rt", rt.String()).Msg(semLogContext + " synch on last-delivered")
+//		err = f.save(watcherId, rt)
+//	} else {
+//		if !f.LastCommitted.IsZero() {
+//			log.Warn().Str("rt", f.LastCommitted.String()).Msg(semLogContext + " synch on last-committed")
+//			err = f.save(watcherId, f.LastCommitted)
+//		}
+//	}
+//
+//	if err != nil {
+//		log.Error().Err(err).Msg(semLogContext)
+//		return err
+//	}
+//
+//	return nil
+//}
 
 const (
 	LastIdle5MinsStoreInterval   = 5 * time.Minute
@@ -148,14 +148,21 @@ func (f *CheckpointSvc) StoreIdle(tokenId string, token checkpoint.ResumeToken) 
 	return err
 }
 
-func (f *CheckpointSvc) Store(tokenId string, token checkpoint.ResumeToken) error {
+func (f *CheckpointSvc) CommitAt(tokenId string, token checkpoint.ResumeToken, syncRequired bool) error {
 	const semLogContext = "mongodb-checkpoint::store"
 	var err error
 
 	// last committed contains the last token that's been stored or not.
-	f.LastCommitted = token
+	if !token.IsZero() {
+		f.LastCommitted = token
+	}
 
-	doSave := false
+	// In the case I commit with an empty token when LastCommitted is empty....
+	if f.LastCommitted.IsZero() {
+		return nil
+	}
+
+	doSave := syncRequired
 	if f.NumberOfTicks < 0 {
 		doSave = true
 		f.NumberOfTicks = 0

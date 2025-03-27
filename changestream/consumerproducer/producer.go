@@ -48,14 +48,18 @@ func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (
 	}
 
 	t := producerImpl{
-		cfg:       cfg,
-		quitc:     make(chan struct{}),
-		wg:        wg,
-		processor: processor,
+		cfg:   cfg,
+		quitc: make(chan struct{}),
+		wg:    wg,
 		metricLabels: map[string]string{
 			"name": cfg.Name,
 		},
 	}
+
+	if processor.IsDeferred() {
+		processor.WithBatchProcessedCallback(&t)
+	}
+	t.processor = processor
 
 	if cfg.WorkMode == WorkModeBatch {
 		if cfg.MaxBatchSize > 0 {
@@ -115,6 +119,8 @@ func (tp *producerImpl) Start() error {
 		tp.wg.Add(1)
 	}
 
+	tp.processor.Start()
+
 	if tp.cfg.MaxBatchSize > 0 {
 		go tp.maxBatchSizePollLoop()
 	} else {
@@ -150,6 +156,7 @@ func (tp *producerImpl) Close() error {
 	const semLogContext = "change-stream-cp::close"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " signalling shutdown transformer producer")
 	close(tp.quitc)
+	tp.processor.Close()
 	return nil
 }
 
@@ -223,7 +230,11 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 			}
 
 			if shouldProcessBatch {
-				err = tp.processBatch(context.Background())
+				if tp.processor.IsDeferred() {
+					err = tp.deferredProcessBatch(context.Background())
+				} else {
+					err = tp.processBatch(context.Background())
+				}
 				if err != nil && tp.onError(err) != nil {
 					tp.shutDown(err)
 					return
@@ -248,7 +259,12 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 		select {
 		case <-ticker.C:
 			if tp.cfg.WorkMode == WorkModeBatch {
-				err := tp.processBatch(context.Background())
+				var err error
+				if tp.processor.IsDeferred() {
+					err = tp.deferredProcessBatch(context.Background())
+				} else {
+					err = tp.processBatch(context.Background())
+				}
 				if err != nil && tp.onError(err) != nil {
 					ticker.Stop()
 					tp.shutDown(err)
@@ -271,6 +287,28 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 			} else if isMsg {
 				tp.numberOfMessages++
 			}
+		}
+	}
+}
+
+func (tp *producerImpl) BatchProcessed(resumeToken checkpoint.ResumeToken, err error) {
+	const semLogContext = "change-stream-cp::batch-processed"
+	if err == nil {
+		_ = tp.produceMetric(nil, MetricBatches, 1, tp.metricLabels)
+		err = tp.consumer.CommitAt(resumeToken, false)
+	} else {
+		log.Error().Err(err).Msg(semLogContext)
+		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)
+		if !resumeToken.IsZero() {
+			log.Warn().Str("rt", resumeToken.String()).Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
+			_ = tp.consumer.CommitAt(resumeToken, true)
+		} else {
+			log.Warn().Msg(semLogContext + " no last committable resume token")
+		}
+
+		if tp.onError(err) != nil {
+			tp.Close()
+			return
 		}
 	}
 }
@@ -298,7 +336,7 @@ func (tp *producerImpl) poll() (bool, error) {
 		} else {
 			// the error is anyway logged but the one propagated is the prev one.
 			log.Warn().Msg(semLogContext + " synch on last committed message")
-			_ = tp.consumer.SynchPoint(checkpoint.ResumeToken{})
+			_ = tp.consumer.CommitAt(checkpoint.ResumeToken{}, true)
 		}
 	}
 
@@ -328,9 +366,30 @@ func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
 	return err
 }
 
+func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
+	const semLogContext = "change-stream-cp::deferred-process-batch"
+	var err error
+
+	batchSize := tp.processor.BatchSize()
+	if tp.cfg.WorkMode != WorkModeBatch || batchSize == 0 {
+		return nil
+	}
+
+	metricGroup := tp.produceMetric(nil, MetricBatchSize, float64(batchSize), tp.metricLabels)
+
+	_, err = tp.processor.ProcessBatch()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		_ = tp.produceMetric(metricGroup, MetricBatchErrors, 1, tp.metricLabels)
+	}
+
+	return err
+}
+
 func (tp *producerImpl) processBatch(ctx context.Context) error {
 	const semLogContext = "change-stream-cp::process-batch"
 
+	batchSize := tp.processor.BatchSize()
 	if tp.cfg.WorkMode != WorkModeBatch || tp.processor.BatchSize() == 0 {
 		return nil
 	}
@@ -338,7 +397,7 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 	defer tp.processor.Clear()
 
 	beginOfProcessing := time.Now()
-	batchSize := tp.processor.BatchSize()
+	metricGroup := tp.produceMetric(nil, MetricBatchSize, float64(batchSize), tp.metricLabels)
 
 	lastCommittableResumeToken, err := tp.processor.ProcessBatch()
 	if err != nil {
@@ -346,14 +405,13 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)
 		if !lastCommittableResumeToken.IsZero() {
 			log.Warn().Str("rt", lastCommittableResumeToken.String()).Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
-			_ = tp.consumer.SynchPoint(lastCommittableResumeToken)
+			_ = tp.consumer.CommitAt(lastCommittableResumeToken, true)
 		} else {
 			log.Warn().Msg(semLogContext + " no last committable resume token")
 		}
 	} else {
 		if batchSize > 0 {
-			metricGroup := tp.produceMetric(nil, MetricBatches, 1, tp.metricLabels)
-			metricGroup = tp.produceMetric(metricGroup, MetricBatchSize, float64(batchSize), tp.metricLabels)
+			metricGroup = tp.produceMetric(metricGroup, MetricBatches, 1, tp.metricLabels)
 			metricGroup = tp.produceMetric(metricGroup, MetricBatchDuration, time.Since(beginOfProcessing).Seconds(), tp.metricLabels)
 		}
 

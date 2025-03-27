@@ -70,28 +70,28 @@ func (f *CheckpointSvc) Retrieve(watcherId string) (checkpoint.ResumeToken, erro
 	return token, nil
 }
 
-func (f *CheckpointSvc) Synch(watcherId string, rt checkpoint.ResumeToken) error {
-	const semLogContext = "file-checkpoint::synch"
-	var err error
-
-	// level is warn since this is called in cases when you want to force the update of synchpoint in case of errors
-	if !rt.IsZero() {
-		log.Warn().Str("rt", rt.String()).Msg(semLogContext + " synch on last-delivered")
-		err = f.save(watcherId, rt)
-	} else {
-		if !f.LastCommitted.IsZero() {
-			log.Warn().Str("rt", f.LastCommitted.String()).Msg(semLogContext + " synch on last-committed")
-			err = f.save(watcherId, f.LastCommitted)
-		}
-	}
-
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return err
-	}
-
-	return nil
-}
+//func (f *CheckpointSvc) CommitAt2(watcherId string, rt checkpoint.ResumeToken, syncRequired bool) error {
+//	const semLogContext = "file-checkpoint::synch"
+//	var err error
+//
+//	// level is warn since this is called in cases when you want to force the update of synchpoint in case of errors
+//	if !rt.IsZero() {
+//		log.Warn().Str("rt", rt.String()).Msg(semLogContext + " synch on last-delivered")
+//		err = f.save(watcherId, rt)
+//	} else {
+//		if !f.LastCommitted.IsZero() {
+//			log.Warn().Str("rt", f.LastCommitted.String()).Msg(semLogContext + " synch on last-committed")
+//			err = f.save(watcherId, f.LastCommitted)
+//		}
+//	}
+//
+//	if err != nil {
+//		log.Error().Err(err).Msg(semLogContext)
+//		return err
+//	}
+//
+//	return nil
+//}
 
 func (f *CheckpointSvc) StoreIdle(watcherId string, token checkpoint.ResumeToken) error {
 	return errors.New("still not implemented for file checkpoint svc")
@@ -103,13 +103,15 @@ func (f *CheckpointSvc) ClearIdle() {
 	log.Error().Err(err).Msg(semLogContext)
 }
 
-func (f *CheckpointSvc) Store(watcherId string, token checkpoint.ResumeToken) error {
+func (f *CheckpointSvc) CommitAt(watcherId string, token checkpoint.ResumeToken, syncRequired bool) error {
 	var err error
 
 	// last committed contains the last token that's been stored or not.
-	f.LastCommitted = token
+	if !token.IsZero() {
+		f.LastCommitted = token
+	}
 
-	doSave := false
+	doSave := syncRequired
 	if f.NumberOfTicks < 0 {
 		doSave = true
 		f.NumberOfTicks = 0

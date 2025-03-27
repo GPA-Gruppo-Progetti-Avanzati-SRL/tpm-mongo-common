@@ -14,6 +14,10 @@ type ConsumerProducer interface {
 	Name() string
 }
 
+type BatchProcessedCb interface {
+	BatchProcessed(resumeToken checkpoint.ResumeToken, err error)
+}
+
 type Server interface {
 	Close()
 	Start() error
@@ -21,6 +25,11 @@ type Server interface {
 }
 
 type Processor interface {
+	WithBatchProcessedCallback(commitCb BatchProcessedCb)
+	IsDeferred() bool
+	Start()
+	Close()
+
 	ProcessMessage(evt *events.ChangeEvent) error
 	AddMessage2Batch(evt *events.ChangeEvent) error
 	ProcessBatch() (checkpoint.ResumeToken, error)

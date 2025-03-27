@@ -7,10 +7,45 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type EchoConsumerBatch struct {
+	evts []*events.ChangeEvent
+}
+
+const deferredMode = true
+
 type EchoConsumerProducer struct {
-	numEvents  int
-	numBatches int
-	evts       []*events.ChangeEvent
+	numEvents    int
+	numBatches   int
+	currentBatch EchoConsumerBatch
+	commitCb     BatchProcessedCb
+
+	workChannel chan EchoConsumerBatch
+}
+
+func NewEchoConsumerProducer() *EchoConsumerProducer {
+	if deferredMode {
+		return &EchoConsumerProducer{workChannel: make(chan EchoConsumerBatch, 10)}
+	}
+
+	return &EchoConsumerProducer{}
+}
+
+func (p *EchoConsumerProducer) Start() {
+	const semLogContext = "echo-producer::start"
+	log.Info().Msg(semLogContext)
+
+	if deferredMode {
+		go p.deferredBatchWorkLoop()
+	}
+}
+
+func (p *EchoConsumerProducer) Close() {
+	const semLogContext = "echo-producer::close"
+	log.Info().Msg(semLogContext)
+
+	if deferredMode {
+		close(p.workChannel)
+	}
 }
 
 func (e *EchoConsumerProducer) ProcessMessage(evt *events.ChangeEvent) error {
@@ -27,32 +62,67 @@ func (e *EchoConsumerProducer) ProcessMessage(evt *events.ChangeEvent) error {
 func (e *EchoConsumerProducer) AddMessage2Batch(evt *events.ChangeEvent) error {
 	const semLogContext = "echo-producer::add-message-2-batch"
 	log.Trace().Interface("evt", evt).Msg(semLogContext)
-	e.evts = append(e.evts, evt)
+	e.currentBatch.evts = append(e.currentBatch.evts, evt)
 	return nil
 }
 
 func (e *EchoConsumerProducer) ProcessBatch() (checkpoint.ResumeToken, error) {
 	const semLogContext = "echo-producer::process-batch"
 	log.Info().Msg(semLogContext)
-	e.numEvents += len(e.evts)
+	if !deferredMode {
+		return e.doProcessBatch(e.currentBatch)
+	} else {
+		e.workChannel <- e.currentBatch
+		e.currentBatch = EchoConsumerBatch{}
+	}
+
+	return checkpoint.ResumeToken{}, nil
+}
+
+func (e *EchoConsumerProducer) deferredBatchWorkLoop() {
+	const semLogContext = "echo-producer::deferred-batch-work-loop"
+	log.Info().Msg(semLogContext + " - start")
+
+	for {
+		batch, ok := <-e.workChannel
+		if !ok {
+			break
+		}
+		rt, err := e.doProcessBatch(batch)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+		}
+
+		e.commitCb.BatchProcessed(rt, err)
+	}
+
+	log.Info().Msg(semLogContext + " - exited from loop")
+}
+
+func (e *EchoConsumerProducer) doProcessBatch(batch EchoConsumerBatch) (checkpoint.ResumeToken, error) {
+	const semLogContext = "echo-producer::do-process-batch"
+
+	e.numEvents += len(batch.evts)
 	e.numBatches++
 	log.Info().Interface("num-batches", e.numBatches).Int("num-evts", e.numEvents).Msg(semLogContext)
 	if e.numBatches%4 == 0 {
-		return checkpoint.ResumeToken{}, errors.New("batch error")
+		return checkpoint.ResumeToken{}, errors.New("currentBatch error")
 	}
-	return checkpoint.ResumeToken{}, nil
+
+	rt := batch.evts[len(batch.evts)-1].ResumeTok
+	return rt, nil
 }
 
 func (e *EchoConsumerProducer) Clear() {
 	const semLogContext = "echo-producer::clear-batch"
 	log.Info().Msg(semLogContext)
-	e.evts = nil
+	e.currentBatch = EchoConsumerBatch{}
 }
 
 func (e *EchoConsumerProducer) Reset() error {
 	const semLogContext = "echo-producer::reset"
 	log.Info().Msg(semLogContext)
-	e.evts = nil
+	e.currentBatch = EchoConsumerBatch{}
 	e.numEvents = 0
 	e.numBatches = 0
 	return nil
@@ -61,9 +131,18 @@ func (e *EchoConsumerProducer) Reset() error {
 func (e *EchoConsumerProducer) BatchSize() int {
 	const semLogContext = "echo-producer::batch-size"
 
-	sz := len(e.evts)
+	sz := len(e.currentBatch.evts)
 	if sz > 0 {
-		log.Info().Int("batch-size", sz).Msg(semLogContext)
+		log.Info().Int("currentBatch-size", sz).Msg(semLogContext)
 	}
 	return sz
+}
+
+func (e *EchoConsumerProducer) IsDeferred() bool {
+	const semLogContext = "echo-producer::is-deferred"
+	return deferredMode
+}
+
+func (e *EchoConsumerProducer) WithBatchProcessedCallback(commitCb BatchProcessedCb) {
+	e.commitCb = commitCb
 }
