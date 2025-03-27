@@ -222,6 +222,7 @@ func (svc *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) e
 		checkpointcollection.UpdateWithShort_token(token.ShortVersion()),
 		checkpointcollection.UpdateWithTxn_opn_index(info.TxnOpIndex),
 		checkpointcollection.UpdateWithStatus(checkpointcollection.CheckPointStatusActive),
+		checkpointcollection.UpdateWithIncrementOp_count(1),
 	)
 
 	resp, err := svc.coll.UpdateOne(context.Background(), f.Build(), ud.Build(), &opts)

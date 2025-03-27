@@ -34,6 +34,7 @@ type UnsetOptions struct {
 	ShortToken  UnsetMode
 	TxnOpnIndex UnsetMode
 	Status      UnsetMode
+	OpCount     UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -84,6 +85,11 @@ func WithStatusUnsetMode(m UnsetMode) UnsetOption {
 		uopt.Status = m
 	}
 }
+func WithOpCountUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.OpCount = m
+	}
+}
 
 type UpdateOption func(ud *UpdateDocument)
 type UpdateOptions []UpdateOption
@@ -117,6 +123,7 @@ func GetUpdateDocument(obj *Document, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnsetShort_token(obj.ShortToken, uo.ResolveUnsetMode(uo.ShortToken))
 	ud.setOrUnsetTxn_opn_index(obj.TxnOpnIndex, uo.ResolveUnsetMode(uo.TxnOpnIndex))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
+	ud.setOrUnsetOp_count(obj.OpCount, uo.ResolveUnsetMode(uo.OpCount))
 
 	return ud
 }
@@ -442,6 +449,67 @@ func UpdateWithStatus(p string) UpdateOption {
 
 // @tpm-schematics:start-region("status-field-update-section")
 // @tpm-schematics:end-region("status-field-update-section")
+
+// SetOp_count No Remarks
+func (ud *UpdateDocument) SetOp_count(p int32) *UpdateDocument {
+	mName := fmt.Sprintf(OpCountFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetOp_count No Remarks
+func (ud *UpdateDocument) UnsetOp_count() *UpdateDocument {
+	mName := fmt.Sprintf(OpCountFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetOp_count No Remarks
+func (ud *UpdateDocument) setOrUnsetOp_count(p int32, um UnsetMode) {
+	if p != 0 {
+		ud.SetOp_count(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetOp_count()
+		case SetData2Default:
+			ud.UnsetOp_count()
+		}
+	}
+}
+
+func UpdateWithOp_count(p int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			ud.SetOp_count(p)
+		} else {
+			ud.UnsetOp_count()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("op-count-field-update-section")
+
+func (ud *UpdateDocument) IncOp_count(p int32) *UpdateDocument {
+	mName := fmt.Sprintf(OpCountFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: "$inc", Value: bson.E{Key: mName, Value: p}}
+	})
+	return ud
+}
+
+func UpdateWithIncrementOp_count(p int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		ud.IncOp_count(p)
+	}
+}
+
+// @tpm-schematics:end-region("op-count-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")
