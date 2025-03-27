@@ -497,8 +497,8 @@ func UpdateWithOp_count(p int32) UpdateOption {
 
 func (ud *UpdateDocument) IncOp_count(p int32) *UpdateDocument {
 	mName := fmt.Sprintf(OpCountFieldName)
-	ud.Set().Add(func() bson.E {
-		return bson.E{Key: "$inc", Value: bson.E{Key: mName, Value: p}}
+	ud.Inc().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
