@@ -203,6 +203,7 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 	}
 
 	var cbEvt BatchProcessedCbEvent
+	var ok bool
 	for {
 		select {
 		case <-tp.quitc:
@@ -211,10 +212,12 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 			tp.shutDown(nil)
 			return
 
-		case cbEvt = <-tp.batchProcessedCbChannel:
-			if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
-				tp.shutDown(cbEvt.Err)
-				return
+		case cbEvt, ok = <-tp.batchProcessedCbChannel:
+			if ok {
+				if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
+					tp.shutDown(cbEvt.Err)
+					return
+				}
 			}
 
 		default:
@@ -265,6 +268,7 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 	ticker := time.NewTicker(tp.cfg.TickInterval)
 
 	var cbEvt BatchProcessedCbEvent
+	var ok bool
 	for {
 		select {
 		case <-ticker.C:
@@ -281,11 +285,12 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 					return
 				}
 			}
-		case cbEvt = <-tp.batchProcessedCbChannel:
-			if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
-				ticker.Stop()
-				tp.shutDown(cbEvt.Err)
-				return
+		case cbEvt, ok = <-tp.batchProcessedCbChannel:
+			if ok {
+				if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
+					tp.shutDown(cbEvt.Err)
+					return
+				}
 			}
 
 		case <-tp.quitc:
