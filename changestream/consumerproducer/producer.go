@@ -202,6 +202,7 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 		return
 	}
 
+	var cbEvt BatchProcessedCbEvent
 	for {
 		select {
 		case <-tp.quitc:
@@ -209,6 +210,12 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 
 			tp.shutDown(nil)
 			return
+
+		case cbEvt = <-tp.batchProcessedCbChannel:
+			if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
+				tp.shutDown(cbEvt.Err)
+				return
+			}
 
 		default:
 			isMsg, err := tp.poll()
@@ -320,7 +327,9 @@ func (tp *producerImpl) BatchProcessed(cbEvt BatchProcessedCbEvent) {
 			log.Warn().Msg(semLogContext + " no last committable resume token")
 		}
 
+		log.Warn().Msg(semLogContext + " - writing to batc-processed-event-channel")
 		tp.batchProcessedCbChannel <- cbEvt
+		log.Warn().Msg(semLogContext + " - batch-processed-event-channel produced")
 	}
 }
 
