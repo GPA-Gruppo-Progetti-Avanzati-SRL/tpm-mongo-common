@@ -93,7 +93,7 @@ func (e *EchoConsumerProducer) deferredBatchWorkLoop() {
 			log.Error().Err(err).Msg(semLogContext)
 		}
 
-		e.commitCb.BatchProcessed(rt, err)
+		e.commitCb.BatchProcessed(BatchProcessedCbEvent{rt, err})
 	}
 
 	log.Info().Msg(semLogContext + " - exited from loop")
@@ -113,13 +113,13 @@ func (e *EchoConsumerProducer) doProcessBatch(batch EchoConsumerBatch) (checkpoi
 	return rt, nil
 }
 
-func (e *EchoConsumerProducer) Clear() {
+func (e *EchoConsumerProducer) ClearProcessor() {
 	const semLogContext = "echo-producer::clear-batch"
 	log.Info().Msg(semLogContext)
 	e.currentBatch = EchoConsumerBatch{}
 }
 
-func (e *EchoConsumerProducer) Reset() error {
+func (e *EchoConsumerProducer) ResetProcessor() error {
 	const semLogContext = "echo-producer::reset"
 	log.Info().Msg(semLogContext)
 	e.currentBatch = EchoConsumerBatch{}
@@ -128,7 +128,7 @@ func (e *EchoConsumerProducer) Reset() error {
 	return nil
 }
 
-func (e *EchoConsumerProducer) BatchSize() int {
+func (e *EchoConsumerProducer) ProcessorBatchSize() int {
 	const semLogContext = "echo-producer::batch-size"
 
 	sz := len(e.currentBatch.evts)
@@ -138,7 +138,7 @@ func (e *EchoConsumerProducer) BatchSize() int {
 	return sz
 }
 
-func (e *EchoConsumerProducer) IsDeferred() bool {
+func (e *EchoConsumerProducer) IsProcessorDeferred() bool {
 	const semLogContext = "echo-producer::is-deferred"
 	return deferredMode
 }

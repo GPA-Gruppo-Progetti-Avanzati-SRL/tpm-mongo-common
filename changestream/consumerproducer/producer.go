@@ -32,9 +32,10 @@ type producerImpl struct {
 	shutdownSync sync.Once
 	quitc        chan struct{}
 
-	parent           Server
-	numberOfMessages int
-	processor        Processor
+	parent                  Server
+	numberOfMessages        int
+	processor               Processor
+	batchProcessedCbChannel chan BatchProcessedCbEvent
 
 	consumer     *changestream.Consumer
 	metricLabels map[string]string
@@ -56,8 +57,9 @@ func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (
 		},
 	}
 
-	if processor.IsDeferred() {
+	if processor.IsProcessorDeferred() {
 		processor.WithBatchProcessedCallback(&t)
+		t.batchProcessedCbChannel = make(chan BatchProcessedCbEvent)
 	}
 	t.processor = processor
 
@@ -175,7 +177,7 @@ func (tp *producerImpl) onError(errIn error) error {
 
 	tp.consumer.Close()
 
-	err := tp.processor.Reset()
+	err := tp.processor.ResetProcessor()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -220,17 +222,17 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 			shouldProcessBatch := false
 			if isMsg {
 				tp.numberOfMessages++
-				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.BatchSize() == tp.cfg.MaxBatchSize {
+				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.ProcessorBatchSize() == tp.cfg.MaxBatchSize {
 					shouldProcessBatch = true
 				}
 			} else {
-				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.BatchSize() > 0 {
+				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.ProcessorBatchSize() > 0 {
 					shouldProcessBatch = true
 				}
 			}
 
 			if shouldProcessBatch {
-				if tp.processor.IsDeferred() {
+				if tp.processor.IsProcessorDeferred() {
 					err = tp.deferredProcessBatch(context.Background())
 				} else {
 					err = tp.processBatch(context.Background())
@@ -255,12 +257,13 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 
 	ticker := time.NewTicker(tp.cfg.TickInterval)
 
+	var cbEvt BatchProcessedCbEvent
 	for {
 		select {
 		case <-ticker.C:
 			if tp.cfg.WorkMode == WorkModeBatch {
 				var err error
-				if tp.processor.IsDeferred() {
+				if tp.processor.IsProcessorDeferred() {
 					err = tp.deferredProcessBatch(context.Background())
 				} else {
 					err = tp.processBatch(context.Background())
@@ -271,6 +274,13 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 					return
 				}
 			}
+		case cbEvt = <-tp.batchProcessedCbChannel:
+			if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
+				ticker.Stop()
+				tp.shutDown(cbEvt.Err)
+				return
+			}
+
 		case <-tp.quitc:
 			log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " terminating poll loop")
 			ticker.Stop()
@@ -291,25 +301,26 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 	}
 }
 
-func (tp *producerImpl) BatchProcessed(resumeToken checkpoint.ResumeToken, err error) {
+func (tp *producerImpl) BatchProcessed(cbEvt BatchProcessedCbEvent) {
 	const semLogContext = "change-stream-cp::batch-processed"
-	if err == nil {
+	var err error
+	if cbEvt.Err == nil {
 		_ = tp.produceMetric(nil, MetricBatches, 1, tp.metricLabels)
-		err = tp.consumer.CommitAt(resumeToken, false)
+		err = tp.consumer.CommitAt(cbEvt.Rt, false)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+		}
 	} else {
-		log.Error().Err(err).Msg(semLogContext)
+		log.Error().Err(cbEvt.Err).Msg(semLogContext)
 		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)
-		if !resumeToken.IsZero() {
-			log.Warn().Str("rt", resumeToken.String()).Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
-			_ = tp.consumer.CommitAt(resumeToken, true)
+		if !cbEvt.Rt.IsZero() {
+			log.Warn().Str("rt", cbEvt.Rt.String()).Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
+			_ = tp.consumer.CommitAt(cbEvt.Rt, true)
 		} else {
 			log.Warn().Msg(semLogContext + " no last committable resume token")
 		}
 
-		if tp.onError(err) != nil {
-			tp.Close()
-			return
-		}
+		tp.batchProcessedCbChannel <- cbEvt
 	}
 }
 
@@ -370,7 +381,7 @@ func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 	const semLogContext = "change-stream-cp::deferred-process-batch"
 	var err error
 
-	batchSize := tp.processor.BatchSize()
+	batchSize := tp.processor.ProcessorBatchSize()
 	if tp.cfg.WorkMode != WorkModeBatch || batchSize == 0 {
 		return nil
 	}
@@ -389,12 +400,12 @@ func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 func (tp *producerImpl) processBatch(ctx context.Context) error {
 	const semLogContext = "change-stream-cp::process-batch"
 
-	batchSize := tp.processor.BatchSize()
-	if tp.cfg.WorkMode != WorkModeBatch || tp.processor.BatchSize() == 0 {
+	batchSize := tp.processor.ProcessorBatchSize()
+	if tp.cfg.WorkMode != WorkModeBatch || tp.processor.ProcessorBatchSize() == 0 {
 		return nil
 	}
 
-	defer tp.processor.Clear()
+	defer tp.processor.ClearProcessor()
 
 	beginOfProcessing := time.Now()
 	metricGroup := tp.produceMetric(nil, MetricBatchSize, float64(batchSize), tp.metricLabels)

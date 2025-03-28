@@ -14,8 +14,13 @@ type ConsumerProducer interface {
 	Name() string
 }
 
+type BatchProcessedCbEvent struct {
+	Rt  checkpoint.ResumeToken
+	Err error
+}
+
 type BatchProcessedCb interface {
-	BatchProcessed(resumeToken checkpoint.ResumeToken, err error)
+	BatchProcessed(evt BatchProcessedCbEvent)
 }
 
 type Server interface {
@@ -26,16 +31,16 @@ type Server interface {
 
 type Processor interface {
 	WithBatchProcessedCallback(commitCb BatchProcessedCb)
-	IsDeferred() bool
+	IsProcessorDeferred() bool
 	StartProcessor()
 	CloseProcessor()
 
 	ProcessMessage(evt *events.ChangeEvent) error
 	AddMessage2Batch(evt *events.ChangeEvent) error
 	ProcessBatch() (checkpoint.ResumeToken, error)
-	Clear()
-	BatchSize() int
-	Reset() error
+	ClearProcessor()
+	ProcessorBatchSize() int
+	ResetProcessor() error
 }
 
 type UnimplementedConsumerProducerProcessor struct {
