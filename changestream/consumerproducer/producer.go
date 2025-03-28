@@ -3,6 +3,7 @@ package consumerproducer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
@@ -332,7 +333,7 @@ func (tp *producerImpl) BatchProcessed(cbEvt BatchProcessedCbEvent) {
 			log.Warn().Msg(semLogContext + " no last committable resume token")
 		}
 
-		log.Warn().Msg(semLogContext + " - writing to batc-processed-event-channel")
+		log.Warn().Str("ch", fmt.Sprintf("%v", tp.batchProcessedCbChannel)).Msg(semLogContext + " - writing to batc-processed-event-channel")
 		tp.batchProcessedCbChannel <- cbEvt
 		log.Warn().Msg(semLogContext + " - batch-processed-event-channel produced")
 	}
