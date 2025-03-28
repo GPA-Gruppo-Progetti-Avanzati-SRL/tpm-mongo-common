@@ -60,7 +60,7 @@ func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (
 
 	if processor.IsProcessorDeferred() {
 		processor.WithBatchProcessedCallback(&t)
-		t.batchProcessedCbChannel = make(chan BatchProcessedCbEvent)
+		t.batchProcessedCbChannel = make(chan BatchProcessedCbEvent, 1)
 	}
 	t.processor = processor
 
