@@ -37,12 +37,12 @@ type producerImpl struct {
 	numberOfMessages        int
 	processor               Processor
 	batchProcessedCbChannel chan BatchProcessedCbEvent
-
-	consumer     *changestream.Consumer
-	metricLabels map[string]string
+	checkpointSvc           checkpoint.ResumeTokenCheckpointSvc
+	consumer                *changestream.Consumer
+	metricLabels            map[string]string
 }
 
-func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (ConsumerProducer, error) {
+func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor *EchoConsumerProducer) (ConsumerProducer, error) {
 	const semLogContext = "change-stream-cs-factory::new"
 
 	if cfg.WorkMode != WorkModeBatch {
@@ -59,7 +59,8 @@ func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (
 	}
 
 	if processor.IsProcessorDeferred() {
-		processor.WithBatchProcessedCallback(&t)
+		processor.WithBatchProcessedErrorCallback(&t)
+		processor.WithBatchProcessedCommitAtCallback(&t)
 		if cfg.BatchProcessedCbChannelSize <= 0 {
 			cfg.BatchProcessedCbChannelSize = 1
 		}
@@ -147,6 +148,10 @@ func (tp *producerImpl) newConsumer() (*changestream.Consumer, error) {
 			return nil, err
 		}
 		opts = append(opts, changestream.WithCheckpointSvc(svc))
+
+		if tp.processor != nil && tp.processor.IsProcessorDeferred() {
+			tp.checkpointSvc = svc
+		}
 	}
 
 	consumer, err := changestream.NewConsumer(&tp.cfg.Consumer, opts...)
@@ -317,15 +322,20 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 	}
 }
 
-func (tp *producerImpl) BatchProcessed(cbEvt BatchProcessedCbEvent) {
-	const semLogContext = "change-stream-cp::batch-processed"
-	var err error
+func (tp *producerImpl) BatchProcessedCommitAtCb(cbEvt BatchProcessedCbEvent) {
+	const semLogContext = "change-stream-cp::batch-processed-commit-at"
+
+	err := tp.checkpointSvc.CommitAt(tp.cfg.Consumer.Id, cbEvt.Rt, false)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+	}
+
+}
+func (tp *producerImpl) BatchProcessedErrorCb(cbEvt BatchProcessedCbEvent) {
+	const semLogContext = "change-stream-cp::batch-processed-error-cb"
+
 	if cbEvt.Err == nil {
 		_ = tp.produceMetric(nil, MetricBatches, 1, tp.metricLabels)
-		err = tp.consumer.CommitAt(cbEvt.Rt, false)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-		}
 	} else {
 		log.Error().Err(cbEvt.Err).Msg(semLogContext)
 		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)

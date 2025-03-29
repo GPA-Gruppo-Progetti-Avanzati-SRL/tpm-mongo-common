@@ -17,9 +17,9 @@ type EchoConsumerProducer struct {
 	numEvents    int
 	numBatches   int
 	currentBatch EchoConsumerBatch
-	commitCb     BatchProcessedCb
-
-	workChannel chan EchoConsumerBatch
+	errorCb      BatchProcessedErrorCb
+	commitAtCb   BatchProcessedCommitAtCb
+	workChannel  chan EchoConsumerBatch
 }
 
 func NewEchoConsumerProducer() *EchoConsumerProducer {
@@ -91,9 +91,10 @@ func (e *EchoConsumerProducer) deferredBatchWorkLoop() {
 		rt, err := e.doProcessBatch(batch)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
+			e.errorCb.BatchProcessedErrorCb(BatchProcessedCbEvent{rt, err})
 		}
 
-		e.commitCb.BatchProcessed(BatchProcessedCbEvent{rt, err})
+		e.commitAtCb.BatchProcessedCommitAtCb(BatchProcessedCbEvent{rt, err})
 	}
 
 	log.Info().Msg(semLogContext + " - exited from loop")
@@ -143,6 +144,10 @@ func (e *EchoConsumerProducer) IsProcessorDeferred() bool {
 	return deferredMode
 }
 
-func (e *EchoConsumerProducer) WithBatchProcessedCallback(commitCb BatchProcessedCb) {
-	e.commitCb = commitCb
+func (e *EchoConsumerProducer) WithBatchProcessedErrorCallback(errorCb BatchProcessedErrorCb) {
+	e.errorCb = errorCb
+}
+
+func (e *EchoConsumerProducer) WithBatchProcessedCommitAtCallback(commitCb BatchProcessedCommitAtCb) {
+	e.commitAtCb = commitCb
 }

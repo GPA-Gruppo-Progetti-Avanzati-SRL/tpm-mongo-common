@@ -19,8 +19,12 @@ type BatchProcessedCbEvent struct {
 	Err error
 }
 
-type BatchProcessedCb interface {
-	BatchProcessed(evt BatchProcessedCbEvent)
+type BatchProcessedErrorCb interface {
+	BatchProcessedErrorCb(evt BatchProcessedCbEvent)
+}
+
+type BatchProcessedCommitAtCb interface {
+	BatchProcessedCommitAtCb(evt BatchProcessedCbEvent)
 }
 
 type Server interface {
@@ -30,7 +34,8 @@ type Server interface {
 }
 
 type Processor interface {
-	WithBatchProcessedCallback(commitCb BatchProcessedCb)
+	WithBatchProcessedErrorCallback(commitCb BatchProcessedErrorCb)
+	WithBatchProcessedCommitAtCallback(commitCb BatchProcessedCommitAtCb)
 	IsProcessorDeferred() bool
 	StartProcessor()
 	CloseProcessor()
