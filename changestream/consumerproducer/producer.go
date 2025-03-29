@@ -42,7 +42,7 @@ type producerImpl struct {
 	metricLabels            map[string]string
 }
 
-func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor *EchoConsumerProducer) (ConsumerProducer, error) {
+func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (ConsumerProducer, error) {
 	const semLogContext = "change-stream-cs-factory::new"
 
 	if cfg.WorkMode != WorkModeBatch {
