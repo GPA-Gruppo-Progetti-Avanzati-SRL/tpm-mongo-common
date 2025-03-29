@@ -30,14 +30,15 @@ type TracingCfg struct {
 }
 
 type Config struct {
-	Name                string                           `yaml:"name,omitempty" mapstructure:"name,omitempty" json:"name,omitempty"`
-	WorkMode            string                           `yaml:"work-mode,omitempty" mapstructure:"work-mode,omitempty" json:"work-mode,omitempty"`
-	Consumer            changestream.Config              `yaml:"consumer,omitempty" mapstructure:"consumer,omitempty" json:"consumer,omitempty"`
-	CheckPointSvcConfig factory.Config                   `yaml:"checkpoint-svc,omitempty" mapstructure:"checkpoint-svc,omitempty" json:"checkpoint-svc,omitempty"`
-	RefMetrics          *promutil.MetricsConfigReference `yaml:"ref-metrics,omitempty"  mapstructure:"ref-metrics,omitempty"  json:"ref-metrics,omitempty"`
-	TickInterval        time.Duration                    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
-	MaxBatchSize        int                              `yaml:"max-batch-size,omitempty" mapstructure:"max-batch-size,omitempty" json:"max-batch-size,omitempty"`
-	Tracing             TracingCfg                       `yaml:"tracing,omitempty" mapstructure:"tracing,omitempty" json:"tracing,omitempty"`
+	Name                        string                           `yaml:"name,omitempty" mapstructure:"name,omitempty" json:"name,omitempty"`
+	WorkMode                    string                           `yaml:"work-mode,omitempty" mapstructure:"work-mode,omitempty" json:"work-mode,omitempty"`
+	Consumer                    changestream.Config              `yaml:"consumer,omitempty" mapstructure:"consumer,omitempty" json:"consumer,omitempty"`
+	CheckPointSvcConfig         factory.Config                   `yaml:"checkpoint-svc,omitempty" mapstructure:"checkpoint-svc,omitempty" json:"checkpoint-svc,omitempty"`
+	RefMetrics                  *promutil.MetricsConfigReference `yaml:"ref-metrics,omitempty"  mapstructure:"ref-metrics,omitempty"  json:"ref-metrics,omitempty"`
+	TickInterval                time.Duration                    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
+	MaxBatchSize                int                              `yaml:"max-batch-size,omitempty" mapstructure:"max-batch-size,omitempty" json:"max-batch-size,omitempty"`
+	Tracing                     TracingCfg                       `yaml:"tracing,omitempty" mapstructure:"tracing,omitempty" json:"tracing,omitempty"`
+	ProcessedBatchCbChannelSize int                              `yaml:"processed-batch-cb-chan-size,omitempty" mapstructure:"processed-batch-cb-chan-size,omitempty" json:"processed-batch-cb-chan-size,omitempty"`
 }
 
 func (c *Config) RewindEnabled() bool {
