@@ -38,7 +38,7 @@ type Config struct {
 	TickInterval                time.Duration                    `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
 	MaxBatchSize                int                              `yaml:"max-batch-size,omitempty" mapstructure:"max-batch-size,omitempty" json:"max-batch-size,omitempty"`
 	Tracing                     TracingCfg                       `yaml:"tracing,omitempty" mapstructure:"tracing,omitempty" json:"tracing,omitempty"`
-	ProcessedBatchCbChannelSize int                              `yaml:"processed-batch-cb-chan-size,omitempty" mapstructure:"processed-batch-cb-chan-size,omitempty" json:"processed-batch-cb-chan-size,omitempty"`
+	BatchProcessedCbChannelSize int                              `yaml:"batch-processed-cb-chan-size,omitempty" mapstructure:"batch-processed-cb-chan-size,omitempty" json:"batch-processed-cb-chan-size,omitempty"`
 }
 
 func (c *Config) RewindEnabled() bool {
