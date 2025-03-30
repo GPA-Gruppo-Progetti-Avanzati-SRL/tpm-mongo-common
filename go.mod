@@ -3,9 +3,10 @@ module github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
 go 1.21
 
 require (
-	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.73
+	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.77
 	github.com/feliixx/mongoextjson v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0
+	github.com/prometheus/client_golang v1.20.5
 	github.com/rs/zerolog v1.33.0
 	github.com/stretchr/testify v1.10.0
 	go.mongodb.org/mongo-driver v1.17.2
@@ -26,7 +27,6 @@ require (
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.20.5 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect

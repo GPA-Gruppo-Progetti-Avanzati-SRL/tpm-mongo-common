@@ -8,7 +8,6 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,7 +21,123 @@ const (
 	MetricChangeStreamIdleTryNext              = "cdc-cs-idle-try-next"
 	MetricChangeStreamMillisecondsBehindSource = "cdc-cs-milliseconds-behind-source"
 	MetricChangeStreamNumEvents                = "cdc-cs-events"
+	MetricCdcEventErrors                       = "cdc-event-errors"
 )
+
+type ConsumerStatsInfo struct {
+	HistoryLost              int
+	IdlesTryNext             int
+	MillisecondsBehindSource int64
+	NumEvents                int
+	CdcEventErrors           int
+
+	HistoryLostCounterMetric            promutil.CollectorWithLabels
+	IdlesTryNextGaugeMetric             promutil.CollectorWithLabels
+	MillisecondsBehindSourceGaugeMetric promutil.CollectorWithLabels
+	NumEventsCounterMetric              promutil.CollectorWithLabels
+	CdcEventErrorsCounterMetric         promutil.CollectorWithLabels
+	metricErrors                        bool
+}
+
+func (stat *ConsumerStatsInfo) Clear() *ConsumerStatsInfo {
+	stat.HistoryLost = 0
+	stat.IdlesTryNext = 0
+	stat.MillisecondsBehindSource = 0
+	stat.NumEvents = 0
+	return stat
+}
+
+func (stat *ConsumerStatsInfo) IncNumEvents() {
+	stat.NumEvents++
+	if !stat.metricErrors {
+		stat.NumEventsCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *ConsumerStatsInfo) IncHistoryLost() {
+	stat.HistoryLost++
+	if !stat.metricErrors {
+		stat.HistoryLostCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *ConsumerStatsInfo) IncIdlesTryNext() {
+	stat.IdlesTryNext++
+	if !stat.metricErrors {
+		stat.IdlesTryNextGaugeMetric.SetMetric(float64(stat.IdlesTryNext))
+	}
+}
+
+func (stat *ConsumerStatsInfo) ResetIdlesTryNext() {
+	stat.IdlesTryNext = 0
+	if !stat.metricErrors {
+		stat.IdlesTryNextGaugeMetric.SetMetric(0)
+	}
+}
+
+func (stat *ConsumerStatsInfo) IncCdcEventErrors() {
+	stat.CdcEventErrors++
+	if !stat.metricErrors {
+		stat.CdcEventErrorsCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *ConsumerStatsInfo) SetMillisecondsBehindSource(ms int64) {
+	stat.MillisecondsBehindSource = ms
+	if !stat.metricErrors {
+		stat.MillisecondsBehindSourceGaugeMetric.SetMetric(float64(ms))
+	}
+}
+
+func (stat *ConsumerStatsInfo) ResetMillisecondsBehindSource() {
+	stat.MillisecondsBehindSource = 0
+	if !stat.metricErrors {
+		stat.MillisecondsBehindSourceGaugeMetric.SetMetric(0)
+	}
+}
+
+func NewStatsInfo(whatcherId, metricGroupId string) *ConsumerStatsInfo {
+	stat := &ConsumerStatsInfo{}
+	mg, err := promutil.GetGroup(metricGroupId)
+	if err != nil {
+		stat.metricErrors = true
+		return stat
+	} else {
+		stat.HistoryLostCounterMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamHistoryLostCounter, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.IdlesTryNextGaugeMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamIdleTryNext, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.MillisecondsBehindSourceGaugeMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamMillisecondsBehindSource, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.NumEventsCounterMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamNumEvents, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+	}
+
+	return stat
+}
 
 type Consumer struct {
 	cfg           *Config
@@ -31,10 +146,8 @@ type Consumer struct {
 
 	lastCommittedToken checkpoint.ResumeToken
 	lastPolledToken    checkpoint.ResumeToken
-	numEvents          int
-	numIdlesTryNext    int
 
-	metricsLabels prometheus.Labels
+	statsInfo *ConsumerStatsInfo
 }
 
 func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
@@ -46,10 +159,8 @@ func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
 	}
 
 	s := &Consumer{
-		cfg: cfg,
-		metricsLabels: prometheus.Labels{
-			MetricLabelName: cfg.Id,
-		},
+		cfg:       cfg,
+		statsInfo: NewStatsInfo(cfg.Id, cfg.RefMetrics.GId),
 	}
 
 	s.chgStream, err = s.newChangeStream()
@@ -68,6 +179,7 @@ func (s *Consumer) Close() {
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 	}
+	s.statsInfo.Clear()
 }
 
 func (s *Consumer) CommitAt(rt checkpoint.ResumeToken, syncRequired bool) error {
@@ -119,14 +231,10 @@ func (s *Consumer) Abort() error {
 func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	const semLogContext = "consumer::process-change-stream"
 
-	var g *promutil.Group
 	if !s.chgStream.TryNext(context.TODO()) {
 
-		s.numIdlesTryNext++
-		g = s.setMetric(g, MetricChangeStreamIdleTryNext, float64(s.numIdlesTryNext), nil)
-
-		// with no events assume there is no lag..... reset this gauge
-		g = s.setMetric(g, MetricChangeStreamMillisecondsBehindSource, 0, nil)
+		s.statsInfo.IncIdlesTryNext()
+		s.statsInfo.ResetMillisecondsBehindSource()
 
 		if s.chgStream.ID() == 0 {
 			log.Warn().Msg(semLogContext + " - stream EOF")
@@ -136,9 +244,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		if s.chgStream.Err() != nil {
 			ec := util.MongoErrorCode(s.chgStream.Err(), s.ServerVersion)
 			if ec == util.MongoErrChangeStreamHistoryLost {
-				var g *promutil.Group
-				g = s.setMetric(g, MetricChangeStreamHistoryLostCounter, 1, nil)
-
+				s.statsInfo.IncHistoryLost()
 				if s.cfg.checkPointSvc != nil {
 					errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
 					if errHl != nil {
@@ -173,9 +279,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		s.cfg.checkPointSvc.ClearIdle()
 	}
 
-	// clear the gauge
-	s.numIdlesTryNext = 0
-	g = s.setMetric(g, MetricChangeStreamIdleTryNext, 0, nil)
+	s.statsInfo.ResetIdlesTryNext()
 
 	/*
 		    Errore fittizio generato per motivi di test
@@ -186,8 +290,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 			}
 	*/
 
-	s.numEvents++
-	g = s.setMetric(g, MetricChangeStreamNumEvents, 1, nil)
+	s.statsInfo.IncNumEvents()
 
 	var data bson.M
 	if err := s.chgStream.Decode(&data); err != nil {
@@ -211,14 +314,14 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	if s.cfg.VerifyOutOfSequenceError {
 		if evt.ResumeTok.Value <= s.lastPolledToken.Value {
 			log.Error().Err(OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", s.lastPolledToken.Value).Msg(semLogContext + " - out-of-sequence token")
-			g = s.setMetric(g, "cdc-event-errors", 1, nil)
+			s.statsInfo.IncCdcEventErrors()
 			return nil, OutOfSequenceError
 		}
 	}
 
 	clusterTime := time.Unix(int64(evt.ClusterTime.T), 0)
 	lag := time.Now().Sub(clusterTime)
-	g = s.setMetric(g, MetricChangeStreamMillisecondsBehindSource, float64(lag.Milliseconds()), nil)
+	s.statsInfo.SetMillisecondsBehindSource(lag.Milliseconds())
 
 	s.lastPolledToken = evt.ResumeTok
 	return &evt, nil
@@ -265,8 +368,7 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 		mongoCode := util.MongoErrorCode(err, s.ServerVersion)
 		// TODO add logic to retry with the start after time depending on config
 		if mongoCode == util.MongoErrChangeStreamHistoryLost {
-			var g *promutil.Group
-			g = s.setMetric(g, MetricChangeStreamHistoryLostCounter, 1, nil)
+			s.statsInfo.IncHistoryLost()
 
 			if s.cfg.checkPointSvc != nil {
 				errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
@@ -315,7 +417,8 @@ func (s *Consumer) handleError(err error) string {
 	return policy
 }
 
-func (s *Consumer) setMetric(metricGroup *promutil.Group, metricId string, value float64, labels map[string]string) *promutil.Group {
+/*
+func (s *Consumer) setMetricBad(metricGroup *promutil.Group, metricId string, value float64, labels map[string]string) *promutil.Group {
 	const semLogContext = "watcher::set-metric"
 
 	var err error
@@ -340,3 +443,4 @@ func (s *Consumer) setMetric(metricGroup *promutil.Group, metricId string, value
 
 	return metricGroup
 }
+*/

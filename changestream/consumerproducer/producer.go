@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	MetricLabelName = "name"
+
 	MetricRewindsCounter  = "cdc-rewinds"
 	MetricBatchErrors     = "cdc-batch-errors"
 	MetricBatches         = "cdc-batches"
@@ -25,6 +27,171 @@ const (
 	MetricMessages        = "cdc-events"
 	MetricMessageDuration = "cdc-event-duration"
 )
+
+type StatsInfo struct {
+	Rewinds         int
+	BatchErrors     int
+	Batches         int
+	BatchSize       int
+	BatchDuration   float64
+	MessageErrors   int
+	Messages        int
+	MessageDuration float64
+
+	RewindsCounterMetric       promutil.CollectorWithLabels
+	BatchesCounterMetric       promutil.CollectorWithLabels
+	BatchErrorsCounterMetric   promutil.CollectorWithLabels
+	BatchSizeGaugeMetric       promutil.CollectorWithLabels
+	BatchDurationHistogram     promutil.CollectorWithLabels
+	MessageErrorsCounterMetric promutil.CollectorWithLabels
+	MessagesCounterMetric      promutil.CollectorWithLabels
+	MessageDurationHistogram   promutil.CollectorWithLabels
+	metricErrors               bool
+}
+
+func (stat *StatsInfo) Clear() *StatsInfo {
+	stat.Rewinds = 0
+	stat.BatchErrors = 0
+	stat.Batches = 0
+	stat.BatchSize = 0
+	stat.BatchDuration = 0
+	stat.MessageErrors = 0
+	stat.Messages = 0
+	stat.MessageDuration = 0
+	return stat
+}
+
+func (stat *StatsInfo) IncRewinds() {
+	stat.Rewinds++
+	if !stat.metricErrors {
+		stat.RewindsCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *StatsInfo) IncBatchErrors() {
+	stat.BatchErrors++
+	if !stat.metricErrors {
+		stat.BatchErrorsCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *StatsInfo) IncBatches() {
+	stat.Batches++
+	if !stat.metricErrors {
+		stat.BatchesCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *StatsInfo) IncMessageErrors() {
+	stat.MessageErrors++
+	if !stat.metricErrors {
+		stat.MessageErrorsCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *StatsInfo) IncMessages() {
+	stat.Messages++
+	if !stat.metricErrors {
+		stat.MessagesCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *StatsInfo) SetBatchSize(sz int) {
+	stat.BatchSize = sz
+	if !stat.metricErrors {
+		stat.BatchSizeGaugeMetric.SetMetric(float64(sz))
+	}
+}
+
+func (stat *StatsInfo) SetBatchDuration(dur float64) {
+	stat.BatchDuration = dur
+	if !stat.metricErrors {
+		stat.BatchDurationHistogram.SetMetric(dur)
+	}
+}
+
+func (stat *StatsInfo) SetMessageDuration(dur float64) {
+	stat.MessageDuration = dur
+	if !stat.metricErrors {
+		stat.MessageDurationHistogram.SetMetric(dur)
+	}
+}
+
+func NewStatsInfo(whatcherId, metricGroupId string) *StatsInfo {
+	stat := &StatsInfo{}
+	mg, err := promutil.GetGroup(metricGroupId)
+	if err != nil {
+		stat.metricErrors = true
+		return stat
+	} else {
+		stat.RewindsCounterMetric, err = mg.CollectorByIdWithLabels(MetricRewindsCounter, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.BatchErrorsCounterMetric, err = mg.CollectorByIdWithLabels(MetricBatchErrors, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.BatchesCounterMetric, err = mg.CollectorByIdWithLabels(MetricBatches, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.BatchSizeGaugeMetric, err = mg.CollectorByIdWithLabels(MetricBatchSize, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.BatchDurationHistogram, err = mg.CollectorByIdWithLabels(MetricBatchDuration, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.MessageErrorsCounterMetric, err = mg.CollectorByIdWithLabels(MetricMessageErrors, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.MessagesCounterMetric, err = mg.CollectorByIdWithLabels(MetricMessages, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.MessageDurationHistogram, err = mg.CollectorByIdWithLabels(MetricMessageDuration, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+	}
+
+	return stat
+}
 
 type producerImpl struct {
 	cfg *Config
@@ -39,7 +206,7 @@ type producerImpl struct {
 	batchProcessedCbChannel chan BatchProcessedCbEvent
 	checkpointSvc           checkpoint.ResumeTokenCheckpointSvc
 	consumer                *changestream.Consumer
-	metricLabels            map[string]string
+	statsInfo               *StatsInfo
 }
 
 func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (ConsumerProducer, error) {
@@ -50,12 +217,10 @@ func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (
 	}
 
 	t := producerImpl{
-		cfg:   cfg,
-		quitc: make(chan struct{}),
-		wg:    wg,
-		metricLabels: map[string]string{
-			"name": cfg.Name,
-		},
+		cfg:       cfg,
+		quitc:     make(chan struct{}),
+		wg:        wg,
+		statsInfo: NewStatsInfo(cfg.Name, cfg.RefMetrics.GId),
 	}
 
 	if processor.IsProcessorDeferred() {
@@ -182,7 +347,7 @@ func (tp *producerImpl) onError(errIn error) error {
 	}
 
 	// Increment number of rewinds
-	_ = tp.produceMetric(nil, MetricRewindsCounter, 1, tp.metricLabels)
+	tp.statsInfo.IncRewinds()
 
 	tp.consumer.Close()
 
@@ -335,10 +500,10 @@ func (tp *producerImpl) BatchProcessedErrorCb(cbEvt BatchProcessedCbEvent) {
 	const semLogContext = "change-stream-cp::batch-processed-error-cb"
 
 	if cbEvt.Err == nil {
-		_ = tp.produceMetric(nil, MetricBatches, 1, tp.metricLabels)
+		tp.statsInfo.IncBatches()
 	} else {
 		log.Error().Err(cbEvt.Err).Msg(semLogContext)
-		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)
+		tp.statsInfo.IncBatchErrors()
 		if !cbEvt.Rt.IsZero() {
 			log.Warn().Str("rt", cbEvt.Rt.String()).Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
 			_ = tp.consumer.CommitAt(cbEvt.Rt, true)
@@ -394,11 +559,11 @@ func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
 	err = tp.processor.AddMessage2Batch(km)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		_ = tp.produceMetric(nil, MetricMessageErrors, 1, tp.metricLabels)
+		tp.statsInfo.IncMessageErrors()
 		return err
 	}
 
-	_ = tp.produceMetric(nil, MetricMessages, 1, tp.metricLabels)
+	tp.statsInfo.IncMessages()
 	// should not commit at this stage
 	// err = tp.consumer.Commit()
 
@@ -414,12 +579,11 @@ func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 		return nil
 	}
 
-	metricGroup := tp.produceMetric(nil, MetricBatchSize, float64(batchSize), tp.metricLabels)
-
+	tp.statsInfo.SetBatchSize(batchSize)
 	_, err = tp.processor.ProcessBatch()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		_ = tp.produceMetric(metricGroup, MetricBatchErrors, 1, tp.metricLabels)
+		tp.statsInfo.IncBatchErrors()
 	}
 
 	return err
@@ -436,12 +600,12 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 	defer tp.processor.ClearProcessor()
 
 	beginOfProcessing := time.Now()
-	metricGroup := tp.produceMetric(nil, MetricBatchSize, float64(batchSize), tp.metricLabels)
+	tp.statsInfo.SetBatchSize(batchSize)
 
 	lastCommittableResumeToken, err := tp.processor.ProcessBatch()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		_ = tp.produceMetric(nil, MetricBatchErrors, 1, tp.metricLabels)
+		tp.statsInfo.IncBatchErrors()
 		if !lastCommittableResumeToken.IsZero() {
 			log.Warn().Str("rt", lastCommittableResumeToken.String()).Msg(semLogContext + " last committable resume token is not zero - forcing a checkpoint save")
 			_ = tp.consumer.CommitAt(lastCommittableResumeToken, true)
@@ -450,8 +614,8 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 		}
 	} else {
 		if batchSize > 0 {
-			metricGroup = tp.produceMetric(metricGroup, MetricBatches, 1, tp.metricLabels)
-			metricGroup = tp.produceMetric(metricGroup, MetricBatchDuration, time.Since(beginOfProcessing).Seconds(), tp.metricLabels)
+			tp.statsInfo.IncBatches()
+			tp.statsInfo.SetBatchDuration(time.Since(beginOfProcessing).Seconds())
 		}
 
 		err = tp.consumer.Commit()
@@ -475,12 +639,12 @@ func (tp *producerImpl) processMessage(e *events.ChangeEvent) error {
 	err = tp.processor.ProcessMessage(e)
 	if err != nil {
 		log.Error().Err(err).Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " error processing message")
-		_ = tp.produceMetric(nil, MetricMessageErrors, 1, tp.metricLabels)
+		tp.statsInfo.IncMessageErrors()
 		return err
 	}
 
-	metricGroup := tp.produceMetric(nil, MetricMessages, 1, tp.metricLabels)
-	metricGroup = tp.produceMetric(metricGroup, MetricMessageDuration, time.Since(beginOfProcessing).Seconds(), tp.metricLabels)
+	tp.statsInfo.IncMessages()
+	tp.statsInfo.SetBatchDuration(time.Since(beginOfProcessing).Seconds())
 
 	return nil
 }
@@ -508,7 +672,7 @@ func (tp *producerImpl) shutDown(err error) {
 
 }
 
-func (tp *producerImpl) produceMetric(metricGroup *promutil.Group, metricId string, value float64, labels map[string]string) *promutil.Group {
+func (tp *producerImpl) produceMetric2(metricGroup *promutil.Group, metricId string, value float64, labels map[string]string) *promutil.Group {
 	const semLogContext = "change-stream-cp::produce-metric"
 
 	// Unconfigured...

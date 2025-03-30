@@ -1,18 +1,25 @@
 package changestream_test
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/listeners"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/yaml.v2"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"testing"
+	"time"
 )
 
 const (
@@ -48,7 +55,7 @@ func TestPrepareData2Load(t *testing.T) {
 }
 
 var yamlWatcherConfig = []byte(`
-id: my-watcher
+id: cdc-tx-mario
 lks-name: default
 collection-id: watch-collection
 out-of-seq-error: true
@@ -156,7 +163,140 @@ func TestConsumer(t *testing.T) {
 				t.Log((*evt).String())
 				err = c.Commit()
 				require.NoError(t, err)
+			} else {
+
 			}
 		}
+	}
+}
+
+func TestConsumerTryNext(t *testing.T) {
+	const semLogContext = "change-stream::consumer"
+
+	cfg := changestream.Config{}
+	err := yaml.Unmarshal(yamlWatcherConfig, &cfg)
+	require.NoError(t, err)
+
+	chkSvcCfg := factory.Config{}
+	err = yaml.Unmarshal(yamlCheckPointSvcConfig, &chkSvcCfg)
+	require.NoError(t, err)
+
+	var opts []changestream.ConfigOption
+	svc, err := factory.NewCheckPointSvc(chkSvcCfg)
+	require.NoError(t, err)
+	opts = append(opts, changestream.WithCheckpointSvc(svc))
+
+	c, err := changestream.NewConsumer(&cfg, opts...)
+	require.NoError(t, err)
+
+	log.Info().Msg("enabling SIGINT e SIGTERM")
+	shutdownChannel := make(chan error)
+	go func() {
+		c := make(chan os.Signal)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		shutdownChannel <- fmt.Errorf("signal received: %v", <-c)
+	}()
+
+	var mu sync.Mutex
+	ticker := time.NewTicker(500 * time.Millisecond)
+	numEvts := 0
+	begin := time.Now()
+	for {
+		select {
+		case <-ticker.C:
+			//mu.Lock()
+			//fmt.Printf("numEvts: %d\n", numEvts)
+			//numEvts = 0
+			//mu.Unlock()
+		case <-shutdownChannel:
+			log.Info().Msg(semLogContext + " terminating")
+			c.Close()
+			require.NoError(t, err)
+			return
+		default:
+			evt, err := c.Poll()
+			require.NoError(t, err)
+			if evt != nil {
+				mu.Lock()
+				numEvts++
+				if numEvts%20000 == 0 {
+					fmt.Printf("elapsed: %d\n", time.Since(begin).Milliseconds())
+				}
+				mu.Unlock()
+			}
+		}
+	}
+}
+
+func TestConsumerNext(t *testing.T) {
+	const semLogContext = "change-stream::consumer"
+
+	opts := options.ChangeStreamOptions{
+		BatchSize:                nil,
+		Collation:                nil,
+		Comment:                  nil,
+		FullDocument:             nil,
+		FullDocumentBeforeChange: nil,
+		MaxAwaitTime:             nil,
+		ResumeAfter:              nil,
+		ShowExpandedEvents:       nil,
+		StartAtOperationTime:     nil,
+		StartAfter:               nil,
+		Custom:                   nil,
+		CustomPipeline:           nil,
+	}
+
+	var tok bson.M
+	tok = bson.M{"_data": "8267E73748000000222B042C01002C03E66E5A1004F3ACB4AA4DE147A0B0F5F541701E4310463C6F7065726174696F6E54797065003C696E736572740046646F63756D656E744B65790046645F6964006467E7374793A5A7D34207F732000004"}
+	opts.SetResumeAfter(tok)
+
+	lks, err := mongolks.GetLinkedService(context.Background(), "default")
+	require.NoError(t, err)
+
+	coll := lks.GetCollection(WatchCollectionId, "")
+	if coll == nil {
+		err = errors.New("collection not found in config: " + WatchCollectionId)
+		log.Fatal().Err(err).Msg(semLogContext)
+	}
+
+	collStream, err := coll.Watch(context.TODO(), mongo.Pipeline{}, &opts)
+	require.NoError(t, err)
+
+	log.Info().Msg("enabling SIGINT e SIGTERM")
+	shutdownChannel := make(chan error)
+	go func() {
+		c := make(chan os.Signal)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		shutdownChannel <- fmt.Errorf("signal received: %v", <-c)
+	}()
+
+	var mu sync.Mutex
+	ticker := time.NewTicker(500 * time.Millisecond)
+	numEvts := 0
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				mu.Lock()
+				//fmt.Printf("numEvts: %d\n", numEvts)
+				//numEvts = 0
+				mu.Unlock()
+			}
+		}
+	}()
+
+	begin := time.Now()
+	for collStream.Next(context.TODO()) {
+		var event map[string]interface{}
+		if errDecode := collStream.Decode(&event); errDecode != nil {
+			log.Printf("error decoding: %s", errDecode)
+		}
+		//fmt.Println(numEvts)
+		mu.Lock()
+		numEvts++
+		if numEvts%20000 == 0 {
+			fmt.Printf("evts: %d - elapsed: %d\n", numEvts, time.Since(begin).Milliseconds())
+		}
+		mu.Unlock()
 	}
 }
