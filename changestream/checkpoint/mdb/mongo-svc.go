@@ -163,29 +163,15 @@ func (f *CheckpointSvc) CommitAt(tokenId string, token checkpoint.ResumeToken, s
 	}
 
 	doSave := syncRequired
-	if f.NumberOfTicks < 0 {
-		doSave = true
-		f.NumberOfTicks = 0
-	} else {
-		if (f.NumberOfTicks + 1) >= f.cfg.Stride {
+	if !doSave {
+		switch {
+		case f.NumberOfTicks < 0:
 			doSave = true
-		}
-
-		lastSavedTm, err1 := time.Parse(time.RFC3339Nano, f.LastSaved.At)
-		currentTokenTm, err2 := time.Parse(time.RFC3339Nano, token.At)
-		if err1 == nil && err2 == nil {
-			if currentTokenTm.Sub(lastSavedTm) > 1*time.Minute {
-				log.Info().Float64("interval", currentTokenTm.Sub(lastSavedTm).Seconds()).Msg(semLogContext)
-				doSave = true
-			}
-		} else {
-			if err1 != nil {
-				log.Error().Err(err1).Msg(semLogContext)
-			}
-
-			if err2 != nil {
-				log.Error().Err(err2).Msg(semLogContext)
-			}
+			f.NumberOfTicks = 0
+		case (f.NumberOfTicks + 1) >= f.cfg.Stride:
+			doSave = true
+		case tokenIsNewerThan(token.At, f.LastSaved.At):
+			doSave = true
 		}
 	}
 
@@ -199,6 +185,39 @@ func (f *CheckpointSvc) CommitAt(tokenId string, token checkpoint.ResumeToken, s
 	}
 
 	return err
+}
+
+func tokenIsNewerThan(newTokenAt, oldTokenAt string) bool {
+	const semLogContext = "mongodb-checkpoint::store"
+	var lastSavedTm, currentTokenTm time.Time
+
+	var err error
+	if oldTokenAt != "" {
+		lastSavedTm, err = time.Parse(time.RFC3339Nano, oldTokenAt)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return false
+		}
+	} else {
+		lastSavedTm = time.Now()
+	}
+
+	if newTokenAt != "" {
+		currentTokenTm, err = time.Parse(time.RFC3339Nano, newTokenAt)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return false
+		}
+	} else {
+		currentTokenTm = time.Now()
+	}
+
+	if currentTokenTm.Sub(lastSavedTm) > 1*time.Minute {
+		log.Info().Float64("interval", currentTokenTm.Sub(lastSavedTm).Seconds()).Msg(semLogContext)
+		return true
+	}
+
+	return false
 }
 
 func (svc *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) error {

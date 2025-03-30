@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/factory"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
@@ -16,8 +16,6 @@ import (
 )
 
 const (
-	MetricLabelName = "name"
-
 	MetricRewindsCounter  = "cdc-rewinds"
 	MetricBatchErrors     = "cdc-batch-errors"
 	MetricBatches         = "cdc-batches"
@@ -117,7 +115,7 @@ func (stat *StatsInfo) SetMessageDuration(dur float64) {
 	}
 }
 
-func NewStatsInfo(whatcherId, metricGroupId string) *StatsInfo {
+func NewProducerStatsInfo(whatcherId, metricGroupId string) *StatsInfo {
 	stat := &StatsInfo{}
 	mg, err := promutil.GetGroup(metricGroupId)
 	if err != nil {
@@ -194,7 +192,7 @@ func NewStatsInfo(whatcherId, metricGroupId string) *StatsInfo {
 }
 
 type producerImpl struct {
-	cfg *Config
+	cfg *ProducerConfig
 
 	wg           *sync.WaitGroup
 	shutdownSync sync.Once
@@ -205,11 +203,11 @@ type producerImpl struct {
 	processor               Processor
 	batchProcessedCbChannel chan BatchProcessedCbEvent
 	checkpointSvc           checkpoint.ResumeTokenCheckpointSvc
-	consumer                *changestream.Consumer
+	consumer                *Consumer
 	statsInfo               *StatsInfo
 }
 
-func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (ConsumerProducer, error) {
+func NewConsumerProducer(cfg *ProducerConfig, wg *sync.WaitGroup, processor Processor) (ConsumerProducer, error) {
 	const semLogContext = "change-stream-cs-factory::new"
 
 	if cfg.WorkMode != WorkModeBatch {
@@ -220,7 +218,7 @@ func NewConsumerProducer(cfg *Config, wg *sync.WaitGroup, processor Processor) (
 		cfg:       cfg,
 		quitc:     make(chan struct{}),
 		wg:        wg,
-		statsInfo: NewStatsInfo(cfg.Name, cfg.RefMetrics.GId),
+		statsInfo: NewProducerStatsInfo(cfg.Name, cfg.RefMetrics.GId),
 	}
 
 	if processor.IsProcessorDeferred() {
@@ -302,24 +300,24 @@ func (tp *producerImpl) Start() error {
 	return nil
 }
 
-func (tp *producerImpl) newConsumer() (*changestream.Consumer, error) {
+func (tp *producerImpl) newConsumer() (*Consumer, error) {
 	const semLogContext = "change-stream-cp::new-consumer"
 
-	var opts []changestream.ConfigOption
+	var opts []ConsumerConfigOption
 	if tp.cfg.CheckPointSvcConfig.Typ != "" {
 		svc, err := factory.NewCheckPointSvc(tp.cfg.CheckPointSvcConfig)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return nil, err
 		}
-		opts = append(opts, changestream.WithCheckpointSvc(svc))
+		opts = append(opts, WithCheckpointSvc(svc))
 
 		if tp.processor != nil && tp.processor.IsProcessorDeferred() {
 			tp.checkpointSvc = svc
 		}
 	}
 
-	consumer, err := changestream.NewConsumer(&tp.cfg.Consumer, opts...)
+	consumer, err := NewConsumer(&tp.cfg.Consumer, opts...)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

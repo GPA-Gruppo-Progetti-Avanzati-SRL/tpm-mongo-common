@@ -1,4 +1,4 @@
-package changestream
+package watcherproducer
 
 import (
 	"context"
@@ -15,17 +15,17 @@ import (
 	"time"
 )
 
+const MetricChangeStreamNumEvents = "cdc-cs-events"
+
 type watcherImpl struct {
-	cfg       *Config
+	cfg       *WatcherConfig
 	chgStream *mongo.ChangeStream
 	quitc     chan struct{}
 	wg        *sync.WaitGroup
-	listeners []Listener
+	listeners []WatcherListener
 }
 
-var OutOfSequenceError = errors.New("resume token out of sequence")
-
-func NewWatcher(cfg *Config, c chan error, wg *sync.WaitGroup, watcherOpts ...ConfigOption) (Watcher, error) {
+func NewWatcher(cfg *WatcherConfig, c chan error, wg *sync.WaitGroup, watcherOpts ...WatcherConfigOption) (Watcher, error) {
 
 	for _, o := range watcherOpts {
 		o(cfg)
@@ -40,7 +40,7 @@ func NewWatcher(cfg *Config, c chan error, wg *sync.WaitGroup, watcherOpts ...Co
 	return s, nil
 }
 
-func (s *watcherImpl) Add(l Listener) error {
+func (s *watcherImpl) Add(l WatcherListener) error {
 	const semLogContext = "watcher::add-listener"
 	log.Info().Msg(semLogContext)
 	s.listeners = append(s.listeners, l)
@@ -74,7 +74,7 @@ func (s *watcherImpl) Start() error {
 func (s *watcherImpl) newChangeStream() (*mongo.ChangeStream, error) {
 	const semLogContext = "watcher::new-change-stream"
 
-	opts, err := s.cfg.changeOptions()
+	opts, err := s.cfg.ChangeStreamOptions()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
@@ -157,7 +157,7 @@ func (s *watcherImpl) handleError(err error) string {
 		log.Error().Err(err).Msg(semLogContext)
 	}
 
-	policy := s.cfg.onWatcherErrorPolicy()
+	policy := s.cfg.OnWatcherErrorPolicy()
 	if policy == OnErrorPolicyContinue {
 		s.chgStream, err = s.newChangeStream()
 		if err != nil {
@@ -200,16 +200,16 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 
 		if s.cfg.VerifyOutOfSequenceError {
 			if evt.ResumeTok.Value <= prevToken.Value {
-				log.Error().Err(OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", prevToken.Value).Msg(semLogContext + " - out-of-sequence token")
+				log.Error().Err(events.OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", prevToken.Value).Msg(semLogContext + " - out-of-sequence token")
 				g = s.setMetric(g, "cdc-event-errors", 1, nil)
-				return prevToken, OutOfSequenceError
+				return prevToken, events.OutOfSequenceError
 			}
 		}
 
 		allSynchs := true
 		for _, l := range s.listeners {
 			var synchronous bool
-			synchronous, err = l.Consume(evt)
+			synchronous, err = l.ConsumeEvent(evt)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
 				return prevToken, err
@@ -218,8 +218,8 @@ func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSiz
 			allSynchs = allSynchs && synchronous
 		}
 
-		if allSynchs && s.cfg.checkPointSvc != nil {
-			err = s.cfg.checkPointSvc.CommitAt(s.cfg.Id, evt.ResumeTok, false)
+		if allSynchs && s.cfg.CheckPointSvc != nil {
+			err = s.cfg.CheckPointSvc.CommitAt(s.cfg.Id, evt.ResumeTok, false)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
 				return evt.ResumeTok, err

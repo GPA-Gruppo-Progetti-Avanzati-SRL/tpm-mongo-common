@@ -1,4 +1,4 @@
-package changestream_test
+package consumerproducer_test
 
 import (
 	_ "embed"
@@ -20,7 +20,7 @@ var yamlConsumerProducerConfig []byte
 func TestConsumerProducer(t *testing.T) {
 	const semLogContext = "change-stream::consumer-producer"
 
-	cfg := consumerproducer.Config{}
+	cfg := consumerproducer.ProducerConfig{}
 	err := yaml.Unmarshal(yamlConsumerProducerConfig, &cfg)
 	require.NoError(t, err)
 

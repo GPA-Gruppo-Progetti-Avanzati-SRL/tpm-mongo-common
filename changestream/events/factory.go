@@ -14,6 +14,8 @@ const (
 	OperationTypeReplace = "replace"
 )
 
+var OutOfSequenceError = errors.New("resume token out of sequence")
+
 var UnsupportedOperationType = errors.New("unsupported operation type")
 
 func ParseEvent(m bson.M) (ChangeEvent, error) {

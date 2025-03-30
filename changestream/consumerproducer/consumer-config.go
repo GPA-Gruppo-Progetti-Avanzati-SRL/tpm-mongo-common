@@ -1,4 +1,4 @@
-package changestream
+package consumerproducer
 
 import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
@@ -50,7 +50,7 @@ type ChangeStreamOptions struct {
 
 // CheckPointServiceCfg     *factory.Config                  `yaml:"checkpoint-svc,omitempty"  mapstructure:"checkpoint-svc,omitempty"  json:"checkpoint-svc,omitempty"`
 
-type Config struct {
+type ConsumerConfig struct {
 	Id                       string                           `yaml:"id,omitempty" mapstructure:"id,omitempty" json:"id,omitempty"`
 	MongoInstance            string                           `yaml:"lks-name,omitempty" mapstructure:"lks-name,omitempty" json:"lks-name,omitempty"`
 	CollectionId             string                           `yaml:"collection-id,omitempty" mapstructure:"collection-id,omitempty" json:"collection-id,omitempty"`
@@ -59,24 +59,24 @@ type Config struct {
 	OnErrorPolicy            string                           `yaml:"on-error-policy,omitempty"  mapstructure:"on-error-policy,omitempty"  json:"on-error-policy,omitempty"`
 	RetryCount               int                              `yaml:"retry-count,omitempty"  mapstructure:"retry-count,omitempty"  json:"retry-count,omitempty"`
 	ChangeStream             ChangeStreamOptions              `yaml:"change-stream-opts,omitempty"  mapstructure:"change-stream-opts,omitempty"  json:"change-stream-opts,omitempty"`
-	checkPointSvc            checkpoint.ResumeTokenCheckpointSvc
+	CheckPointSvc            checkpoint.ResumeTokenCheckpointSvc
 }
 
-type ConfigOption func(*Config)
+type ConsumerConfigOption func(*ConsumerConfig)
 
-func WithRetryCount(retryCount int) ConfigOption {
-	return func(options *Config) {
+func WithRetryCount(retryCount int) ConsumerConfigOption {
+	return func(options *ConsumerConfig) {
 		options.RetryCount = retryCount
 	}
 }
 
-func WithCheckpointSvc(svc checkpoint.ResumeTokenCheckpointSvc) ConfigOption {
-	return func(options *Config) {
-		options.checkPointSvc = svc
+func WithCheckpointSvc(svc checkpoint.ResumeTokenCheckpointSvc) ConsumerConfigOption {
+	return func(options *ConsumerConfig) {
+		options.CheckPointSvc = svc
 	}
 }
 
-func (cfg *Config) changeOptions() (options.ChangeStreamOptions, error) {
+func (cfg *ConsumerConfig) ChangeOptions() (options.ChangeStreamOptions, error) {
 	const semLogContext = "watcher::config-change-options"
 
 	var err error
@@ -97,8 +97,8 @@ func (cfg *Config) changeOptions() (options.ChangeStreamOptions, error) {
 		CustomPipeline:           nil,
 	}
 
-	if cfg.checkPointSvc != nil {
-		token, err = cfg.checkPointSvc.Retrieve(cfg.Id)
+	if cfg.CheckPointSvc != nil {
+		token, err = cfg.CheckPointSvc.Retrieve(cfg.Id)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return opts, err
@@ -111,7 +111,7 @@ func (cfg *Config) changeOptions() (options.ChangeStreamOptions, error) {
 	return opts, nil
 }
 
-func (cfg *Config) Pipeline() (mongo.Pipeline, error) {
+func (cfg *ConsumerConfig) Pipeline() (mongo.Pipeline, error) {
 	const semLogContext = "watcher::config-pipeline"
 
 	if cfg.ChangeStream.Pl == "" {
@@ -127,14 +127,14 @@ func (cfg *Config) Pipeline() (mongo.Pipeline, error) {
 	return pl, err
 }
 
-func (cfg *Config) onWatcherErrorPolicy() string {
+func (cfg *ConsumerConfig) OnWatcherErrorPolicy() string {
 	if cfg.OnErrorPolicy == "" {
 		return OnErrorPolicyContinue
 	}
 	return cfg.OnErrorPolicy
 }
 
-func (cfg *Config) onConsumerErrorPolicy() string {
+func (cfg *ConsumerConfig) onConsumerErrorPolicy() string {
 	if cfg.OnErrorPolicy == "" {
 		return OnErrorPolicyContinue
 	}

@@ -1,4 +1,4 @@
-package changestream
+package consumerproducer
 
 import (
 	"context"
@@ -96,7 +96,7 @@ func (stat *ConsumerStatsInfo) ResetMillisecondsBehindSource() {
 	}
 }
 
-func NewStatsInfo(whatcherId, metricGroupId string) *ConsumerStatsInfo {
+func NewConsumerStatsInfo(whatcherId, metricGroupId string) *ConsumerStatsInfo {
 	stat := &ConsumerStatsInfo{}
 	mg, err := promutil.GetGroup(metricGroupId)
 	if err != nil {
@@ -140,7 +140,7 @@ func NewStatsInfo(whatcherId, metricGroupId string) *ConsumerStatsInfo {
 }
 
 type Consumer struct {
-	cfg           *Config
+	cfg           *ConsumerConfig
 	ServerVersion util.MongoDbVersion
 	chgStream     *mongo.ChangeStream
 
@@ -150,7 +150,7 @@ type Consumer struct {
 	statsInfo *ConsumerStatsInfo
 }
 
-func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
+func NewConsumer(cfg *ConsumerConfig, watcherOpts ...ConsumerConfigOption) (*Consumer, error) {
 	const semLogContext = "consumer::new"
 	var err error
 
@@ -160,7 +160,7 @@ func NewConsumer(cfg *Config, watcherOpts ...ConfigOption) (*Consumer, error) {
 
 	s := &Consumer{
 		cfg:       cfg,
-		statsInfo: NewStatsInfo(cfg.Id, cfg.RefMetrics.GId),
+		statsInfo: NewConsumerStatsInfo(cfg.Id, cfg.RefMetrics.GId),
 	}
 
 	s.chgStream, err = s.newChangeStream()
@@ -185,13 +185,13 @@ func (s *Consumer) Close() {
 func (s *Consumer) CommitAt(rt checkpoint.ResumeToken, syncRequired bool) error {
 	const semLogContext = "consumer::commit-at"
 
-	if s.cfg.checkPointSvc == nil {
+	if s.cfg.CheckPointSvc == nil {
 		err := errors.New("no checkpoint service configured to honour commit op")
 		log.Error().Err(err).Msg(semLogContext)
 		return err
 	}
 
-	err := s.cfg.checkPointSvc.CommitAt(s.cfg.Id, rt, syncRequired)
+	err := s.cfg.CheckPointSvc.CommitAt(s.cfg.Id, rt, syncRequired)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -203,7 +203,7 @@ func (s *Consumer) CommitAt(rt checkpoint.ResumeToken, syncRequired bool) error 
 func (s *Consumer) Commit() error {
 	const semLogContext = "consumer::commit"
 
-	if s.cfg.checkPointSvc == nil {
+	if s.cfg.CheckPointSvc == nil {
 		err := errors.New("no checkpoint service configured to honour commit op")
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -214,7 +214,7 @@ func (s *Consumer) Commit() error {
 		return nil
 	}
 
-	err := s.cfg.checkPointSvc.CommitAt(s.cfg.Id, s.lastPolledToken, false)
+	err := s.cfg.CheckPointSvc.CommitAt(s.cfg.Id, s.lastPolledToken, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
@@ -245,8 +245,8 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 			ec := util.MongoErrorCode(s.chgStream.Err(), s.ServerVersion)
 			if ec == util.MongoErrChangeStreamHistoryLost {
 				s.statsInfo.IncHistoryLost()
-				if s.cfg.checkPointSvc != nil {
-					errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
+				if s.cfg.CheckPointSvc != nil {
+					errHl := s.cfg.CheckPointSvc.OnHistoryLost(s.cfg.Id)
 					if errHl != nil {
 						log.Error().Err(errHl).Msg(semLogContext + " - history lost")
 					}
@@ -258,14 +258,14 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 			return nil, s.chgStream.Err()
 		}
 
-		if s.cfg.checkPointSvc != nil {
+		if s.cfg.CheckPointSvc != nil {
 			idleResumeToken, err := checkpoint.DecodeResumeToken(s.chgStream.ResumeToken())
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
 				return nil, err
 			}
 
-			err = s.cfg.checkPointSvc.StoreIdle(s.cfg.Id, idleResumeToken)
+			err = s.cfg.CheckPointSvc.StoreIdle(s.cfg.Id, idleResumeToken)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
 				return nil, err
@@ -275,8 +275,8 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		return nil, nil
 	}
 
-	if s.cfg.checkPointSvc != nil {
-		s.cfg.checkPointSvc.ClearIdle()
+	if s.cfg.CheckPointSvc != nil {
+		s.cfg.CheckPointSvc.ClearIdle()
 	}
 
 	s.statsInfo.ResetIdlesTryNext()
@@ -313,9 +313,9 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 
 	if s.cfg.VerifyOutOfSequenceError {
 		if evt.ResumeTok.Value <= s.lastPolledToken.Value {
-			log.Error().Err(OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", s.lastPolledToken.Value).Msg(semLogContext + " - out-of-sequence token")
+			log.Error().Err(events.OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", s.lastPolledToken.Value).Msg(semLogContext + " - out-of-sequence token")
 			s.statsInfo.IncCdcEventErrors()
-			return nil, OutOfSequenceError
+			return nil, events.OutOfSequenceError
 		}
 	}
 
@@ -330,7 +330,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 	const semLogContext = "consumer::new-change-stream"
 
-	opts, err := s.cfg.changeOptions()
+	opts, err := s.cfg.ChangeOptions()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
@@ -370,8 +370,8 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 		if mongoCode == util.MongoErrChangeStreamHistoryLost {
 			s.statsInfo.IncHistoryLost()
 
-			if s.cfg.checkPointSvc != nil {
-				errHl := s.cfg.checkPointSvc.OnHistoryLost(s.cfg.Id)
+			if s.cfg.CheckPointSvc != nil {
+				errHl := s.cfg.CheckPointSvc.OnHistoryLost(s.cfg.Id)
 				if errHl != nil {
 					log.Error().Err(errHl).Msg(semLogContext + " - history lost")
 				}

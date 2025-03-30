@@ -9,10 +9,16 @@ import (
 type DefaultListener struct {
 }
 
-func (l *DefaultListener) Consume(evt events.ChangeEvent) (bool, error) {
+func (l *DefaultListener) ConsumeEvent(evt events.ChangeEvent) (bool, error) {
 	const semLogContext = "change-stream-default-listener::consume"
 
 	log.Trace().Str("current-token", evt.ResumeTok.Value).Str("event", evt.String()).Msg(semLogContext)
 	fmt.Println(evt.String())
+	return true, nil
+}
+
+func (l *DefaultListener) ConsumeBatch(evt []events.ChangeEvent) (bool, error) {
+	const semLogContext = "change-stream-default-listener::consume"
+
 	return true, nil
 }

@@ -1,4 +1,4 @@
-package changestream_test
+package consumerproducer_test
 
 import (
 	"fmt"
