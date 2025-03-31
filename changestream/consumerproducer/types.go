@@ -50,6 +50,8 @@ type Processor interface {
 	ClearProcessor()
 	ProcessorBatchSize() int
 	ResetProcessor() error
+
+	ProcessBatchOfChangeStreamEvents(streamEvents BatchOfChangeStreamEvents) (checkpoint.ResumeToken, error)
 }
 
 type UnimplementedConsumerProducerProcessor struct {

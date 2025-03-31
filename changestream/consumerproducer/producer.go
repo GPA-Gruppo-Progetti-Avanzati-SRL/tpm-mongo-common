@@ -205,12 +205,14 @@ type producerImpl struct {
 	checkpointSvc           checkpoint.ResumeTokenCheckpointSvc
 	consumer                *Consumer
 	statsInfo               *StatsInfo
+
+	batchOfChangeEvents BatchOfChangeStreamEvents
 }
 
 func NewConsumerProducer(cfg *ProducerConfig, wg *sync.WaitGroup, processor Processor) (ConsumerProducer, error) {
 	const semLogContext = "change-stream-cs-factory::new"
 
-	if cfg.WorkMode != WorkModeBatch {
+	if cfg.WorkMode != WorkModeBatch && cfg.WorkMode != WorkModeBatchFF {
 		cfg.WorkMode = WorkModeMsg
 	}
 
@@ -231,7 +233,7 @@ func NewConsumerProducer(cfg *ProducerConfig, wg *sync.WaitGroup, processor Proc
 	}
 	t.processor = processor
 
-	if cfg.WorkMode == WorkModeBatch {
+	if cfg.WorkMode == WorkModeBatch || cfg.WorkMode == WorkModeBatchFF {
 		if cfg.MaxBatchSize > 0 {
 			cfg.TickInterval = 0
 			log.Info().Int("max-batch-size", cfg.MaxBatchSize).Msg(semLogContext + " - working in batch-size mode")
@@ -402,15 +404,15 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 			}
 
 			shouldProcessBatch := false
-			if isMsg {
-				tp.numberOfMessages++
-				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.ProcessorBatchSize() == tp.cfg.MaxBatchSize {
-					shouldProcessBatch = true
-				}
-			} else {
-				if tp.cfg.WorkMode == WorkModeBatch && tp.processor.ProcessorBatchSize() > 0 {
-					shouldProcessBatch = true
-				}
+			switch {
+			case tp.cfg.WorkMode == WorkModeBatch && isMsg && tp.processor.ProcessorBatchSize() == tp.cfg.MaxBatchSize:
+				shouldProcessBatch = true
+			case tp.cfg.WorkMode == WorkModeBatch && !isMsg && tp.processor.ProcessorBatchSize() > 0:
+				shouldProcessBatch = true
+			case tp.cfg.WorkMode == WorkModeBatchFF && isMsg && len(tp.batchOfChangeEvents.Events) == tp.cfg.MaxBatchSize:
+				shouldProcessBatch = true
+			case tp.cfg.WorkMode == WorkModeBatchFF && !isMsg && len(tp.batchOfChangeEvents.Events) > 0:
+				shouldProcessBatch = true
 			}
 
 			if shouldProcessBatch {
@@ -419,6 +421,7 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 				} else {
 					err = tp.processBatch(context.Background())
 				}
+
 				if err != nil && tp.onError(err) != nil {
 					tp.shutDown(err)
 					return
@@ -444,19 +447,22 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			if tp.cfg.WorkMode == WorkModeBatch {
+
+			if tp.cfg.WorkMode == WorkModeBatch || tp.cfg.WorkMode == WorkModeBatchFF {
 				var err error
 				if tp.processor.IsProcessorDeferred() {
 					err = tp.deferredProcessBatch(context.Background())
 				} else {
 					err = tp.processBatch(context.Background())
 				}
+
 				if err != nil && tp.onError(err) != nil {
 					ticker.Stop()
 					tp.shutDown(err)
 					return
 				}
 			}
+
 		case cbEvt, ok = <-tp.batchProcessedCbChannel:
 			if ok {
 				if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
@@ -529,11 +535,21 @@ func (tp *producerImpl) poll() (bool, error) {
 		return false, nil
 	}
 
-	if tp.cfg.WorkMode == WorkModeBatch {
+	switch tp.cfg.WorkMode {
+	case WorkModeBatch:
 		err = tp.addMessage2Batch(ev)
-	} else {
+		tp.numberOfMessages++
+		if err == nil {
+			tp.statsInfo.IncMessages()
+		}
+	case WorkModeBatchFF:
+		tp.numberOfMessages++
+		tp.batchOfChangeEvents.Events = append(tp.batchOfChangeEvents.Events, ev)
+		tp.statsInfo.IncMessages()
+	default:
 		err = tp.processMessage(ev)
 		if err == nil {
+			tp.numberOfMessages++
 			err = tp.consumer.Commit()
 		} else {
 			// the error is anyway logged but the one propagated is the prev one.
@@ -561,24 +577,42 @@ func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
 		return err
 	}
 
-	tp.statsInfo.IncMessages()
 	// should not commit at this stage
 	// err = tp.consumer.Commit()
 
-	return err
+	return nil
 }
 
 func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 	const semLogContext = "change-stream-cp::deferred-process-batch"
 	var err error
 
-	batchSize := tp.processor.ProcessorBatchSize()
-	if tp.cfg.WorkMode != WorkModeBatch || batchSize == 0 {
+	var batchSize int
+	switch tp.cfg.WorkMode {
+	case WorkModeBatch:
+		batchSize = tp.processor.ProcessorBatchSize()
+	case WorkModeBatchFF:
+		batchSize = len(tp.batchOfChangeEvents.Events)
+	default:
+	}
+
+	if batchSize == 0 {
 		return nil
 	}
 
+	defer func() {
+		tp.batchOfChangeEvents = BatchOfChangeStreamEvents{}
+	}()
+
 	tp.statsInfo.SetBatchSize(batchSize)
-	_, err = tp.processor.ProcessBatch()
+	switch tp.cfg.WorkMode {
+	case WorkModeBatch:
+		_, err = tp.processor.ProcessBatch()
+	case WorkModeBatchFF:
+		_, err = tp.processor.ProcessBatchOfChangeStreamEvents(tp.batchOfChangeEvents)
+	default:
+	}
+
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		tp.statsInfo.IncBatchErrors()
@@ -590,17 +624,37 @@ func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 func (tp *producerImpl) processBatch(ctx context.Context) error {
 	const semLogContext = "change-stream-cp::process-batch"
 
-	batchSize := tp.processor.ProcessorBatchSize()
-	if tp.cfg.WorkMode != WorkModeBatch || tp.processor.ProcessorBatchSize() == 0 {
+	var batchSize int
+	switch tp.cfg.WorkMode {
+	case WorkModeBatch:
+		batchSize = tp.processor.ProcessorBatchSize()
+	case WorkModeBatchFF:
+		batchSize = len(tp.batchOfChangeEvents.Events)
+	default:
+	}
+
+	if batchSize == 0 {
 		return nil
 	}
 
-	defer tp.processor.ClearProcessor()
+	defer func() {
+		tp.processor.ClearProcessor()
+		tp.batchOfChangeEvents = BatchOfChangeStreamEvents{}
+	}()
 
 	beginOfProcessing := time.Now()
 	tp.statsInfo.SetBatchSize(batchSize)
 
-	lastCommittableResumeToken, err := tp.processor.ProcessBatch()
+	var lastCommittableResumeToken checkpoint.ResumeToken
+	var err error
+	switch tp.cfg.WorkMode {
+	case WorkModeBatch:
+		lastCommittableResumeToken, err = tp.processor.ProcessBatch()
+	case WorkModeBatchFF:
+		lastCommittableResumeToken, err = tp.processor.ProcessBatchOfChangeStreamEvents(tp.batchOfChangeEvents)
+	default:
+	}
+
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		tp.statsInfo.IncBatchErrors()

@@ -15,8 +15,9 @@ const (
 	OnErrorExit   = "exit"
 	OnErrorRewind = "rewind"
 
-	WorkModeMsg   = "msg-mode"
-	WorkModeBatch = "batch-mode"
+	WorkModeMsg     = "msg-mode"
+	WorkModeBatch   = "batch-mode"
+	WorkModeBatchFF = "batch-mode-ff"
 )
 
 type ServerConfig struct {
