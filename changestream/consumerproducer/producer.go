@@ -551,7 +551,7 @@ func (tp *producerImpl) poll() (bool, error) {
 	case WorkModeBatchFF:
 		tp.numberOfMessages++
 		tp.batchOfChangeEvents.Events = append(tp.batchOfChangeEvents.Events, ev)
-		tp.statsInfo.IncMessages()
+		//tp.statsInfo.IncMessages()
 	default:
 		err = tp.processMessage(ev)
 		if err == nil {
