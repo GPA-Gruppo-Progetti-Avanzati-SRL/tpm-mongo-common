@@ -232,7 +232,7 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	const semLogContext = "consumer::process-change-stream"
 	log.Trace().Msg(semLogContext)
 	if !s.chgStream.TryNext(context.TODO()) {
-
+		log.Trace().Msg(semLogContext + " - in trynext")
 		s.statsInfo.IncIdlesTryNext()
 		s.statsInfo.ResetMillisecondsBehindSource()
 
