@@ -15,7 +15,7 @@ type ConsumerProducer interface {
 }
 
 type BatchOfChangeStreamEvents struct {
-	evts []*events.ChangeEvent
+	Events []*events.ChangeEvent
 }
 
 type BatchProcessedCbEvent struct {
