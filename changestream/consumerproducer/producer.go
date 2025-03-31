@@ -532,6 +532,7 @@ func (tp *producerImpl) poll() (bool, error) {
 	var err error
 
 	ev, err := tp.consumer.Poll()
+	log.Trace().Msg(semLogContext + " - polled")
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return false, err
@@ -551,7 +552,7 @@ func (tp *producerImpl) poll() (bool, error) {
 	case WorkModeBatchFF:
 		tp.numberOfMessages++
 		tp.batchOfChangeEvents.Events = append(tp.batchOfChangeEvents.Events, ev)
-		//tp.statsInfo.IncMessages()
+		tp.statsInfo.IncMessages()
 	default:
 		err = tp.processMessage(ev)
 		if err == nil {
