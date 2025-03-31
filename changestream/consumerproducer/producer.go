@@ -387,6 +387,7 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 			return
 
 		case cbEvt, ok = <-tp.batchProcessedCbChannel:
+			log.Trace().Msg(semLogContext + " received batch processed event")
 			if ok {
 				if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
 					tp.shutDown(cbEvt.Err)
@@ -395,6 +396,7 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 			}
 
 		default:
+			log.Trace().Msg(semLogContext + " doing default")
 			isMsg, err := tp.poll()
 			if err != nil {
 				if tp.onError(err) != nil {
@@ -493,11 +495,12 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 
 func (tp *producerImpl) BatchProcessedCommitAtCb(cbEvt BatchProcessedCbEvent) {
 	const semLogContext = "change-stream-cp::batch-processed-commit-at"
-	log.Trace().Msg(semLogContext)
+	log.Trace().Msg(semLogContext + " - in")
 	err := tp.checkpointSvc.CommitAt(tp.cfg.Consumer.Id, cbEvt.Rt, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 	}
+	log.Trace().Msg(semLogContext + " - out")
 
 }
 func (tp *producerImpl) BatchProcessedErrorCb(cbEvt BatchProcessedCbEvent) {
@@ -525,6 +528,7 @@ func (tp *producerImpl) BatchProcessedErrorCb(cbEvt BatchProcessedCbEvent) {
 func (tp *producerImpl) poll() (bool, error) {
 	const semLogContext = "change-stream-cp::poll"
 	log.Trace().Msg(semLogContext)
+	defer log.Trace().Msg(semLogContext + " - polled")
 	var err error
 
 	ev, err := tp.consumer.Poll()
