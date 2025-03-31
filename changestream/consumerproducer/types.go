@@ -14,6 +14,10 @@ type ConsumerProducer interface {
 	Name() string
 }
 
+type BatchOfChangeStreamEvents struct {
+	evts []*events.ChangeEvent
+}
+
 type BatchProcessedCbEvent struct {
 	Rt  checkpoint.ResumeToken
 	Err error
