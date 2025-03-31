@@ -232,7 +232,6 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 	const semLogContext = "consumer::process-change-stream"
 	log.Trace().Msg(semLogContext)
 	if !s.chgStream.TryNext(context.TODO()) {
-		log.Trace().Msg(semLogContext + " - in trynext")
 		s.statsInfo.IncIdlesTryNext()
 		s.statsInfo.ResetMillisecondsBehindSource()
 
@@ -275,7 +274,6 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 		return nil, nil
 	}
 
-	log.Trace().Msg(semLogContext + " - after trynext")
 	if s.cfg.CheckPointSvc != nil {
 		s.cfg.CheckPointSvc.ClearIdle()
 	}

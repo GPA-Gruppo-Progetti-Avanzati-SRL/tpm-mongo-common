@@ -528,11 +528,10 @@ func (tp *producerImpl) BatchProcessedErrorCb(cbEvt BatchProcessedCbEvent) {
 func (tp *producerImpl) poll() (bool, error) {
 	const semLogContext = "change-stream-cp::poll"
 	log.Trace().Msg(semLogContext)
-	defer log.Trace().Msg(semLogContext + " - polled")
+
 	var err error
 
 	ev, err := tp.consumer.Poll()
-	log.Trace().Msg(semLogContext + " - polled")
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return false, err
