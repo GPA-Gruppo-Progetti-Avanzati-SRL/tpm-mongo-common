@@ -493,7 +493,7 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 
 func (tp *producerImpl) BatchProcessedCommitAtCb(cbEvt BatchProcessedCbEvent) {
 	const semLogContext = "change-stream-cp::batch-processed-commit-at"
-
+	log.Trace().Msg(semLogContext)
 	err := tp.checkpointSvc.CommitAt(tp.cfg.Consumer.Id, cbEvt.Rt, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -502,6 +502,7 @@ func (tp *producerImpl) BatchProcessedCommitAtCb(cbEvt BatchProcessedCbEvent) {
 }
 func (tp *producerImpl) BatchProcessedErrorCb(cbEvt BatchProcessedCbEvent) {
 	const semLogContext = "change-stream-cp::batch-processed-error-cb"
+	log.Trace().Msg(semLogContext)
 
 	if cbEvt.Err == nil {
 		tp.statsInfo.IncBatches()
@@ -523,6 +524,7 @@ func (tp *producerImpl) BatchProcessedErrorCb(cbEvt BatchProcessedCbEvent) {
 
 func (tp *producerImpl) poll() (bool, error) {
 	const semLogContext = "change-stream-cp::poll"
+	log.Trace().Msg(semLogContext)
 	var err error
 
 	ev, err := tp.consumer.Poll()
@@ -563,6 +565,7 @@ func (tp *producerImpl) poll() (bool, error) {
 
 func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
 	const semLogContext = "change-stream-cp::add-message-2-batch"
+	log.Trace().Msg(semLogContext)
 	var err error
 
 	spanName := tp.cfg.Tracing.SpanName
@@ -585,6 +588,7 @@ func (tp *producerImpl) addMessage2Batch(km *events.ChangeEvent) error {
 
 func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 	const semLogContext = "change-stream-cp::deferred-process-batch"
+	log.Trace().Msg(semLogContext)
 	var err error
 
 	var batchSize int
@@ -623,6 +627,7 @@ func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 
 func (tp *producerImpl) processBatch(ctx context.Context) error {
 	const semLogContext = "change-stream-cp::process-batch"
+	log.Trace().Msg(semLogContext)
 
 	var batchSize int
 	switch tp.cfg.WorkMode {
@@ -678,7 +683,7 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 
 func (tp *producerImpl) processMessage(e *events.ChangeEvent) error {
 	const semLogContext = "change-stream-cp::process-message"
-
+	log.Trace().Msg(semLogContext)
 	var err error
 
 	beginOfProcessing := time.Now()
@@ -703,7 +708,7 @@ func (tp *producerImpl) processMessage(e *events.ChangeEvent) error {
 
 func (tp *producerImpl) shutDown(err error) {
 	const semLogContext = "change-stream-cp::shutdown"
-
+	log.Trace().Msg(semLogContext)
 	tp.shutdownSync.Do(func() {
 
 		if tp.wg != nil {
@@ -724,31 +729,31 @@ func (tp *producerImpl) shutDown(err error) {
 
 }
 
-func (tp *producerImpl) produceMetric2(metricGroup *promutil.Group, metricId string, value float64, labels map[string]string) *promutil.Group {
-	const semLogContext = "change-stream-cp::produce-metric"
-
-	// Unconfigured...
-
-	if metricGroup == nil && tp.cfg.RefMetrics == nil {
-		log.Trace().Msg(semLogContext + " - un-configured metrics")
-		return nil
-	}
-
-	var err error
-	if metricGroup == nil {
-		g, err := promutil.GetGroup(tp.cfg.RefMetrics.GId)
-		if err != nil {
-			log.Trace().Err(err).Msg(semLogContext)
-			return nil
-		}
-
-		metricGroup = &g
-	}
-
-	err = metricGroup.SetMetricValueById(metricId, value, labels)
-	if err != nil {
-		log.Warn().Err(err).Msg(semLogContext)
-	}
-
-	return metricGroup
-}
+//func (tp *producerImpl) produceMetric2(metricGroup *promutil.Group, metricId string, value float64, labels map[string]string) *promutil.Group {
+//	const semLogContext = "change-stream-cp::produce-metric"
+//
+//	// Unconfigured...
+//
+//	if metricGroup == nil && tp.cfg.RefMetrics == nil {
+//		log.Trace().Msg(semLogContext + " - un-configured metrics")
+//		return nil
+//	}
+//
+//	var err error
+//	if metricGroup == nil {
+//		g, err := promutil.GetGroup(tp.cfg.RefMetrics.GId)
+//		if err != nil {
+//			log.Trace().Err(err).Msg(semLogContext)
+//			return nil
+//		}
+//
+//		metricGroup = &g
+//	}
+//
+//	err = metricGroup.SetMetricValueById(metricId, value, labels)
+//	if err != nil {
+//		log.Warn().Err(err).Msg(semLogContext)
+//	}
+//
+//	return metricGroup
+//}
