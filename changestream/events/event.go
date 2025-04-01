@@ -57,8 +57,9 @@ func (e *ChangeEvent) String() string {
 	return string(b)
 }
 
-func (e *ChangeEvent) DocumentKeyAsString() string {
+func (e *ChangeEvent) DocumentKeyAsString() (string, bool) {
 	var docKey string
+	isObjectId := true
 	if e.DocumentKey != nil {
 		if k, ok := e.DocumentKey["_id"]; ok {
 			switch tk := k.(type) {
@@ -66,11 +67,12 @@ func (e *ChangeEvent) DocumentKeyAsString() string {
 				docKey = tk.Hex()
 			default:
 				docKey = fmt.Sprint(tk)
+				isObjectId = false
 			}
 		}
 	}
 
-	return docKey
+	return docKey, isObjectId
 }
 
 func (e *ChangeEvent) ClusterTimeAsString() string {

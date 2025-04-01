@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/consumerproducer"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer/datasource"
@@ -273,7 +273,7 @@ func (c *Consumer) Poll() (datasource.Event, error) {
 	case evt.IsDocument():
 		log.Info().Interface("evt", evt).Msg(semLogContext + " - document")
 		c.numEvents++
-		g = c.setMetric(g, changestream.MetricChangeStreamNumEvents, 1, nil)
+		g = c.setMetric(g, consumerproducer.MetricChangeStreamNumEvents, 1, nil)
 	case evt.IsBoundary():
 		log.Info().Interface("evt", evt).Msg(semLogContext + " - boundary")
 
