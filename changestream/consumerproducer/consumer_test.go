@@ -57,7 +57,7 @@ ref-metrics:
    histogram-id: "cdc-event-duration"
 change-stream-opts:
    # batch-size: 500
-   # full-document: default
+   full-document: updateLookup
    # before-full-document: whenAvailable
    # could result in a blocking call
    # max-await-time: 1m

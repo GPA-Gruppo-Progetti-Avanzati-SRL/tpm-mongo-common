@@ -97,9 +97,18 @@ func getDocument(m bson.M, fieldName string, mandatory bool) (primitive.M, error
 		return nil, err
 	}
 
+	if i == nil {
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+			return nil, err
+		}
+
+		return nil, err
+	}
+
 	v, ok := i.(primitive.M)
 	if !ok {
-		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
+		err = fmt.Errorf("invalid type %T for %s", i, fieldName)
 		return nil, err
 	}
 

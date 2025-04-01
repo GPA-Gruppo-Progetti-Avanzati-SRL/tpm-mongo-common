@@ -7,6 +7,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,26 +16,164 @@ import (
 	"time"
 )
 
-const MetricChangeStreamNumEvents = "cdc-cs-events"
+const (
+	MetricLabelName                            = "name"
+	MetricChangeStreamHistoryLostCounter       = "cdc-cs-history-lost"
+	MetricChangeStreamIdleTryNext              = "cdc-cs-idle-try-next"
+	MetricChangeStreamMillisecondsBehindSource = "cdc-cs-milliseconds-behind-source"
+	MetricChangeStreamNumEvents                = "cdc-cs-events"
+	MetricCdcEventErrors                       = "cdc-event-errors"
+)
+
+type WatcherStatsInfo struct {
+	HistoryLost              int
+	IdlesTryNext             int
+	MillisecondsBehindSource int64
+	NumEvents                int
+	CdcEventErrors           int
+
+	HistoryLostCounterMetric            promutil.CollectorWithLabels
+	IdlesTryNextGaugeMetric             promutil.CollectorWithLabels
+	MillisecondsBehindSourceGaugeMetric promutil.CollectorWithLabels
+	NumEventsCounterMetric              promutil.CollectorWithLabels
+	CdcEventErrorsCounterMetric         promutil.CollectorWithLabels
+	metricErrors                        bool
+}
+
+func (stat *WatcherStatsInfo) Clear() *WatcherStatsInfo {
+	stat.HistoryLost = 0
+	stat.IdlesTryNext = 0
+	stat.MillisecondsBehindSource = 0
+	stat.NumEvents = 0
+	return stat
+}
+
+func (stat *WatcherStatsInfo) IncNumEvents() {
+	stat.NumEvents++
+	if !stat.metricErrors {
+		stat.NumEventsCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *WatcherStatsInfo) IncHistoryLost() {
+	stat.HistoryLost++
+	if !stat.metricErrors {
+		stat.HistoryLostCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *WatcherStatsInfo) IncIdlesTryNext() {
+	stat.IdlesTryNext++
+	if !stat.metricErrors {
+		stat.IdlesTryNextGaugeMetric.SetMetric(float64(stat.IdlesTryNext))
+	}
+}
+
+func (stat *WatcherStatsInfo) ResetIdlesTryNext() {
+	stat.IdlesTryNext = 0
+	if !stat.metricErrors {
+		stat.IdlesTryNextGaugeMetric.SetMetric(0)
+	}
+}
+
+func (stat *WatcherStatsInfo) IncCdcEventErrors() {
+	stat.CdcEventErrors++
+	if !stat.metricErrors {
+		stat.CdcEventErrorsCounterMetric.SetMetric(1)
+	}
+}
+
+func (stat *WatcherStatsInfo) SetMillisecondsBehindSource(ms int64) {
+	stat.MillisecondsBehindSource = ms
+	if !stat.metricErrors {
+		stat.MillisecondsBehindSourceGaugeMetric.SetMetric(float64(ms))
+	}
+}
+
+func (stat *WatcherStatsInfo) ResetMillisecondsBehindSource() {
+	stat.MillisecondsBehindSource = 0
+	if !stat.metricErrors {
+		stat.MillisecondsBehindSourceGaugeMetric.SetMetric(0)
+	}
+}
+
+func NewWatcherStatsInfo(whatcherId, metricGroupId string) *WatcherStatsInfo {
+	stat := &WatcherStatsInfo{}
+	mg, err := promutil.GetGroup(metricGroupId)
+	if err != nil {
+		stat.metricErrors = true
+		return stat
+	} else {
+		stat.HistoryLostCounterMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamHistoryLostCounter, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.IdlesTryNextGaugeMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamIdleTryNext, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.MillisecondsBehindSourceGaugeMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamMillisecondsBehindSource, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+
+		stat.NumEventsCounterMetric, err = mg.CollectorByIdWithLabels(MetricChangeStreamNumEvents, map[string]string{
+			MetricLabelName: whatcherId,
+		})
+		if err != nil {
+			stat.metricErrors = true
+			return stat
+		}
+	}
+
+	return stat
+}
 
 type watcherImpl struct {
-	cfg       *WatcherConfig
-	chgStream *mongo.ChangeStream
+	cfg           *WatcherConfig
+	ServerVersion util.MongoDbVersion
+	chgStream     *mongo.ChangeStream
+
+	lastCommittedToken checkpoint.ResumeToken
+	lastPolledToken    checkpoint.ResumeToken
+
 	quitc     chan struct{}
 	wg        *sync.WaitGroup
 	listeners []WatcherListener
+
+	statsInfo *WatcherStatsInfo
 }
 
 func NewWatcher(cfg *WatcherConfig, c chan error, wg *sync.WaitGroup, watcherOpts ...WatcherConfigOption) (Watcher, error) {
+	const semLogContext = "watcher::new"
+	var err error
 
 	for _, o := range watcherOpts {
 		o(cfg)
 	}
 
 	s := &watcherImpl{
-		cfg:   cfg,
-		quitc: make(chan struct{}),
-		wg:    wg,
+		cfg:       cfg,
+		quitc:     make(chan struct{}),
+		statsInfo: NewWatcherStatsInfo(cfg.Id, cfg.RefMetrics.GId),
+		wg:        wg,
+	}
+
+	s.chgStream, err = s.newChangeStream()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
 	}
 
 	return s, nil
@@ -42,7 +181,7 @@ func NewWatcher(cfg *WatcherConfig, c chan error, wg *sync.WaitGroup, watcherOpt
 
 func (s *watcherImpl) Add(l WatcherListener) error {
 	const semLogContext = "watcher::add-listener"
-	log.Info().Msg(semLogContext)
+	log.Trace().Msg(semLogContext)
 	s.listeners = append(s.listeners, l)
 	return nil
 }
@@ -50,7 +189,29 @@ func (s *watcherImpl) Add(l WatcherListener) error {
 func (s *watcherImpl) Close() {
 	const semLogContext = "watcher::close"
 	log.Info().Msg(semLogContext)
+	err := s.chgStream.Close(context.Background())
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+	}
 	close(s.quitc)
+}
+
+func (s *watcherImpl) CommitAt(rt checkpoint.ResumeToken, syncRequired bool) error {
+	const semLogContext = "consumer::commit-at"
+
+	if s.cfg.CheckPointSvc == nil {
+		err := errors.New("no checkpoint service configured to honour commit op")
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	err := s.cfg.CheckPointSvc.CommitAt(s.cfg.Id, rt, syncRequired)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	return nil
 }
 
 func (s *watcherImpl) Start() error {
@@ -92,6 +253,12 @@ func (s *watcherImpl) newChangeStream() (*mongo.ChangeStream, error) {
 		return nil, err
 	}
 
+	s.ServerVersion, err = lks.ServerVersion()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
 	coll := lks.GetCollection(s.cfg.CollectionId, "")
 	if coll == nil {
 		err = errors.New("collection not found in config: " + s.cfg.CollectionId)
@@ -103,6 +270,21 @@ func (s *watcherImpl) newChangeStream() (*mongo.ChangeStream, error) {
 	log.Info().Err(err).Int("retry-num", counter).Msg(semLogContext)
 	collStream, err := coll.Watch(context.TODO(), pipeline, &opts)
 	for err != nil && counter < s.cfg.RetryCount {
+		mongoCode := util.MongoErrorCode(err, s.ServerVersion)
+		// TODO add logic to retry with the start after time depending on config
+		if mongoCode == util.MongoErrChangeStreamHistoryLost {
+			s.statsInfo.IncHistoryLost()
+
+			if s.cfg.CheckPointSvc != nil {
+				errHl := s.cfg.CheckPointSvc.OnHistoryLost(s.cfg.Id)
+				if errHl != nil {
+					log.Error().Err(errHl).Msg(semLogContext + " - history lost")
+				}
+			}
+			log.Error().Err(err).Msg(semLogContext + " - history lost")
+			return nil, err
+		}
+
 		counter++
 		log.Info().Err(err).Int("retry-num", counter).Msg(semLogContext)
 		collStream, err = coll.Watch(context.TODO(), mongo.Pipeline{}, &opts)
@@ -167,6 +349,108 @@ func (s *watcherImpl) handleError(err error) string {
 	}
 
 	return policy
+}
+
+func (s *watcherImpl) nextBatchOfEvents(batchSize int) ([]*events.ChangeEvent, error) {
+	const semLogContext = "watcher::next-batch-of-events"
+	batchOfEvents := make([]*events.ChangeEvent, 0, batchSize)
+	numEvents := 0
+	beginOf := time.Now()
+
+	for numEvents < batchSize {
+		evt, err := s.nextEvent()
+		if err != nil {
+			return nil, err
+		}
+
+		batchOfEvents = append(batchOfEvents, evt)
+		numEvents++
+	}
+
+	log.Info().Int64("elapsed", time.Since(beginOf).Milliseconds()).Msg(semLogContext)
+	return batchOfEvents, nil
+}
+
+func (s *watcherImpl) nextEvent() (*events.ChangeEvent, error) {
+	const semLogContext = "watcher::next"
+	log.Trace().Msg(semLogContext)
+
+	ok := s.chgStream.Next(context.Background())
+	if !ok {
+		s.statsInfo.ResetMillisecondsBehindSource()
+
+		if s.chgStream.ID() == 0 {
+			log.Warn().Msg(semLogContext + " - stream EOF")
+			return nil, io.EOF
+		}
+
+		if s.chgStream.Err() != nil {
+			ec := util.MongoErrorCode(s.chgStream.Err(), s.ServerVersion)
+			if ec == util.MongoErrChangeStreamHistoryLost {
+				s.statsInfo.IncHistoryLost()
+				if s.cfg.CheckPointSvc != nil {
+					errHl := s.cfg.CheckPointSvc.OnHistoryLost(s.cfg.Id)
+					if errHl != nil {
+						log.Error().Err(errHl).Msg(semLogContext + " - history lost")
+					}
+				}
+			} else {
+				log.Error().Err(s.chgStream.Err()).Int32("error-code", ec).Interface("error", s.chgStream.Err()).Msg(semLogContext)
+			}
+
+			return nil, s.chgStream.Err()
+		}
+
+		return nil, errors.New("watcher undefined condition")
+	}
+
+	s.statsInfo.IncNumEvents()
+
+	var data bson.M
+	if err := s.chgStream.Decode(&data); err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+	}
+
+	evt, err := events.ParseEvent(data)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return &evt, err
+	}
+
+	if s.cfg.VerifyOutOfSequenceError {
+		if evt.ResumeTok.Value <= s.lastPolledToken.Value {
+			log.Error().Err(events.OutOfSequenceError).Str("current", evt.ResumeTok.Value).Str("prev", s.lastPolledToken.Value).Msg(semLogContext + " - out-of-sequence token")
+			s.statsInfo.IncCdcEventErrors()
+			return nil, events.OutOfSequenceError
+		}
+	}
+
+	clusterTime := time.Unix(int64(evt.ClusterTime.T), 0)
+	lag := time.Now().Sub(clusterTime)
+	s.statsInfo.SetMillisecondsBehindSource(lag.Milliseconds())
+
+	allSynchs := true
+	for _, l := range s.listeners {
+		var synchronous bool
+		synchronous, err = l.ConsumeEvent(evt)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return nil, err
+		}
+
+		allSynchs = allSynchs && synchronous
+	}
+
+	if allSynchs && s.cfg.CheckPointSvc != nil {
+		err = s.cfg.CheckPointSvc.CommitAt(s.cfg.Id, evt.ResumeTok, false)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return nil, err
+		}
+	}
+
+	s.lastPolledToken = evt.ResumeTok
+	return &evt, nil
 }
 
 func (s *watcherImpl) processChangeStream(token checkpoint.ResumeToken, batchSize int) (checkpoint.ResumeToken, error) {

@@ -22,6 +22,11 @@ type EchoConsumerProducer struct {
 	workChannel  chan EchoConsumerBatch
 }
 
+func (p *EchoConsumerProducer) ProcessBatchOfChangeStreamEvents(streamEvents BatchOfChangeStreamEvents) (checkpoint.ResumeToken, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewEchoConsumerProducer() *EchoConsumerProducer {
 	if deferredMode {
 		return &EchoConsumerProducer{workChannel: make(chan EchoConsumerBatch, 10)}
