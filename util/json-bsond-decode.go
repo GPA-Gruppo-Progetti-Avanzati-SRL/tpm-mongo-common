@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"sort"
 	"strings"
 )
@@ -201,6 +202,13 @@ func (o *OrderedMap) ToBsonD() (bson.D, error) {
 				return nil, err
 			}
 			a = append(a, bson.E{Key: k, Value: val})
+		case primitive.A:
+			val, err := adaptSlice(tv)
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				return nil, err
+			}
+			a = append(a, bson.E{Key: k, Value: val})
 		default:
 			a = append(a, bson.E{Key: k, Value: v})
 		}
@@ -372,13 +380,27 @@ func decodeOrderedMap(dec *json.Decoder, o *OrderedMap) error {
 					return err
 				}
 			case '[':
-				if values, ok := o.values[key].([]interface{}); ok {
+				switch values := o.values[key].(type) {
+				case []interface{}:
 					if err = decodeSlice(dec, values, o.escapeHTML); err != nil {
 						return err
 					}
-				} else if err = decodeSlice(dec, []interface{}{}, o.escapeHTML); err != nil {
-					return err
+				case primitive.A:
+					if err = decodeSlice(dec, values, o.escapeHTML); err != nil {
+						return err
+					}
+				default:
+					if err = decodeSlice(dec, []interface{}{}, o.escapeHTML); err != nil {
+						return err
+					}
 				}
+				//if values, ok := o.values[key].([]interface{}); ok {
+				//	if err = decodeSlice(dec, values, o.escapeHTML); err != nil {
+				//		return err
+				//	}
+				//} else if err = decodeSlice(dec, []interface{}{}, o.escapeHTML); err != nil {
+				//	return err
+				//}
 			}
 		}
 	}
