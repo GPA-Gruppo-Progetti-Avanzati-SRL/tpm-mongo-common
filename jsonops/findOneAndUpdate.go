@@ -228,7 +228,9 @@ func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []
 
 	sc, body, err := executeFindOneAndUpdateOp(c, statementQuery, statementUpdate, &fo)
 	if err != nil {
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
+		mongoErrorCode := util.MongoErrorCode(err, util.MongoDbVersion{})
+		log.Error().Err(err).Int32("mongo-error", mongoErrorCode).Msg(semLogContext)
+		return OperationResult{StatusCode: int(-mongoErrorCode)}, nil, err
 	}
 
 	if sc.StatusCode == http.StatusOK {

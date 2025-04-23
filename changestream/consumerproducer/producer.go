@@ -407,14 +407,24 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 
 			shouldProcessBatch := false
 			switch {
-			case tp.cfg.WorkMode == WorkModeBatch && isMsg && tp.processor.ProcessorBatchSize() == tp.cfg.MaxBatchSize:
+			case tp.cfg.WorkMode == WorkModeBatch && ((isMsg && tp.processor.ProcessorBatchSize() == tp.cfg.MaxBatchSize) || !isMsg):
 				shouldProcessBatch = true
-			case tp.cfg.WorkMode == WorkModeBatch && !isMsg && tp.processor.ProcessorBatchSize() > 0:
+			//case tp.cfg.WorkMode == WorkModeBatch && !isMsg:
+			//	if tp.processor.ProcessorBatchSize() > 0 {
+			//		shouldProcessBatch = true
+			//	} else {
+			//		tp.statsInfo.SetBatchSize(0)
+			//	}
+			case tp.cfg.WorkMode == WorkModeBatchFF && ((isMsg && len(tp.batchOfChangeEvents.Events) == tp.cfg.MaxBatchSize) || !isMsg):
 				shouldProcessBatch = true
-			case tp.cfg.WorkMode == WorkModeBatchFF && isMsg && len(tp.batchOfChangeEvents.Events) == tp.cfg.MaxBatchSize:
-				shouldProcessBatch = true
-			case tp.cfg.WorkMode == WorkModeBatchFF && !isMsg && len(tp.batchOfChangeEvents.Events) > 0:
-				shouldProcessBatch = true
+				// case !isMsg:
+				// shouldProcessBatch = true
+				//case tp.cfg.WorkMode == WorkModeBatchFF && !isMsg:
+				//	if len(tp.batchOfChangeEvents.Events) > 0 {
+				//		shouldProcessBatch = true
+				//	} else {
+				//		tp.statsInfo.SetBatchSize(0)
+				//	}
 			}
 
 			if shouldProcessBatch {
@@ -604,6 +614,7 @@ func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 	default:
 	}
 
+	tp.statsInfo.SetBatchSize(batchSize)
 	if batchSize == 0 {
 		return nil
 	}
@@ -612,7 +623,6 @@ func (tp *producerImpl) deferredProcessBatch(ctx context.Context) error {
 		tp.batchOfChangeEvents = BatchOfChangeStreamEvents{}
 	}()
 
-	tp.statsInfo.SetBatchSize(batchSize)
 	switch tp.cfg.WorkMode {
 	case WorkModeBatch:
 		_, err = tp.processor.ProcessBatch()
@@ -642,6 +652,7 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 	default:
 	}
 
+	tp.statsInfo.SetBatchSize(batchSize)
 	if batchSize == 0 {
 		return nil
 	}
@@ -652,7 +663,6 @@ func (tp *producerImpl) processBatch(ctx context.Context) error {
 	}()
 
 	beginOfProcessing := time.Now()
-	tp.statsInfo.SetBatchSize(batchSize)
 
 	var lastCommittableResumeToken checkpoint.ResumeToken
 	var err error
