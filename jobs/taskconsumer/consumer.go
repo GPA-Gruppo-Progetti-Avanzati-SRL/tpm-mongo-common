@@ -69,7 +69,7 @@ type Consumer struct {
 	numEvents int
 }
 
-func NewConsumer(taskColl *mongo.Collection, task task.Task, ds DataSource, cfg *Config, opts ...ConfigOption) (*Consumer, error) {
+func NewConsumer(taskColl *mongo.Collection, task task.Task, cfg *Config, opts ...ConfigOption) (*Consumer, error) {
 	const semLogContext = "query-stream::new"
 	var err error
 
@@ -91,6 +91,12 @@ func NewConsumer(taskColl *mongo.Collection, task task.Task, ds DataSource, cfg 
 	rand.Shuffle(len(shuffledPartitionIndexes), func(i, j int) {
 		shuffledPartitionIndexes[i], shuffledPartitionIndexes[j] = shuffledPartitionIndexes[j], shuffledPartitionIndexes[i]
 	})
+
+	ds, err := datasource.NewMongoDbConnectorForTask(task.Info)
+	if err != nil {
+		log.Error().Err(err).Str("task-id", task.Bid).Msg(semLogContext)
+		return nil, err
+	}
 
 	return &Consumer{
 		cfg:            cfg,
@@ -170,8 +176,8 @@ func (c *Consumer) CommitEvent(evt datasource.Event, forceSync bool) error {
 	return err
 }
 
-func (c *Consumer) Commit() error {
-	return c.CommitEvent(c.lastPolledEvent, false)
+func (c *Consumer) Commit(forceSync bool) error {
+	return c.CommitEvent(c.lastPolledEvent, forceSync)
 	//const semLogContext = "consumer::commit"
 	//var err error
 	//if s.lastPolledEvent.Key != primitive.NilObjectID {
@@ -241,11 +247,18 @@ func (c *Consumer) Poll() (datasource.Event, error) {
 				return datasource.ErrEvent, err
 			}
 		}
-		evt, err = c.NextPartition()
-	} else {
-		evt, err = c.Next()
+		ok, err := c.NextPartition()
+		if !ok {
+			if err == nil {
+				return datasource.EofEvent, nil
+			} else {
+				log.Error().Err(err).Msg(semLogContext)
+				return datasource.ErrEvent, err
+			}
+		}
 	}
 
+	evt, err = c.Next()
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return evt, err
@@ -257,6 +270,7 @@ func (c *Consumer) Poll() (datasource.Event, error) {
 		err = c.handleBoundaryEvent(evt)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
+			return evt, err
 		}
 	}
 
@@ -277,7 +291,7 @@ func (c *Consumer) Poll() (datasource.Event, error) {
 	case evt.IsBoundary():
 		log.Info().Interface("evt", evt).Msg(semLogContext + " - boundary")
 
-	case evt.IsErr:
+	case evt.Typ == datasource.EventTypeError:
 		log.Error().Interface("evt", evt).Msg(semLogContext + " - err")
 	default:
 		log.Info().Interface("evt", evt).Msg(semLogContext + " - zero?")
@@ -290,7 +304,7 @@ func (c *Consumer) handleBoundaryEvent(evt datasource.Event) error {
 	const semLogContext = "consumer::handle-boundary-event"
 
 	var err error
-	if evt.EofPartition && c.curPrtWithFails == 0 {
+	if evt.Typ == datasource.EventTypeEofPartition && c.curPrtWithFails == 0 {
 		var st string
 		if c.task.DataStreamType == task.DataStreamTypeFinite {
 			st = "EOF"
@@ -303,7 +317,7 @@ func (c *Consumer) handleBoundaryEvent(evt datasource.Event) error {
 					evt1 = c.lastCommittedEvent
 				} else {
 					err = errors.New("lease not acquired by consumer")
-					log.Error().Err(err).Interface("evt", evt).Msg(semLogContext)
+					log.Error().Err(err).Interface("evt", evt).Str("lease-bid", c.leaseHandler.Lease.Bid).Str("evt-partition", partition.Id(c.task.Bid, c.lastCommittedEvent.Partition)).Msg(semLogContext)
 					return err
 				}
 			}
@@ -391,24 +405,24 @@ func (c *Consumer) Next() (datasource.Event, error) {
 	return datasource.ErrEvent, errors.New("partition is already eof-ed")
 }
 
-func (c *Consumer) NextPartition() (datasource.Event, error) {
+func (c *Consumer) NextPartition() (bool, error) {
 	const semLogContext = "consumer::next-partition"
 	var err error
-	var evt datasource.Event
 
 	c.curPrtNdx, err = c.acquirePartition()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			return datasource.EofEvent, err
+			return false, nil
 		}
-		return datasource.ErrEvent, err
+		return false, err
 	}
 
 	c.curPrtIsEof = false
 	c.curPrtWithFails = 0
-	evt, err = c.dataSource.Next()
-	evt.Partition = c.task.Partitions[c.shuffledPartitionIndexes[c.curPrtNdx]].PartitionNumber
-	return evt, err
+
+	// evt, err = c.dataSource.Next()
+	// evt.Partition = c.task.Partitions[c.shuffledPartitionIndexes[c.curPrtNdx]].PartitionNumber
+	return true, nil
 }
 
 //func (qs *Consumer) Next3() (Event, error) {
@@ -475,13 +489,16 @@ func (c *Consumer) acquirePartition() (int, error) {
 					return -1, err
 				}
 
-				if c.dataSource.IsEOF() {
-					log.Info().Int32("partition-number", prt.PartitionNumber).Msg(semLogContext + " - partition is eof")
-					_ = lh.Release()
-				} else {
-					c.leaseHandler = lh
-					return prtNdx, nil
-				}
+				c.leaseHandler = lh
+				return prtNdx, nil
+
+				//if c.dataSource.IsEOF() {
+				//	log.Info().Int32("partition-number", prt.PartitionNumber).Msg(semLogContext + " - partition is eof")
+				//	_ = lh.Release()
+				//} else {
+				//	c.leaseHandler = lh
+				//	return prtNdx, nil
+				//}
 			} else {
 				if err != nil {
 					log.Error().Err(err).Msg(semLogContext)
@@ -497,7 +514,7 @@ func (c *Consumer) setMetric(metricGroup *promutil.Group, metricId string, value
 
 	var err error
 	if metricGroup == nil {
-		g, err := promutil.GetGroup(c.cfg.RefMetrics.GId)
+		g, err := promutil.GetGroup(c.cfg.MetricsGId)
 		if err != nil {
 			log.Trace().Err(err).Msg(semLogContext)
 			return nil

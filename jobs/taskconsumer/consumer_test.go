@@ -2,9 +2,7 @@ package taskconsumer_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
@@ -15,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"io"
 	"testing"
 )
 
@@ -28,14 +25,19 @@ const (
 )
 
 const (
-	WithPopulateData = false
-	WithClearData    = false
+	WithPopulateTasks = true
+	WithPopulateData  = true
+	WithClearData     = true
 )
 
 func TestNewConsumer(t *testing.T) {
 
+	if WithPopulateTasks {
+		populateTasks(t)
+	}
+
 	if WithPopulateData {
-		populateTaskAndData(t)
+		populateData(t)
 	}
 
 	if WithClearData {
@@ -52,25 +54,20 @@ func TestNewConsumer(t *testing.T) {
 	consumerCfg := taskconsumer.Config{
 		Id: "my-consumer-group",
 		// to-do: configure a metric. This generates an error in trace mode.
-		RefMetrics: &promutil.MetricsConfigReference{
-			GId: "qstream-events",
-		},
+		MetricsGId: "qstream-events",
 		//OnErrorPolicy: querystream.OnErrorPolicyExit,
 	}
 
-	ds, err := datasource.NewMongoDbConnectorForTask(tasks[0].Info)
-	require.NoError(t, err)
-
-	qs, err := taskconsumer.NewConsumer(taskColl, tasks[0], ds, &consumerCfg)
+	qs, err := taskconsumer.NewConsumer(taskColl, tasks[0], &consumerCfg)
 	require.NoError(t, err)
 	defer qs.Close(context.Background())
 
 	numDocs := 0
 	evt, err := qs.Poll()
-	for !evt.Eof && err == nil {
+	for evt.Typ != datasource.EventTypeEof && err == nil {
 		if evt.IsDocument() {
 			numDocs++
-			err = qs.Commit()
+			err = qs.Commit(false)
 			require.NoError(t, err)
 		}
 		t.Log(evt)
@@ -78,13 +75,23 @@ func TestNewConsumer(t *testing.T) {
 	}
 
 	t.Logf("num-documents: %d", numDocs)
-	if err != nil {
-		require.Condition(t, func() bool { return errors.Is(err, io.EOF) }, "expected EOF but found %s", err.Error())
-	}
+	require.NoError(t, err)
+	require.Condition(t, func() bool { return evt.Typ == datasource.EventTypeEof }, "expected EOF but found %v", evt)
 
+	//if err != nil {
+	//	require.Condition(t, func() bool { return errors.Is(err, io.EOF) }, "expected EOF but found %s", err.Error())
+	//}
 }
 
-func populateTaskAndData(t *testing.T) {
+func populateTasks(t *testing.T) {
+	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
+	require.NoError(t, err)
+
+	_, err = populateTask(t, taskColl)
+	require.NoError(t, err)
+}
+
+func populateData(t *testing.T) {
 	qcoll, err := mongolks.GetCollection(context.Background(), QueryInstanceId, QueryCollectionId)
 	if err != nil {
 		panic(err)
@@ -94,12 +101,6 @@ func populateTaskAndData(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
-	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
-	require.NoError(t, err)
-
-	_, err = populateTask(t, taskColl)
-	require.NoError(t, err)
 }
 
 func clearTaskAndData(t *testing.T) {
@@ -124,7 +125,7 @@ func populateTask(t *testing.T, taskColl *mongo.Collection) (task.Task, error) {
 		JobBid:         jobId,
 		Status:         task.StatusAvailable,
 		Typ:            task.TypeQMongo,
-		DataStreamType: task.DataStreamTypeFinite,
+		DataStreamType: task.DataStreamTypeInfinite,
 		Info: beans.TaskInfo{
 			MdbInstance:   JobsInstanceId,
 			MdbCollection: QueryCollectionId,

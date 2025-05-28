@@ -16,7 +16,7 @@ import (
 const (
 	QueryInstanceId     = "default"
 	QueryCollectionId   = "query-collection"
-	QueryCollectionName = "tpm_mongo_common"
+	QueryCollectionName = "task_query_docs"
 	JobsInstanceId      = "default"
 	JobsCollectionId    = "jobs-collection"
 	JobsCollectionName  = "jobs"

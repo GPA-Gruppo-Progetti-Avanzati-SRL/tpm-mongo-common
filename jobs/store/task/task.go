@@ -10,6 +10,7 @@ const (
 	TypeAny                = "any"
 	TypeQMongo             = "q-mongo"
 	StatusAvailable        = "available"
+	StatusReady            = "ready"
 	StatusClosed           = "closed"
 	DataStreamTypeInfinite = "infinite"
 	DataStreamTypeFinite   = "finite"
