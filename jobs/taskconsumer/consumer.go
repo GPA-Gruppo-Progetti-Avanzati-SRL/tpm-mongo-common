@@ -317,7 +317,7 @@ func (c *Consumer) handleBoundaryEvent(evt datasource.Event) error {
 		var st string
 		if c.curPrtWithFails == 0 {
 			if c.task.StreamType == task.DataStreamTypeFinite {
-				st = "EOF"
+				st = partition.StatusEOF
 			}
 
 			evt1 := datasource.NoEvent

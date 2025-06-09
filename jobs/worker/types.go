@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer/datasource"
 	"github.com/rs/zerolog/log"
 )
@@ -100,4 +101,82 @@ func (w *UnimplementedProcessor) WithDeferredCallback(cb func(DeferredCbEvent)) 
 	const semLogContext = "worker-processor::with-deferred-callback"
 	log.Info().Msg(semLogContext)
 	return nil
+}
+
+type MessageDummyProcessor struct {
+	UnimplementedProcessor
+	ErrorsStride int
+	numEvts      int
+}
+
+func (w *MessageDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-event"
+	log.Info().Msg(semLogContext)
+	w.numEvts++
+	if w.numEvts == w.ErrorsStride && w.ErrorsStride > 0 {
+		err := errors.New("error condition materialized")
+		log.Error().Err(err).Msg(semLogContext)
+		w.numEvts = 0
+		return OnEventResponseUndefined, err
+	}
+
+	return OnEventResponseProcessed, nil
+}
+
+func (w *MessageDummyProcessor) OnTickEvent() (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-tick-event"
+	log.Info().Msg(semLogContext)
+	return OnEventResponseSkipped, nil
+}
+
+func (w *MessageDummyProcessor) OnEofEvent() (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-eof-event"
+	log.Info().Msg(semLogContext)
+	return OnEventResponseSkipped, nil
+}
+
+func (w *MessageDummyProcessor) OnEofPartitionEvent() (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-eof-partition-event"
+	log.Info().Msg(semLogContext)
+	return OnEventResponseSkipped, nil
+}
+
+type BatchDummyProcessor struct {
+	UnimplementedProcessor
+	ErrorsStride int
+	numEvts      int
+}
+
+func (w *BatchDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-event"
+	panic(semLogContext + " - implement me")
+}
+
+func (w *BatchDummyProcessor) OnTickEvent() (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-tick-event"
+	log.Info().Msg(semLogContext)
+	return OnEventResponseSkipped, nil
+}
+
+func (w *BatchDummyProcessor) OnEofEvent() (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-eof-event"
+	log.Info().Msg(semLogContext)
+	return OnEventResponseSkipped, nil
+}
+
+func (w *BatchDummyProcessor) OnEofPartitionEvent() (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-eof-partition-event"
+	log.Info().Msg(semLogContext)
+	return OnEventResponseSkipped, nil
+}
+
+func (w *BatchDummyProcessor) OnEvents(evt []datasource.Event) (OnEventResponseStatus, error) {
+	const semLogContext = "worker-processor::on-events"
+	log.Info().Msg(semLogContext)
+	w.numEvts += len(evt)
+	if (w.numEvts%w.ErrorsStride) == 0 && w.ErrorsStride > 0 {
+		return OnEventResponseUndefined, errors.New("error condition materialized")
+	}
+
+	return OnEventResponseProcessed, nil
 }

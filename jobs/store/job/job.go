@@ -8,7 +8,7 @@ const (
 	EType           = "job"
 	TypeAny         = "any"
 	StatusAvailable = "available"
-	StatusClosed    = "closed"
+	StatusDone      = "done"
 )
 
 // @tpm-schematics:end-region("top-file-section")

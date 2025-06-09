@@ -15,7 +15,9 @@ attributes:
   - name: stream_type
     type: string
     options: with-filter
-  - name: jobId
+  - name: processor_id
+    type: string
+  - name: job_id
     type: string
     options: with-filter
   - name: info

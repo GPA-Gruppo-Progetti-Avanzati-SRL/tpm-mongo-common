@@ -11,7 +11,7 @@ const (
 	TypeQMongo             = "q-mongo"
 	StatusAvailable        = "available"
 	StatusReady            = "ready"
-	StatusClosed           = "closed"
+	StatusDone             = "done"
 	DataStreamTypeInfinite = "infinite"
 	DataStreamTypeFinite   = "finite"
 )
@@ -24,6 +24,7 @@ type Task struct {
 	Status         string                `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
 	DataSourceType string                `json:"data_source_type,omitempty" bson:"data_source_type,omitempty" yaml:"data_source_type,omitempty"`
 	StreamType     string                `json:"stream_type,omitempty" bson:"stream_type,omitempty" yaml:"stream_type,omitempty"`
+	ProcessorId    string                `json:"processor_id,omitempty" bson:"processor_id,omitempty" yaml:"processor_id,omitempty"`
 	JobId          string                `json:"job_id,omitempty" bson:"job_id,omitempty" yaml:"job_id,omitempty"`
 	Info           beans.TaskInfo        `json:"info,omitempty" bson:"info,omitempty" yaml:"info,omitempty"`
 	Partitions     []partition.Partition `json:"partitions,omitempty" bson:"partitions,omitempty" yaml:"partitions,omitempty"`
@@ -33,8 +34,19 @@ type Task struct {
 }
 
 func (s Task) IsZero() bool {
-	return s.Bid == "" && s.Et == "" && s.Status == "" && s.DataSourceType == "" && s.StreamType == "" && s.JobId == "" && s.Info.IsZero() && len(s.Partitions) == 0
+	return s.Bid == "" && s.Et == "" && s.Status == "" && s.DataSourceType == "" && s.StreamType == "" && s.ProcessorId == "" && s.JobId == "" && s.Info.IsZero() && len(s.Partitions) == 0
 }
 
 // @tpm-schematics:start-region("bottom-file-section")
+
+func (s Task) IsEOF() bool {
+	for _, p := range s.Partitions {
+		if p.Status != partition.StatusEOF {
+			return false
+		}
+	}
+
+	return true
+}
+
 // @tpm-schematics:end-region("bottom-file-section")

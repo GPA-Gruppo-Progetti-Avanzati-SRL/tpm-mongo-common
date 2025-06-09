@@ -47,7 +47,7 @@ type Worker struct {
 	batchOfEvents BatchOfEvents
 }
 
-func NewWorker(jobsCollection *mongo.Collection, task task.Task, cfg *Config, wg *sync.WaitGroup, processor Processor) (*Worker, error) {
+func NewWorker(jobsCollection *mongo.Collection, task task.Task, cfg *Config, wg *sync.WaitGroup) (*Worker, error) {
 	const semLogContext = "worker-factory::new"
 
 	if cfg.WorkMode != WorkModeBatch {
@@ -63,13 +63,29 @@ func NewWorker(jobsCollection *mongo.Collection, task task.Task, cfg *Config, wg
 		task:      task,
 	}
 
-	err := processor.WithDeferredCallback(nil)
+	if cfg.Processor == nil {
+		err := errors.New("no processor configured")
+		log.Error().Err(err).Msg(semLogContext)
+
+		switch cfg.WorkMode {
+		case WorkModeBatch:
+			t.processor = &BatchDummyProcessor{}
+		case WorkModeMsg:
+			t.processor = &MessageDummyProcessor{}
+		default:
+			err := errors.New("unknown work mode")
+			log.Error().Err(err).Msg(semLogContext)
+			return nil, err
+		}
+	} else {
+		t.processor = cfg.Processor
+	}
+
+	err := t.processor.WithDeferredCallback(nil)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
 	}
-
-	t.processor = processor
 
 	if cfg.TickInterval == 0 {
 		cfg.TickInterval = time.Second

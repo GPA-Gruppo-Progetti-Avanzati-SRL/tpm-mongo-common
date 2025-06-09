@@ -2,11 +2,10 @@ package jobs_test
 
 import (
 	"context"
-	"errors"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/monitor"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer/datasource"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/worker"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
@@ -24,7 +23,7 @@ func TestNewWorkerMessage(t *testing.T) {
 	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
 	require.NoError(t, err)
 
-	jobs, err := job.FindJobsByTypeAndStatus(taskColl, job.TypeAny, job.StatusAvailable)
+	jobs, err := job.FindJobsByTypeAndStatus(taskColl, []string{job.TypeAny}, job.StatusAvailable)
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(jobs) > 0 }, "expected jobs to be available")
 
@@ -45,10 +44,11 @@ func TestNewWorkerMessage(t *testing.T) {
 		TickInterval: 0,
 		MaxBatchSize: 0,
 		Tracing:      worker.TracingCfg{},
+		Processor:    &worker.MessageDummyProcessor{ErrorsStride: WithOnEventErrorsStride},
 	}
 
 	var wg sync.WaitGroup
-	wrk, err := worker.NewWorker(taskColl, tasks[0], &wrkCfg, &wg, &MessageWorkerListener{})
+	wrk, err := worker.NewWorker(taskColl, tasks[0], &wrkCfg, &wg)
 	require.NoError(t, err)
 
 	err = wrk.Start()
@@ -63,42 +63,39 @@ func TestNewWorkerMessage(t *testing.T) {
 	log.Info().Msg("terminated")
 }
 
-type MessageWorkerListener struct {
-	worker.UnimplementedProcessor
+func TestScheduler(t *testing.T) {
 
-	numEvts int
-}
+	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
+	require.NoError(t, err)
 
-func (w *MessageWorkerListener) OnEvent(evt datasource.Event) (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-event"
-	log.Info().Msg(semLogContext)
-	w.numEvts++
-	if w.numEvts == WithOnEventErrorsStride {
-		err := errors.New("error condition materialized")
-		log.Error().Err(err).Msg(semLogContext)
-		w.numEvts = 0
-		return worker.OnEventResponseUndefined, err
+	cfg := monitor.Config{
+		WorkersConfig: []worker.Config{
+			{
+				Name:          "my-worker",
+				WorkMode:      worker.WorkModeMsg,
+				OnErrorPolicy: worker.OnErrorContinue,
+				Consumer: taskconsumer.Config{
+					Id:               "my-worker-consumer",
+					MetricsGId:       "wrk-consumer-qmetrics",
+					OnPartitionError: "",
+				},
+				TickInterval: 0,
+				MaxBatchSize: 0,
+				Tracing:      worker.TracingCfg{},
+				Processor:    &worker.MessageDummyProcessor{ErrorsStride: 0},
+			},
+		},
 	}
 
-	return worker.OnEventResponseProcessed, nil
-}
+	var wg sync.WaitGroup
+	m, err := monitor.NewMonitor(taskColl, &cfg, &wg)
+	require.NoError(t, err)
 
-func (w *MessageWorkerListener) OnTickEvent() (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-tick-event"
-	log.Info().Msg(semLogContext)
-	return worker.OnEventResponseSkipped, nil
-}
+	err = m.Start()
+	require.NoError(t, err)
 
-func (w *MessageWorkerListener) OnEofEvent() (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-eof-event"
-	log.Info().Msg(semLogContext)
-	return worker.OnEventResponseSkipped, nil
-}
-
-func (w *MessageWorkerListener) OnEofPartitionEvent() (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-eof-partition-event"
-	log.Info().Msg(semLogContext)
-	return worker.OnEventResponseSkipped, nil
+	wg.Wait()
+	log.Info().Msg("waiting for completion")
 }
 
 func TestNewWorkerBatch(t *testing.T) {
@@ -123,10 +120,11 @@ func TestNewWorkerBatch(t *testing.T) {
 		TickInterval: 0,
 		MaxBatchSize: 0,
 		Tracing:      worker.TracingCfg{},
+		Processor:    &worker.BatchDummyProcessor{ErrorsStride: WithOnEventErrorsStride},
 	}
 
 	var wg sync.WaitGroup
-	wrk, err := worker.NewWorker(taskColl, tasks[0], &wrkCfg, &wg, &BatchWorkerListener{})
+	wrk, err := worker.NewWorker(taskColl, tasks[0], &wrkCfg, &wg)
 	require.NoError(t, err)
 
 	err = wrk.Start()
@@ -139,43 +137,4 @@ func TestNewWorkerBatch(t *testing.T) {
 	log.Info().Msg("waiting for completion")
 	wg.Wait()
 	log.Info().Msg("terminated")
-}
-
-type BatchWorkerListener struct {
-	worker.UnimplementedProcessor
-	numEvts int
-}
-
-func (w *BatchWorkerListener) OnEvent(evt datasource.Event) (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-event"
-	panic(semLogContext + " - implement me")
-}
-
-func (w *BatchWorkerListener) OnTickEvent() (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-tick-event"
-	log.Info().Msg(semLogContext)
-	return worker.OnEventResponseSkipped, nil
-}
-
-func (w *BatchWorkerListener) OnEofEvent() (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-eof-event"
-	log.Info().Msg(semLogContext)
-	return worker.OnEventResponseSkipped, nil
-}
-
-func (w *BatchWorkerListener) OnEofPartitionEvent() (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-eof-partition-event"
-	log.Info().Msg(semLogContext)
-	return worker.OnEventResponseSkipped, nil
-}
-
-func (w *BatchWorkerListener) OnEvents(evt []datasource.Event) (worker.OnEventResponseStatus, error) {
-	const semLogContext = "worker-processor::on-events"
-	log.Info().Msg(semLogContext)
-	w.numEvts += len(evt)
-	if (w.numEvts % WithOnEventsErrorsStride) == 0 {
-		return worker.OnEventResponseUndefined, errors.New("error condition materialized")
-	}
-
-	return worker.OnEventResponseProcessed, nil
 }

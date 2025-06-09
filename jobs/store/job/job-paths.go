@@ -19,4 +19,9 @@ const (
 )
 
 // @tpm-schematics:start-region("bottom-file-section")
+
+const (
+	Tasks_IFieldName_status = "tasks.%d.status"
+)
+
 // @tpm-schematics:end-region("bottom-file-section")

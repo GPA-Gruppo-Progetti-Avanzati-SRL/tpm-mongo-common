@@ -390,6 +390,17 @@ func UpdateWithTasks(p []beans.TaskReference) UpdateOption {
 }
 
 // @tpm-schematics:start-region("tasks-field-update-section")
+
+func UpdateWithTaskStatus(tskNdx int32, status string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		// partitions are numbered from 1 but array is indexed from 0.
+		mName := fmt.Sprintf(Tasks_IFieldName_status, tskNdx)
+		ud.Set().Add(func() bson.E {
+			return bson.E{Key: mName, Value: status}
+		})
+	}
+}
+
 // @tpm-schematics:end-region("tasks-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")

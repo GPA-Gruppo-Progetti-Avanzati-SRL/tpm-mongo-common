@@ -122,7 +122,7 @@ func populateTask(t *testing.T, taskColl *mongo.Collection) (task.Task, error) {
 	aTask := task.Task{
 		Bid:            taskId,
 		Et:             task.EType,
-		JobBid:         jobId,
+		JobId:          jobId,
 		Status:         task.StatusAvailable,
 		DataSourceType: task.TypeQMongo,
 		StreamType:     task.DataStreamTypeInfinite,

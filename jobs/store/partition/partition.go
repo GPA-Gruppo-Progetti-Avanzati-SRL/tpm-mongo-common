@@ -8,12 +8,12 @@ import (
 // @tpm-schematics:start-region("top-file-section")
 
 const (
-	EType           = "task"
-	TypeAny         = "any"
-	TypeQMongo      = "q-mongo"
-	StatusAvailable = "available"
-	StatusClosed    = "closed"
-
+	EType                           = "task"
+	TypeAny                         = "any"
+	TypeQMongo                      = "q-mongo"
+	StatusAvailable                 = "available"
+	StatusClosed                    = "closed"
+	StatusEOF                       = "EOF"
 	QueryDocumentPartitionFieldName = "_np"
 )
 

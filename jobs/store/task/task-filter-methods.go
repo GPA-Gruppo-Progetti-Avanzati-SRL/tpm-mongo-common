@@ -152,89 +152,89 @@ func (ca *Criteria) AndStatusIn(p []string) *Criteria {
 // @tpm-schematics:end-region("status-field-filter-section")
 
 /*
- * filter-string template: typ
+ * filter-string template: data_source_type
  */
 
-// AndTypEqTo No Remarks
-func (ca *Criteria) AndTypEqTo(p string) *Criteria {
+// AndDataSourceTypeEqTo No Remarks
+func (ca *Criteria) AndDataSourceTypeEqTo(p string) *Criteria {
 
 	if p == "" {
 		return ca
 	}
 
-	mName := fmt.Sprintf(TypFieldName)
+	mName := fmt.Sprintf(DataSourceTypeFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: p} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// AndTypIsNullOrUnset No Remarks
-func (ca *Criteria) AndTypIsNullOrUnset() *Criteria {
+// AndDataSourceTypeIsNullOrUnset No Remarks
+func (ca *Criteria) AndDataSourceTypeIsNullOrUnset() *Criteria {
 
-	mName := fmt.Sprintf(TypFieldName)
+	mName := fmt.Sprintf(DataSourceTypeFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-func (ca *Criteria) AndTypIn(p []string) *Criteria {
+func (ca *Criteria) AndDataSourceTypeIn(p []string) *Criteria {
 
 	if len(p) == 0 {
 		return ca
 	}
 
-	mName := fmt.Sprintf(TypFieldName)
+	mName := fmt.Sprintf(DataSourceTypeFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// @tpm-schematics:start-region("typ-field-filter-section")
-// @tpm-schematics:end-region("typ-field-filter-section")
+// @tpm-schematics:start-region("data-source-type-field-filter-section")
+// @tpm-schematics:end-region("data-source-type-field-filter-section")
 
 /*
- * filter-string template: data_stream_type
+ * filter-string template: stream_type
  */
 
-// AndDataStreamTypeEqTo No Remarks
-func (ca *Criteria) AndDataStreamTypeEqTo(p string) *Criteria {
+// AndStreamTypeEqTo No Remarks
+func (ca *Criteria) AndStreamTypeEqTo(p string) *Criteria {
 
 	if p == "" {
 		return ca
 	}
 
-	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	mName := fmt.Sprintf(StreamTypeFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: p} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// AndDataStreamTypeIsNullOrUnset No Remarks
-func (ca *Criteria) AndDataStreamTypeIsNullOrUnset() *Criteria {
+// AndStreamTypeIsNullOrUnset No Remarks
+func (ca *Criteria) AndStreamTypeIsNullOrUnset() *Criteria {
 
-	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	mName := fmt.Sprintf(StreamTypeFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-func (ca *Criteria) AndDataStreamTypeIn(p []string) *Criteria {
+func (ca *Criteria) AndStreamTypeIn(p []string) *Criteria {
 
 	if len(p) == 0 {
 		return ca
 	}
 
-	mName := fmt.Sprintf(DataStreamTypeFieldName)
+	mName := fmt.Sprintf(StreamTypeFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// @tpm-schematics:start-region("data-stream-type-field-filter-section")
-// @tpm-schematics:end-region("data-stream-type-field-filter-section")
+// @tpm-schematics:start-region("stream-type-field-filter-section")
+// @tpm-schematics:end-region("stream-type-field-filter-section")
 
 /*
- * filter-string template: jobId
+ * filter-string template: job_id
  */
 
 // AndJobIdEqTo No Remarks

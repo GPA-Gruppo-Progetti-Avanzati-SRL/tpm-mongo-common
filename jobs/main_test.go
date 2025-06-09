@@ -7,6 +7,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -22,7 +23,7 @@ const (
 
 	jobId                = "my-job-id"
 	taskId               = jobId + "-t1"
-	dataSourceStreamType = task.DataStreamTypeInfinite
+	dataSourceStreamType = task.DataStreamTypeFinite
 
 	QueryInstanceId     = "default"
 	QueryCollectionId   = "query-collection"
@@ -172,9 +173,10 @@ func populateJob(taskColl *mongo.Collection, aJobId string, aTaskId string) (job
 		Status: job.StatusAvailable,
 		Tasks: []beans.TaskReference{
 			{
-				Id:     aTaskId,
-				Status: task.StatusAvailable,
-				Typ:    task.TypeQMongo,
+				Id:             aTaskId,
+				Status:         task.StatusAvailable,
+				DataSourceType: task.TypeQMongo,
+				StreamType:     dataSourceStreamType,
 			},
 		},
 	}
@@ -197,6 +199,7 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 		Status:         task.StatusAvailable,
 		DataSourceType: task.TypeQMongo,
 		StreamType:     dataSourceStreamType,
+		ProcessorId:    task.TypeAny,
 		Info: beans.TaskInfo{
 			MdbInstance:   JobsInstanceId,
 			MdbCollection: QueryCollectionId,
@@ -229,7 +232,7 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 }
 
 func clearJobAndData() {
-	const semLogContext = "main::clear-task-amd-data"
+	const semLogContext = "main::clear-task-and-data"
 	qcoll, err := mongolks.GetCollection(context.Background(), QueryInstanceId, QueryCollectionId)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -294,6 +297,7 @@ func clearJob(taskColl *mongo.Collection, aJobId string) error {
 }
 
 func clearTask(taskColl *mongo.Collection, aJobId string, aTaskId string) error {
+
 	filter := bson.M{
 		"_bid":   aTaskId,
 		"_et":    task.EType,
@@ -305,6 +309,16 @@ func clearTask(taskColl *mongo.Collection, aJobId string, aTaskId string) error 
 		return err
 	}
 	log.Info().Interface("resp", resp).Msgf("deleted task")
+
+	filter = bson.M{
+		"_et": lease.EntityType,
+	}
+
+	resp, err = taskColl.DeleteMany(context.Background(), filter, nil)
+	if err != nil {
+		return err
+	}
+	log.Info().Interface("resp", resp).Msgf("deleted lease")
 
 	return nil
 }

@@ -32,9 +32,9 @@ type Config struct {
 	OnErrorPolicy string              `yaml:"on-error-policy,omitempty"  mapstructure:"on-error-policy,omitempty"  json:"on-error-policy,omitempty"`
 	Consumer      taskconsumer.Config `yaml:"consumer,omitempty" mapstructure:"consumer,omitempty" json:"consumer,omitempty"`
 	MetricsGId    string              `yaml:"metrics-gid"  mapstructure:"metrics-gid"  json:"metrics-gid,omitempty"`
+	TickInterval  time.Duration       `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
+	MaxBatchSize  int                 `yaml:"max-batch-size,omitempty" mapstructure:"max-batch-size,omitempty" json:"max-batch-size,omitempty"`
+	Tracing       TracingCfg          `yaml:"tracing,omitempty" mapstructure:"tracing,omitempty" json:"tracing,omitempty"`
 
-	TickInterval time.Duration `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
-	MaxBatchSize int           `yaml:"max-batch-size,omitempty" mapstructure:"max-batch-size,omitempty" json:"max-batch-size,omitempty"`
-
-	Tracing TracingCfg `yaml:"tracing,omitempty" mapstructure:"tracing,omitempty" json:"tracing,omitempty"`
+	Processor Processor `yaml:"-" mapstructure:"-" json:"-"`
 }

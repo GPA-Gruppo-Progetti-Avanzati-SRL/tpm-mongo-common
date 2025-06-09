@@ -33,8 +33,9 @@ type UnsetOptions struct {
 	Bid            UnsetMode
 	Et             UnsetMode
 	Status         UnsetMode
-	Typ            UnsetMode
-	DataStreamType UnsetMode
+	DataSourceType UnsetMode
+	StreamType     UnsetMode
+	ProcessorId    UnsetMode
 	JobId          UnsetMode
 	Info           UnsetMode
 	Partitions     UnsetMode
@@ -68,14 +69,19 @@ func WithStatusUnsetMode(m UnsetMode) UnsetOption {
 		uopt.Status = m
 	}
 }
-func WithTypUnsetMode(m UnsetMode) UnsetOption {
+func WithDataSourceTypeUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Typ = m
+		uopt.DataSourceType = m
 	}
 }
-func WithDataStreamTypeUnsetMode(m UnsetMode) UnsetOption {
+func WithStreamTypeUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.DataStreamType = m
+		uopt.StreamType = m
+	}
+}
+func WithProcessorIdUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.ProcessorId = m
 	}
 }
 func WithJobIdUnsetMode(m UnsetMode) UnsetOption {
@@ -122,9 +128,10 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
-	ud.setOrUnsetTyp(obj.DataSourceType, uo.ResolveUnsetMode(uo.Typ))
-	ud.setOrUnsetData_stream_type(obj.StreamType, uo.ResolveUnsetMode(uo.DataStreamType))
-	ud.setOrUnsetJobId(obj.JobId, uo.ResolveUnsetMode(uo.JobId))
+	ud.setOrUnsetData_source_type(obj.DataSourceType, uo.ResolveUnsetMode(uo.DataSourceType))
+	ud.setOrUnsetStream_type(obj.StreamType, uo.ResolveUnsetMode(uo.StreamType))
+	ud.setOrUnsetProcessor_id(obj.ProcessorId, uo.ResolveUnsetMode(uo.ProcessorId))
+	ud.setOrUnsetJob_id(obj.JobId, uo.ResolveUnsetMode(uo.JobId))
 	ud.setOrUnsetInfo(&obj.Info, uo.ResolveUnsetMode(uo.Info))
 	ud.setOrUnsetPartitions(obj.Partitions, uo.ResolveUnsetMode(uo.Partitions))
 
@@ -269,100 +276,146 @@ func UpdateWithStatus(p string) UpdateOption {
 // @tpm-schematics:start-region("status-field-update-section")
 // @tpm-schematics:end-region("status-field-update-section")
 
-// SetTyp No Remarks
-func (ud *UpdateDocument) SetTyp(p string) *UpdateDocument {
-	mName := fmt.Sprintf(TypFieldName)
+// SetData_source_type No Remarks
+func (ud *UpdateDocument) SetData_source_type(p string) *UpdateDocument {
+	mName := fmt.Sprintf(DataSourceTypeFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetTyp No Remarks
-func (ud *UpdateDocument) UnsetTyp() *UpdateDocument {
-	mName := fmt.Sprintf(TypFieldName)
+// UnsetData_source_type No Remarks
+func (ud *UpdateDocument) UnsetData_source_type() *UpdateDocument {
+	mName := fmt.Sprintf(DataSourceTypeFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetTyp No Remarks
-func (ud *UpdateDocument) setOrUnsetTyp(p string, um UnsetMode) {
+// setOrUnsetData_source_type No Remarks
+func (ud *UpdateDocument) setOrUnsetData_source_type(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetTyp(p)
+		ud.SetData_source_type(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetTyp()
+			ud.UnsetData_source_type()
 		case SetData2Default:
-			ud.UnsetTyp()
+			ud.UnsetData_source_type()
 		}
 	}
 }
 
-func UpdateWithTyp(p string) UpdateOption {
+func UpdateWithData_source_type(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetTyp(p)
+			ud.SetData_source_type(p)
 		} else {
-			ud.UnsetTyp()
+			ud.UnsetData_source_type()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("typ-field-update-section")
-// @tpm-schematics:end-region("typ-field-update-section")
+// @tpm-schematics:start-region("data-source-type-field-update-section")
+// @tpm-schematics:end-region("data-source-type-field-update-section")
 
-// SetData_stream_type No Remarks
-func (ud *UpdateDocument) SetData_stream_type(p string) *UpdateDocument {
-	mName := fmt.Sprintf(DataStreamTypeFieldName)
+// SetStream_type No Remarks
+func (ud *UpdateDocument) SetStream_type(p string) *UpdateDocument {
+	mName := fmt.Sprintf(StreamTypeFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetData_stream_type No Remarks
-func (ud *UpdateDocument) UnsetData_stream_type() *UpdateDocument {
-	mName := fmt.Sprintf(DataStreamTypeFieldName)
+// UnsetStream_type No Remarks
+func (ud *UpdateDocument) UnsetStream_type() *UpdateDocument {
+	mName := fmt.Sprintf(StreamTypeFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetData_stream_type No Remarks
-func (ud *UpdateDocument) setOrUnsetData_stream_type(p string, um UnsetMode) {
+// setOrUnsetStream_type No Remarks
+func (ud *UpdateDocument) setOrUnsetStream_type(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetData_stream_type(p)
+		ud.SetStream_type(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetData_stream_type()
+			ud.UnsetStream_type()
 		case SetData2Default:
-			ud.UnsetData_stream_type()
+			ud.UnsetStream_type()
 		}
 	}
 }
 
-func UpdateWithData_stream_type(p string) UpdateOption {
+func UpdateWithStream_type(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetData_stream_type(p)
+			ud.SetStream_type(p)
 		} else {
-			ud.UnsetData_stream_type()
+			ud.UnsetStream_type()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("data-stream-type-field-update-section")
-// @tpm-schematics:end-region("data-stream-type-field-update-section")
+// @tpm-schematics:start-region("stream-type-field-update-section")
+// @tpm-schematics:end-region("stream-type-field-update-section")
 
-// SetJobId No Remarks
-func (ud *UpdateDocument) SetJobId(p string) *UpdateDocument {
+// SetProcessor_id No Remarks
+func (ud *UpdateDocument) SetProcessor_id(p string) *UpdateDocument {
+	mName := fmt.Sprintf(ProcessorIdFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetProcessor_id No Remarks
+func (ud *UpdateDocument) UnsetProcessor_id() *UpdateDocument {
+	mName := fmt.Sprintf(ProcessorIdFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetProcessor_id No Remarks
+func (ud *UpdateDocument) setOrUnsetProcessor_id(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetProcessor_id(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetProcessor_id()
+		case SetData2Default:
+			ud.UnsetProcessor_id()
+		}
+	}
+}
+
+func UpdateWithProcessor_id(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetProcessor_id(p)
+		} else {
+			ud.UnsetProcessor_id()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("processor-id-field-update-section")
+// @tpm-schematics:end-region("processor-id-field-update-section")
+
+// SetJob_id No Remarks
+func (ud *UpdateDocument) SetJob_id(p string) *UpdateDocument {
 	mName := fmt.Sprintf(JobIdFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
@@ -370,8 +423,8 @@ func (ud *UpdateDocument) SetJobId(p string) *UpdateDocument {
 	return ud
 }
 
-// UnsetJobId No Remarks
-func (ud *UpdateDocument) UnsetJobId() *UpdateDocument {
+// UnsetJob_id No Remarks
+func (ud *UpdateDocument) UnsetJob_id() *UpdateDocument {
 	mName := fmt.Sprintf(JobIdFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
@@ -379,27 +432,27 @@ func (ud *UpdateDocument) UnsetJobId() *UpdateDocument {
 	return ud
 }
 
-// setOrUnsetJobId No Remarks
-func (ud *UpdateDocument) setOrUnsetJobId(p string, um UnsetMode) {
+// setOrUnsetJob_id No Remarks
+func (ud *UpdateDocument) setOrUnsetJob_id(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetJobId(p)
+		ud.SetJob_id(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetJobId()
+			ud.UnsetJob_id()
 		case SetData2Default:
-			ud.UnsetJobId()
+			ud.UnsetJob_id()
 		}
 	}
 }
 
-func UpdateWithJobId(p string) UpdateOption {
+func UpdateWithJob_id(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetJobId(p)
+			ud.SetJob_id(p)
 		} else {
-			ud.UnsetJobId()
+			ud.UnsetJob_id()
 		}
 	}
 }

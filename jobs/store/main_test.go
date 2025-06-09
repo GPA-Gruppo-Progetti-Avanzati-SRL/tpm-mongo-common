@@ -112,9 +112,9 @@ func populateJobs() error {
 		Info:   beans.JobInfo{},
 		Tasks: []beans.TaskReference{
 			{
-				Id:     "hello-job-t1",
-				Status: task.StatusAvailable,
-				Typ:    task.TypeQMongo,
+				Id:             "hello-job-t1",
+				Status:         task.StatusAvailable,
+				DataSourceType: task.TypeQMongo,
 			},
 		},
 	}
@@ -143,7 +143,7 @@ func populateTasks(jobId string, numTasks int) error {
 		aTask := task.Task{
 			Bid:            taskId,
 			Et:             task.EType,
-			JobBid:         jobBid,
+			JobId:          jobBid,
 			Status:         task.StatusAvailable,
 			DataSourceType: task.TypeQMongo,
 			Info: beans.TaskInfo{
