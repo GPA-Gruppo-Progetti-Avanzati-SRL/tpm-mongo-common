@@ -141,11 +141,11 @@ func populateTasks(jobId string, numTasks int) error {
 	for i := 1; i <= numTasks; i++ {
 		taskId := fmt.Sprintf("%s-t%d", jobId, i)
 		aTask := task.Task{
-			Bid:    taskId,
-			Et:     task.EType,
-			JobBid: jobBid,
-			Status: task.StatusAvailable,
-			Typ:    task.TypeQMongo,
+			Bid:            taskId,
+			Et:             task.EType,
+			JobBid:         jobBid,
+			Status:         task.StatusAvailable,
+			DataSourceType: task.TypeQMongo,
 			Info: beans.TaskInfo{
 				MdbInstance:   QueryInstanceId,
 				MdbCollection: QueryCollectionId,

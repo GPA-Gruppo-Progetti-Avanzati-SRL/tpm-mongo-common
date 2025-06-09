@@ -123,7 +123,7 @@ func clearPartitionedDocuments(coll *mongo.Collection) error {
 //			Et:     task.EType,
 //			JobBid: jobId,
 //			Status: task.StatusAvailable,
-//			Typ:    task.TypeQMongo,
+//			DataSourceType:    task.TypeQMongo,
 //			Info: beans.TaskInfo{
 //				MdbInstance:   QueryInstanceId,
 //				MdbCollection: QueryCollectionId,

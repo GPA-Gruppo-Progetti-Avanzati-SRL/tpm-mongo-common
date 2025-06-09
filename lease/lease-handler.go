@@ -88,6 +88,7 @@ func AcquireLease(client *mongo.Collection, leaseGroupId, leasedObjectId string,
 				UpdateWithStatus(l.Status),
 				UpdateWithTs(l.Ts),
 				UpdateWithEtag(l.Etag),
+				UpdateWithAcquisitions(l.Acquisitions+1),
 			)
 			res, err := client.UpdateOne(context.Background(), f.Build(), ud.Build())
 			if err != nil {
@@ -211,7 +212,7 @@ func (lh *Handler) renewLoop() {
 	for !exitLoop {
 		select {
 		case <-ticker.C:
-			err := lh.RenewLease()
+			err := lh.RenewLease(false)
 			if err != nil {
 				log.Error().Err(err)
 			}
@@ -224,7 +225,7 @@ func (lh *Handler) renewLoop() {
 	log.Info().Msg(semLogContext + " ended")
 }
 
-func (lh *Handler) RenewLease() error {
+func (lh *Handler) RenewLease(withErrors bool) error {
 	const semLogContext = "lease-handler::renew"
 
 	d, err := findLeaseByGroupIdAndLeasedObjectId(lh.cli, lh.Lease.Gid, lh.Lease.Bid)
@@ -246,6 +247,10 @@ func (lh *Handler) RenewLease() error {
 		UpdateWithEtag(lh.Lease.Etag),
 		UpdateWithTs(lh.Lease.Ts),
 		UpdateWithData(lh.Lease.Data),
+	}
+	if withErrors {
+		updOptions = append(updOptions, UpdateWithIncErrors(1))
+		lh.Lease.Errors++
 	}
 	ud := GetUpdateDocumentFromOptions(updOptions...)
 

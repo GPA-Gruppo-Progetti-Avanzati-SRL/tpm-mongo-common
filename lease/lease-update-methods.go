@@ -26,17 +26,19 @@ const (
 type UnsetOption func(uopt *UnsetOptions)
 
 type UnsetOptions struct {
-	DefaultMode UnsetMode
-	Bid         UnsetMode
-	Et          UnsetMode
-	Gid         UnsetMode
-	LeaseId     UnsetMode
-	Data        UnsetMode
-	Status      UnsetMode
-	Etag        UnsetMode
-	Duration    UnsetMode
-	Ts          UnsetMode
-	Ttl         UnsetMode
+	DefaultMode  UnsetMode
+	Bid          UnsetMode
+	Et           UnsetMode
+	Gid          UnsetMode
+	LeaseId      UnsetMode
+	Data         UnsetMode
+	Status       UnsetMode
+	Etag         UnsetMode
+	Duration     UnsetMode
+	Ts           UnsetMode
+	Ttl          UnsetMode
+	Errors       UnsetMode
+	Acquisitions UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -102,6 +104,16 @@ func WithTtlUnsetMode(m UnsetMode) UnsetOption {
 		uopt.Ttl = m
 	}
 }
+func WithErrorsUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Errors = m
+	}
+}
+func WithAcquisitionsUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Acquisitions = m
+	}
+}
 
 type UpdateOption func(ud *UpdateDocument)
 type UpdateOptions []UpdateOption
@@ -138,6 +150,8 @@ func GetUpdateDocument(obj *Lease, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnsetDuration(obj.Duration, uo.ResolveUnsetMode(uo.Duration))
 	ud.setOrUnsetTs(obj.Ts, uo.ResolveUnsetMode(uo.Ts))
 	ud.setOrUnsetTtl(obj.Ttl, uo.ResolveUnsetMode(uo.Ttl))
+	ud.setOrUnsetErrors(obj.Errors, uo.ResolveUnsetMode(uo.Errors))
+	ud.setOrUnsetAcquisitions(obj.Acquisitions, uo.ResolveUnsetMode(uo.Acquisitions))
 
 	return ud
 }
@@ -601,6 +615,115 @@ func UpdateWithTtl(p int32) UpdateOption {
 
 // @tpm-schematics:start-region("ttl-field-update-section")
 // @tpm-schematics:end-region("ttl-field-update-section")
+
+// SetErrors No Remarks
+func (ud *UpdateDocument) SetErrors(p int32) *UpdateDocument {
+	mName := fmt.Sprintf(ErrorsFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetErrors No Remarks
+func (ud *UpdateDocument) UnsetErrors() *UpdateDocument {
+	mName := fmt.Sprintf(ErrorsFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetErrors No Remarks
+func (ud *UpdateDocument) setOrUnsetErrors(p int32, um UnsetMode) {
+	if p != 0 {
+		ud.SetErrors(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetErrors()
+		case SetData2Default:
+			ud.UnsetErrors()
+		}
+	}
+}
+
+func UpdateWithErrors(p int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			ud.SetErrors(p)
+		} else {
+			ud.UnsetErrors()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("errors-field-update-section")
+
+func (ud *UpdateDocument) IncErrors(p int32) *UpdateDocument {
+	mName := fmt.Sprintf(ErrorsFieldName)
+	ud.Inc().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+func UpdateWithIncErrors(p int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			ud.IncErrors(p)
+		}
+	}
+}
+
+// @tpm-schematics:end-region("errors-field-update-section")
+
+// SetAcquisitions No Remarks
+func (ud *UpdateDocument) SetAcquisitions(p int32) *UpdateDocument {
+	mName := fmt.Sprintf(AcquisitionsFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetAcquisitions No Remarks
+func (ud *UpdateDocument) UnsetAcquisitions() *UpdateDocument {
+	mName := fmt.Sprintf(AcquisitionsFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetAcquisitions No Remarks
+func (ud *UpdateDocument) setOrUnsetAcquisitions(p int32, um UnsetMode) {
+	if p != 0 {
+		ud.SetAcquisitions(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetAcquisitions()
+		case SetData2Default:
+			ud.UnsetAcquisitions()
+		}
+	}
+}
+
+func UpdateWithAcquisitions(p int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			ud.SetAcquisitions(p)
+		} else {
+			ud.UnsetAcquisitions()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("acquisitions-field-update-section")
+// @tpm-schematics:end-region("acquisitions-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

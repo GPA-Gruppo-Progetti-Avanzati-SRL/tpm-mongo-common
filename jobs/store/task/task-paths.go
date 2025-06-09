@@ -13,7 +13,7 @@ const (
 	StatusFieldName             = "status"
 	TypFieldName                = "typ"
 	DataStreamTypeFieldName     = "data_stream_type"
-	JobBidFieldName             = "jobBid"
+	JobIdFieldName              = "jobId"
 	InfoFieldName               = "info"
 	Info_MdbInstanceFieldName   = "info.mdbInstance"
 	Info_MdbCollectionFieldName = "info.mdbCollection"
@@ -25,7 +25,9 @@ const (
 // @tpm-schematics:start-region("bottom-file-section")
 
 const (
-	PartitionsIStatusFieldName = "partitions.%d.status"
+	PartitionsIStatusFieldName       = "partitions.%d.status"
+	PartitionsIErrorsFieldName       = "partitions.%d.errors"
+	PartitionsIAcquisitionsFieldName = "partitions.%d.acquisitions"
 )
 
 // @tpm-schematics:end-region("bottom-file-section")

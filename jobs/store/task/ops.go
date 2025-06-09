@@ -11,7 +11,7 @@ func FindByJobBidAndStatus(coll *mongo.Collection, jobBid string, status string)
 	const semLogContext = "task::find-by-jobBid-and-status"
 
 	f := Filter{}
-	f.Or().AndEtEqTo(EType).AndJobBidEqTo(jobBid).AndStatusEqTo(status)
+	f.Or().AndEtEqTo(EType).AndJobIdEqTo(jobBid).AndStatusEqTo(status)
 	opts := options.FindOptions{}
 
 	crs, err := coll.Find(context.Background(), f.Build(), &opts)
@@ -30,10 +30,19 @@ func FindByJobBidAndStatus(coll *mongo.Collection, jobBid string, status string)
 	return tasks, nil
 }
 
-func (tsk *Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string, prtNdx int32, st string) error {
+func (tsk *Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string, prtNdx int32, st string, withErrors bool) error {
 	const semLogContext = "task::update-partition-status"
+
 	updOpts := UpdateOptions{
-		UpdateWithPartitionStatus(prtNdx, st),
+		UpdateWithIncPartitionAcquisitions(prtNdx),
+	}
+
+	if st != "" {
+		updOpts = append(updOpts, UpdateWithPartitionStatus(prtNdx, st))
+	}
+
+	if withErrors {
+		updOpts = append(updOpts, UpdateWithIncPartitionErrors(prtNdx))
 	}
 
 	f := Filter{}
@@ -47,5 +56,6 @@ func (tsk *Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string
 	}
 
 	log.Info().Interface("resp", resp).Msg(semLogContext)
+
 	return nil
 }

@@ -264,7 +264,7 @@ func (tp *producerImpl) Start() error {
 
 	/*
 		var opts []changestream.ConfigOption
-		if tp.cfg.CheckPointSvcConfig.Typ != "" {
+		if tp.cfg.CheckPointSvcConfig.DataSourceType != "" {
 			svc, err := factory.NewCheckPointSvc(tp.cfg.CheckPointSvcConfig)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)

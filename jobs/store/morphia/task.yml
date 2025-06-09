@@ -9,13 +9,13 @@ attributes:
   - name: status
     type: string
     options: with-filter
-  - name: typ
+  - name: data_source_type
     type: string
     options: with-filter
-  - name: data_stream_type
+  - name: stream_type
     type: string
     options: with-filter
-  - name: jobBid
+  - name: jobId
     type: string
     options: with-filter
   - name: info

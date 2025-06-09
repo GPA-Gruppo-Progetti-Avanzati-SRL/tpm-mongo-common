@@ -234,45 +234,45 @@ func (ca *Criteria) AndDataStreamTypeIn(p []string) *Criteria {
 // @tpm-schematics:end-region("data-stream-type-field-filter-section")
 
 /*
- * filter-string template: jobBid
+ * filter-string template: jobId
  */
 
-// AndJobBidEqTo No Remarks
-func (ca *Criteria) AndJobBidEqTo(p string) *Criteria {
+// AndJobIdEqTo No Remarks
+func (ca *Criteria) AndJobIdEqTo(p string) *Criteria {
 
 	if p == "" {
 		return ca
 	}
 
-	mName := fmt.Sprintf(JobBidFieldName)
+	mName := fmt.Sprintf(JobIdFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: p} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// AndJobBidIsNullOrUnset No Remarks
-func (ca *Criteria) AndJobBidIsNullOrUnset() *Criteria {
+// AndJobIdIsNullOrUnset No Remarks
+func (ca *Criteria) AndJobIdIsNullOrUnset() *Criteria {
 
-	mName := fmt.Sprintf(JobBidFieldName)
+	mName := fmt.Sprintf(JobIdFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-func (ca *Criteria) AndJobBidIn(p []string) *Criteria {
+func (ca *Criteria) AndJobIdIn(p []string) *Criteria {
 
 	if len(p) == 0 {
 		return ca
 	}
 
-	mName := fmt.Sprintf(JobBidFieldName)
+	mName := fmt.Sprintf(JobIdFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// @tpm-schematics:start-region("job-bid-field-filter-section")
-// @tpm-schematics:end-region("job-bid-field-filter-section")
+// @tpm-schematics:start-region("job-id-field-filter-section")
+// @tpm-schematics:end-region("job-id-field-filter-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

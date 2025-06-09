@@ -8,16 +8,18 @@ package lease
 // @tpm-schematics:end-region("top-file-section")
 
 const (
-	BidFieldName      = "_bid"
-	EtFieldName       = "_et"
-	GidFieldName      = "_gid"
-	LeaseIdFieldName  = "leaseId"
-	DataFieldName     = "data"
-	StatusFieldName   = "status"
-	EtagFieldName     = "etag"
-	DurationFieldName = "duration_sec"
-	TsFieldName       = "ts"
-	TtlFieldName      = "ttl"
+	BidFieldName          = "_bid"
+	EtFieldName           = "_et"
+	GidFieldName          = "_gid"
+	LeaseIdFieldName      = "leaseId"
+	DataFieldName         = "data"
+	StatusFieldName       = "status"
+	EtagFieldName         = "etag"
+	DurationFieldName     = "duration_sec"
+	TsFieldName           = "ts"
+	TtlFieldName          = "ttl"
+	ErrorsFieldName       = "errors"
+	AcquisitionsFieldName = "acquisitions"
 )
 
 // @tpm-schematics:start-region("bottom-file-section")

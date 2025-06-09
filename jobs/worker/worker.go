@@ -29,7 +29,7 @@ func (b *BatchOfEvents) Size() int {
 }
 
 type Worker struct {
-	Cfg    *Config `yaml:"worker,omitempty" mapstructure:"worker,omitempty" json:"worker,omitempty"`
+	Cfg    *Config
 	Server *Server
 
 	wg           *sync.WaitGroup
@@ -307,7 +307,7 @@ func (tp *Worker) poll() (datasource.Event, error) {
 //		log.Error().Err(err).Msg(semLogContext)
 //		return datasource.EventTypeError, err
 //	}
-//	for ev.Typ != datasource.EventTypeEof {
+//	for ev.DataSourceType != datasource.EventTypeEof {
 //		ev, err = tp.consumer.Poll()
 //		if err != nil {
 //			log.Error().Err(err).Msg(semLogContext)

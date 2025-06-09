@@ -124,8 +124,8 @@ func populateTask(t *testing.T, taskColl *mongo.Collection) (task.Task, error) {
 		Et:             task.EType,
 		JobBid:         jobId,
 		Status:         task.StatusAvailable,
-		Typ:            task.TypeQMongo,
-		DataStreamType: task.DataStreamTypeInfinite,
+		DataSourceType: task.TypeQMongo,
+		StreamType:     task.DataStreamTypeInfinite,
 		Info: beans.TaskInfo{
 			MdbInstance:   JobsInstanceId,
 			MdbCollection: QueryCollectionId,

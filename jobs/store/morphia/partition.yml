@@ -29,3 +29,7 @@ attributes:
     struct-ref:
       name: PartitionInfo
     type: struct
+  - name: errors
+    type: int
+  - name: acquisitions
+    type: int

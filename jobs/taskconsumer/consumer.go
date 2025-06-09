@@ -113,7 +113,7 @@ func NewConsumer(taskColl *mongo.Collection, task task.Task, cfg *Config, opts .
 	}, nil
 }
 
-func (c *Consumer) UpdateLeaseData(evt datasource.Event, status string) error {
+func (c *Consumer) UpdateLeaseData(evt datasource.Event, status string, withErrors bool) error {
 	const semLogContext = "consumer::update-lease"
 	var err error
 
@@ -137,8 +137,8 @@ func (c *Consumer) UpdateLeaseData(evt datasource.Event, status string) error {
 			renew = true
 		}
 
-		if renew {
-			err = c.leaseHandler.RenewLease()
+		if renew || withErrors {
+			err = c.leaseHandler.RenewLease(withErrors)
 		}
 	} else {
 		log.Warn().Msg(semLogContext + " - cannot update not owned lease")
@@ -147,7 +147,7 @@ func (c *Consumer) UpdateLeaseData(evt datasource.Event, status string) error {
 	return err
 }
 
-func (c *Consumer) CommitEvent(evt datasource.Event, forceSync bool) error {
+func (c *Consumer) CommitEvent(evt datasource.Event, forceSync bool, withErrors bool) error {
 	const semLogContext = "consumer::commit"
 	var err error
 
@@ -161,7 +161,7 @@ func (c *Consumer) CommitEvent(evt datasource.Event, forceSync bool) error {
 			c.lastCommittedEvent = evt
 			c.uncommittedEvents++
 			if c.uncommittedEvents == 3 || forceSync {
-				err = c.UpdateLeaseData(evt, "")
+				err = c.UpdateLeaseData(evt, "", withErrors)
 				c.uncommittedEvents = 0
 			}
 		} else {
@@ -177,7 +177,7 @@ func (c *Consumer) CommitEvent(evt datasource.Event, forceSync bool) error {
 }
 
 func (c *Consumer) Commit(forceSync bool) error {
-	return c.CommitEvent(c.lastPolledEvent, forceSync)
+	return c.CommitEvent(c.lastPolledEvent, forceSync, false)
 	//const semLogContext = "consumer::commit"
 	//var err error
 	//if s.lastPolledEvent.Key != primitive.NilObjectID {
@@ -210,12 +210,14 @@ func (c *Consumer) AbortPartial(lastCommittableEvent datasource.Event) error {
 	var err error
 
 	if lastCommittableEvent.IsDocument() {
-		err = c.CommitEvent(lastCommittableEvent, true)
+		err = c.CommitEvent(lastCommittableEvent, true, true)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 		}
 	} else if c.CommitsPending() {
-		err = c.CommitEvent(c.lastCommittedEvent, true)
+		err = c.CommitEvent(c.lastCommittedEvent, true, true)
+	} else {
+		err = c.UpdateLeaseData(datasource.NoEvent, "", true)
 	}
 
 	c.curPrtWithFails++
@@ -303,16 +305,23 @@ func (c *Consumer) Poll() (datasource.Event, error) {
 func (c *Consumer) handleBoundaryEvent(evt datasource.Event) error {
 	const semLogContext = "consumer::handle-boundary-event"
 
-	var err error
-	if evt.Typ == datasource.EventTypeEofPartition && c.curPrtWithFails == 0 {
-		var st string
-		if c.task.DataStreamType == task.DataStreamTypeFinite {
-			st = "EOF"
-		}
+	log.Info().Interface("evt", evt).Str("lease-bid", c.leaseHandler.Lease.Bid).Str("evt-partition", partition.Id(c.task.Bid, c.lastCommittedEvent.Partition)).Int32("acqs", c.leaseHandler.Lease.Acquisitions).Int32("errs", c.leaseHandler.Lease.Errors).Msg(semLogContext)
 
-		if c.uncommittedEvents > 0 || st != "" {
+	defer func() {
+		c.uncommittedEvents = 0
+	}()
+
+	var err error
+	if evt.Typ == datasource.EventTypeEofPartition {
+
+		var st string
+		if c.curPrtWithFails == 0 {
+			if c.task.StreamType == task.DataStreamTypeFinite {
+				st = "EOF"
+			}
+
 			evt1 := datasource.NoEvent
-			if c.lastCommittedEvent.Key != primitive.NilObjectID {
+			if c.uncommittedEvents > 0 && c.lastCommittedEvent.Key != primitive.NilObjectID {
 				if c.leaseHandler != nil && c.leaseHandler.Lease.Bid == partition.Id(c.task.Bid, c.lastCommittedEvent.Partition) {
 					evt1 = c.lastCommittedEvent
 				} else {
@@ -322,22 +331,21 @@ func (c *Consumer) handleBoundaryEvent(evt datasource.Event) error {
 				}
 			}
 
-			err = c.UpdateLeaseData(evt1, st)
-			if err != nil {
-				log.Error().Err(err).Msg(semLogContext)
-				return err
-			}
-
-			c.uncommittedEvents = 0
-		}
-
-		if c.task.DataStreamType == task.DataStreamTypeFinite {
-			err = c.task.UpdatePartitionStatus(c.taskCollection, c.task.Bid, evt.Partition, "EOF")
-			if err != nil {
-				log.Error().Err(err).Msg(semLogContext)
-				return err
+			if c.uncommittedEvents > 0 || st != "" {
+				err = c.UpdateLeaseData(evt1, st, false)
+				if err != nil {
+					log.Error().Err(err).Msg(semLogContext)
+					return err
+				}
 			}
 		}
+
+		err = c.task.UpdatePartitionStatus(c.taskCollection, c.task.Bid, evt.Partition, st, c.curPrtWithFails != 0)
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+
 	}
 
 	return err

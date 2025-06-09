@@ -3,13 +3,16 @@ package lease
 import (
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
-	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
-	"strings"
 	"time"
 )
 
 // @tpm-schematics:start-region("top-file-section")
+
+import (
+	"github.com/rs/zerolog/log"
+	"strings"
+)
 
 const (
 	EntityType = "lease"
@@ -22,23 +25,25 @@ const (
 // @tpm-schematics:end-region("top-file-section")
 
 type Lease struct {
-	Bid      string `json:"_bid,omitempty" bson:"_bid,omitempty" yaml:"_bid,omitempty"`
-	Et       string `json:"_et,omitempty" bson:"_et,omitempty" yaml:"_et,omitempty"`
-	Gid      string `json:"_gid,omitempty" bson:"_gid,omitempty" yaml:"_gid,omitempty"`
-	LeaseId  string `json:"leaseId,omitempty" bson:"leaseId,omitempty" yaml:"leaseId,omitempty"`
-	Data     bson.M `json:"data,omitempty" bson:"data,omitempty" yaml:"data,omitempty"`
-	Status   string `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
-	Etag     int64  `json:"etag" bson:"etag" yaml:"etag"`
-	Duration int32  `json:"duration_sec,omitempty" bson:"duration_sec,omitempty" yaml:"duration_sec,omitempty"`
-	Ts       string `json:"ts,omitempty" bson:"ts,omitempty" yaml:"ts,omitempty"`
-	Ttl      int32  `json:"ttl,omitempty" bson:"ttl,omitempty" yaml:"ttl,omitempty"`
+	Bid          string `json:"_bid,omitempty" bson:"_bid,omitempty" yaml:"_bid,omitempty"`
+	Et           string `json:"_et,omitempty" bson:"_et,omitempty" yaml:"_et,omitempty"`
+	Gid          string `json:"_gid,omitempty" bson:"_gid,omitempty" yaml:"_gid,omitempty"`
+	LeaseId      string `json:"leaseId,omitempty" bson:"leaseId,omitempty" yaml:"leaseId,omitempty"`
+	Data         bson.M `json:"data,omitempty" bson:"data,omitempty" yaml:"data,omitempty"`
+	Status       string `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
+	Etag         int64  `json:"etag" bson:"etag" yaml:"etag"`
+	Duration     int32  `json:"duration_sec,omitempty" bson:"duration_sec,omitempty" yaml:"duration_sec,omitempty"`
+	Ts           string `json:"ts,omitempty" bson:"ts,omitempty" yaml:"ts,omitempty"`
+	Ttl          int32  `json:"ttl,omitempty" bson:"ttl,omitempty" yaml:"ttl,omitempty"`
+	Errors       int32  `json:"errors,omitempty" bson:"errors,omitempty" yaml:"errors,omitempty"`
+	Acquisitions int32  `json:"acquisitions,omitempty" bson:"acquisitions,omitempty" yaml:"acquisitions,omitempty"`
 
 	// @tpm-schematics:start-region("struct-section")
 	// @tpm-schematics:end-region("struct-section")
 }
 
 func (s Lease) IsZero() bool {
-	return s.Bid == "" && s.Et == "" && s.Gid == "" && s.LeaseId == "" && len(s.Data) == 0 && s.Status == "" && s.Etag == 0 && s.Duration == 0 && s.Ts == "" && s.Ttl == 0
+	return s.Bid == "" && s.Et == "" && s.Gid == "" && s.LeaseId == "" && len(s.Data) == 0 && s.Status == "" && s.Etag == 0 && s.Duration == 0 && s.Ts == "" && s.Ttl == 0 && s.Errors == 0 && s.Acquisitions == 0
 }
 
 // @tpm-schematics:start-region("bottom-file-section")
@@ -49,14 +54,15 @@ func NewLease(leaseType string, objId string, status string, durationSecs int32)
 	lid := strings.Join([]string{leaseType, objId, util.NewObjectId().String()}, ":")
 
 	l := Lease{
-		Bid:      leasedObjectId,
-		Et:       EntityType,
-		Gid:      leaseType,
-		LeaseId:  lid,
-		Status:   status,
-		Duration: durationSecs,
-		Ts:       time.Now().Format(time.RFC3339Nano),
-		Ttl:      300,
+		Bid:          leasedObjectId,
+		Et:           EntityType,
+		Gid:          leaseType,
+		LeaseId:      lid,
+		Status:       status,
+		Duration:     durationSecs,
+		Ts:           time.Now().Format(time.RFC3339Nano),
+		Ttl:          300,
+		Acquisitions: 1,
 	}
 
 	return l

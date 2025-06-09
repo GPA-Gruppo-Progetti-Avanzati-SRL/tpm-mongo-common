@@ -1,8 +1,9 @@
-package worker_test
+package jobs_test
 
 import (
 	"context"
 	"errors"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer/datasource"
@@ -14,12 +15,20 @@ import (
 	"testing"
 )
 
+func TestCaseInitialization(t *testing.T) {
+
+}
+
 func TestNewWorkerMessage(t *testing.T) {
 
 	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
 	require.NoError(t, err)
 
-	tasks, err := task.FindByJobBidAndStatus(taskColl, jobId, task.StatusAvailable)
+	jobs, err := job.FindJobsByTypeAndStatus(taskColl, job.TypeAny, job.StatusAvailable)
+	require.NoError(t, err)
+	require.Condition(t, func() bool { return len(jobs) > 0 }, "expected jobs to be available")
+
+	tasks, err := task.FindByJobBidAndStatus(taskColl, jobs[0].Bid, task.StatusAvailable)
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(tasks) > 0 }, "expected tasks to be available")
 
@@ -64,9 +73,10 @@ func (w *MessageWorkerListener) OnEvent(evt datasource.Event) (worker.OnEventRes
 	const semLogContext = "worker-processor::on-event"
 	log.Info().Msg(semLogContext)
 	w.numEvts++
-	if w.numEvts == 14 {
+	if w.numEvts == WithOnEventErrorsStride {
 		err := errors.New("error condition materialized")
 		log.Error().Err(err).Msg(semLogContext)
+		w.numEvts = 0
 		return worker.OnEventResponseUndefined, err
 	}
 
@@ -163,7 +173,7 @@ func (w *BatchWorkerListener) OnEvents(evt []datasource.Event) (worker.OnEventRe
 	const semLogContext = "worker-processor::on-events"
 	log.Info().Msg(semLogContext)
 	w.numEvts += len(evt)
-	if w.numEvts > 14 {
+	if (w.numEvts % WithOnEventsErrorsStride) == 0 {
 		return worker.OnEventResponseUndefined, errors.New("error condition materialized")
 	}
 

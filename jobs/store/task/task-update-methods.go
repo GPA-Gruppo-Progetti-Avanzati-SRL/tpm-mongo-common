@@ -35,7 +35,7 @@ type UnsetOptions struct {
 	Status         UnsetMode
 	Typ            UnsetMode
 	DataStreamType UnsetMode
-	JobBid         UnsetMode
+	JobId          UnsetMode
 	Info           UnsetMode
 	Partitions     UnsetMode
 }
@@ -78,9 +78,9 @@ func WithDataStreamTypeUnsetMode(m UnsetMode) UnsetOption {
 		uopt.DataStreamType = m
 	}
 }
-func WithJobBidUnsetMode(m UnsetMode) UnsetOption {
+func WithJobIdUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.JobBid = m
+		uopt.JobId = m
 	}
 }
 func WithInfoUnsetMode(m UnsetMode) UnsetOption {
@@ -122,9 +122,9 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
-	ud.setOrUnsetTyp(obj.Typ, uo.ResolveUnsetMode(uo.Typ))
-	ud.setOrUnsetData_stream_type(obj.DataStreamType, uo.ResolveUnsetMode(uo.DataStreamType))
-	ud.setOrUnsetJobBid(obj.JobBid, uo.ResolveUnsetMode(uo.JobBid))
+	ud.setOrUnsetTyp(obj.DataSourceType, uo.ResolveUnsetMode(uo.Typ))
+	ud.setOrUnsetData_stream_type(obj.StreamType, uo.ResolveUnsetMode(uo.DataStreamType))
+	ud.setOrUnsetJobId(obj.JobId, uo.ResolveUnsetMode(uo.JobId))
 	ud.setOrUnsetInfo(&obj.Info, uo.ResolveUnsetMode(uo.Info))
 	ud.setOrUnsetPartitions(obj.Partitions, uo.ResolveUnsetMode(uo.Partitions))
 
@@ -361,51 +361,51 @@ func UpdateWithData_stream_type(p string) UpdateOption {
 // @tpm-schematics:start-region("data-stream-type-field-update-section")
 // @tpm-schematics:end-region("data-stream-type-field-update-section")
 
-// SetJobBid No Remarks
-func (ud *UpdateDocument) SetJobBid(p string) *UpdateDocument {
-	mName := fmt.Sprintf(JobBidFieldName)
+// SetJobId No Remarks
+func (ud *UpdateDocument) SetJobId(p string) *UpdateDocument {
+	mName := fmt.Sprintf(JobIdFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetJobBid No Remarks
-func (ud *UpdateDocument) UnsetJobBid() *UpdateDocument {
-	mName := fmt.Sprintf(JobBidFieldName)
+// UnsetJobId No Remarks
+func (ud *UpdateDocument) UnsetJobId() *UpdateDocument {
+	mName := fmt.Sprintf(JobIdFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetJobBid No Remarks
-func (ud *UpdateDocument) setOrUnsetJobBid(p string, um UnsetMode) {
+// setOrUnsetJobId No Remarks
+func (ud *UpdateDocument) setOrUnsetJobId(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetJobBid(p)
+		ud.SetJobId(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetJobBid()
+			ud.UnsetJobId()
 		case SetData2Default:
-			ud.UnsetJobBid()
+			ud.UnsetJobId()
 		}
 	}
 }
 
-func UpdateWithJobBid(p string) UpdateOption {
+func UpdateWithJobId(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetJobBid(p)
+			ud.SetJobId(p)
 		} else {
-			ud.UnsetJobBid()
+			ud.UnsetJobId()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("job-bid-field-update-section")
-// @tpm-schematics:end-region("job-bid-field-update-section")
+// @tpm-schematics:start-region("job-id-field-update-section")
+// @tpm-schematics:end-region("job-id-field-update-section")
 
 // SetInfo No Remarks
 func (ud *UpdateDocument) SetInfo(p *beans.TaskInfo) *UpdateDocument {
@@ -504,6 +504,26 @@ func UpdateWithPartitionStatus(prt int32, status string) UpdateOption {
 		mName := fmt.Sprintf(PartitionsIStatusFieldName, prt-1)
 		ud.Set().Add(func() bson.E {
 			return bson.E{Key: mName, Value: status}
+		})
+	}
+}
+
+func UpdateWithIncPartitionAcquisitions(prt int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		// partitions are numbered from 1 but array is indexed from 0.
+		mName := fmt.Sprintf(PartitionsIAcquisitionsFieldName, prt-1)
+		ud.Inc().Add(func() bson.E {
+			return bson.E{Key: mName, Value: 1}
+		})
+	}
+}
+
+func UpdateWithIncPartitionErrors(prt int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		// partitions are numbered from 1 but array is indexed from 0.
+		mName := fmt.Sprintf(PartitionsIErrorsFieldName, prt-1)
+		ud.Inc().Add(func() bson.E {
+			return bson.E{Key: mName, Value: 1}
 		})
 	}
 }

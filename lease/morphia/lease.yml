@@ -43,4 +43,7 @@ attributes:
     type: string
   - name: ttl
     type: int
-
+  - name: errors
+    type: int
+  - name: acquisitions
+    type: int
