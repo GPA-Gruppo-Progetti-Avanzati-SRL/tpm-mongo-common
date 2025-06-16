@@ -80,6 +80,9 @@ func (m *Driver) workLoop() {
 	if !hasTasks && m.ExitOnNoTasks() {
 		log.Info().Msg(semLogContext + " no tasks available... exiting")
 		m.wg.Done()
+		if m.shutdownChannel != nil {
+			m.shutdownChannel <- fmt.Errorf("exiting from driver workloop")
+		}
 		return
 	}
 
