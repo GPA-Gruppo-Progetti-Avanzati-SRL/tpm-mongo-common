@@ -73,6 +73,12 @@ func (m *Driver) workLoop() {
 	hasTasks := len(startedTasks) > 0
 	log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
+	if !hasTasks && m.ExitOnNoTasks() {
+		log.Info().Msg(semLogContext + " no tasks available... exiting")
+		m.wg.Done()
+		return
+	}
+
 	ticker := time.NewTicker(m.cfg.TickInterval)
 	log.Info().Float64("tick-interval-ss", m.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting scheduler loop")
 
@@ -83,6 +89,7 @@ func (m *Driver) workLoop() {
 		case <-ticker.C:
 			log.Info().Msg(semLogContext + " tick")
 			if !hasTasks && m.ExitOnNoTasks() {
+				log.Info().Msg(semLogContext + " no tasks available... exiting")
 				terminate = true
 			}
 
@@ -97,6 +104,7 @@ func (m *Driver) workLoop() {
 
 			hasTasks = false
 			if m.ExitOnNoTasks() {
+				log.Info().Msg(semLogContext + " no tasks available... exiting")
 				terminate = true
 			}
 		case <-m.quitc:
