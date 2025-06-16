@@ -70,6 +70,7 @@ func (m *Driver) workLoop() {
 	const semLogContext = "monitor::work-loop"
 
 	startedTasks := m.findAndStartTasks()
+	hasTasks := len(startedTasks) > 0
 	log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
 	ticker := time.NewTicker(m.cfg.TickInterval)
@@ -81,11 +82,23 @@ func (m *Driver) workLoop() {
 		select {
 		case <-ticker.C:
 			log.Info().Msg(semLogContext + " tick")
+			if !hasTasks && m.ExitOnNoTasks() {
+				terminate = true
+			}
+
 		case <-m.workersDone:
 			log.Info().Msg(semLogContext + " - tasks ended normally.")
 			// In here should decide what to do...
-			m.updateTasksStatus(startedTasks)
-			terminate = true
+			err := m.updateTasksStatus(startedTasks)
+			if err != nil {
+				log.Error().Err(err).Msg(semLogContext)
+				terminate = true
+			}
+
+			hasTasks = false
+			if m.ExitOnNoTasks() {
+				terminate = true
+			}
 		case <-m.quitc:
 			log.Info().Msg(semLogContext + " quit")
 			terminate = true
@@ -94,6 +107,10 @@ func (m *Driver) workLoop() {
 
 	m.wg.Done()
 	log.Info().Msg(semLogContext + " - exiting from scheduler loop")
+}
+
+func (m *Driver) ExitOnNoTasks() bool {
+	return true
 }
 
 func (m *Driver) findAndStartTasks() []beans.TaskReference {
