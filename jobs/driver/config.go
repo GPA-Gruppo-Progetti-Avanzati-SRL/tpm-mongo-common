@@ -6,7 +6,7 @@ import (
 )
 
 type StoreReference struct {
-	InstanceName string `yaml:"linked-service-name,omitempty" mapstructure:"linked-service-name,omitempty" json:"linked-service-name,omitempty"`
+	InstanceName string `yaml:"lks,omitempty" mapstructure:"lks,omitempty" json:"lks,omitempty"`
 	CollectionId string `yaml:"collection-id,omitempty" mapstructure:"collection-id,omitempty" json:"collection-id,omitempty"`
 }
 
