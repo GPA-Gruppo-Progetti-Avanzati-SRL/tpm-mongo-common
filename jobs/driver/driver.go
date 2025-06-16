@@ -103,7 +103,7 @@ func (m *Driver) workLoop() {
 		case <-m.workersDone:
 			log.Info().Msg(semLogContext + " - tasks ended normally.")
 			// In here should decide what to do...
-			err := m.updateTasksStatus(startedTasks)
+			err := m.onWorkersDone(startedTasks)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
 				terminate = true
@@ -239,8 +239,8 @@ func (m *Driver) startTasks(jobsColl *mongo.Collection, tasks []task.Task, worke
 	return startedTasks, nil
 }
 
-func (m *Driver) updateTasksStatus(tasks []beans.TaskReference) error {
-	const semLogContext = "monitor::update-tasks-status"
+func (m *Driver) onWorkersDone(tasks []beans.TaskReference) error {
+	const semLogContext = "monitor::on-workers-done"
 
 	for _, tsk := range tasks {
 
@@ -248,6 +248,7 @@ func (m *Driver) updateTasksStatus(tasks []beans.TaskReference) error {
 			continue
 		}
 
+		// issue.... in here a contention skips the job..... that doesn't get updated ...
 		lh, ok, err := lease.AcquireLease(m.jobsColl, "all", tsk.JobId, true)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
@@ -266,6 +267,7 @@ func (m *Driver) updateTasksStatus(tasks []beans.TaskReference) error {
 				log.Error().Err(err).Msg(semLogContext)
 				return err
 			}
+
 			if tsk.IsEOF() {
 				err = tsk.UpdateStatus(m.jobsColl, tsk.Bid, task.StatusDone)
 				if err != nil {
@@ -273,10 +275,18 @@ func (m *Driver) updateTasksStatus(tasks []beans.TaskReference) error {
 					return err
 				}
 
-				err = j.UpdateTaskStatus(m.jobsColl, tsk.Bid, task.StatusDone)
+				ndx, err := j.UpdateTaskStatus(m.jobsColl, tsk.Bid, task.StatusDone)
 				if err != nil {
 					log.Error().Err(err).Msg(semLogContext)
 					return err
+				}
+
+				if ndx == (len(j.Tasks) - 1) {
+					err = j.UpdateStatus(m.jobsColl, j.Bid, task.StatusDone)
+					if err != nil {
+						log.Error().Err(err).Msg(semLogContext)
+						return err
+					}
 				}
 			}
 

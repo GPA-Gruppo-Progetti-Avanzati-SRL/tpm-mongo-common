@@ -47,8 +47,8 @@ func FindByJobBidAndStatus(coll *mongo.Collection, jobBid string, status string)
 	return tasks, nil
 }
 
-func (tsk *Task) UpdateStatus(taskColl *mongo.Collection, taskId string, st string) error {
-	const semLogContext = "task::update-partition-status"
+func (tsk Task) UpdateStatus(taskColl *mongo.Collection, taskId string, st string) error {
+	const semLogContext = "task::update-status"
 
 	updOpts := UpdateOptions{
 		UpdateWithStatus(st),
@@ -69,7 +69,7 @@ func (tsk *Task) UpdateStatus(taskColl *mongo.Collection, taskId string, st stri
 	return nil
 }
 
-func (tsk *Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string, prtNdx int32, st string, withErrors bool) error {
+func (tsk Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string, prtNdx int32, st string, withErrors bool) error {
 	const semLogContext = "task::update-partition-status"
 
 	updOpts := UpdateOptions{

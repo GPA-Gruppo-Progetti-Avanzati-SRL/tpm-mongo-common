@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -82,7 +83,28 @@ func (j Job) GetTasks(coll *mongo.Collection) ([]task.Task, error) {
 	return tsks, nil
 }
 
-func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st string) error {
+func (j Job) UpdateStatus(jobsColl *mongo.Collection, jobId string, st string) error {
+	const semLogContext = "job::update-status"
+
+	updOpts := UpdateOptions{
+		UpdateWithStatus(st),
+	}
+
+	f := Filter{}
+	f.Or().AndEtEqTo(EType).AndBidEqTo(jobId)
+
+	updDoc := GetUpdateDocumentFromOptions(updOpts...)
+	resp, err := jobsColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	log.Info().Interface("resp", resp).Msg(semLogContext)
+	return nil
+}
+
+func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st string) (int, error) {
 	const semLogContext = "job::update-task-status"
 
 	taskNdx := -1
@@ -93,6 +115,11 @@ func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st stri
 		}
 	}
 
+	if taskNdx == -1 {
+		err := errors.New("task not found")
+		log.Error().Err(err).Msg(semLogContext)
+		return taskNdx, err
+	}
 	updOpts := UpdateOptions{
 		UpdateWithTaskStatus(int32(taskNdx), st),
 	}
@@ -104,9 +131,9 @@ func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st stri
 	resp, err := taskColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return err
+		return taskNdx, err
 	}
 
 	log.Info().Interface("resp", resp).Msg(semLogContext)
-	return nil
+	return taskNdx, nil
 }
