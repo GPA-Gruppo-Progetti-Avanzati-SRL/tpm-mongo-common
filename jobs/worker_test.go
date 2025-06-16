@@ -93,7 +93,7 @@ func TestScheduler(t *testing.T) {
 	m, err := driver.NewDriver(&cfg, &wg)
 	require.NoError(t, err)
 
-	err = m.Start()
+	err = m.Start(nil)
 	require.NoError(t, err)
 
 	wg.Wait()

@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
@@ -23,6 +24,8 @@ type Driver struct {
 	workersWg   *sync.WaitGroup
 	workersDone chan struct{}
 	quitc       chan struct{}
+
+	shutdownChannel chan error // channel used to quit the application. triggered when driver wants to exit.
 }
 
 func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
@@ -53,8 +56,9 @@ func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
 	return m, nil
 }
 
-func (m *Driver) Start() error {
+func (m *Driver) Start(sh chan error) error {
 	const semLogContext = "monitor::start"
+	m.shutdownChannel = sh
 	m.wg.Add(1)
 	go m.workLoop()
 	return nil
@@ -111,6 +115,10 @@ func (m *Driver) workLoop() {
 			log.Info().Msg(semLogContext + " quit")
 			terminate = true
 		}
+	}
+
+	if terminate && m.shutdownChannel != nil {
+		m.shutdownChannel <- fmt.Errorf("exiting from driver workloop")
 	}
 
 	m.wg.Done()
