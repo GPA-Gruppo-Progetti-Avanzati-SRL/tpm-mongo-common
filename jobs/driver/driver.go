@@ -1,19 +1,21 @@
-package monitor
+package driver
 
 import (
+	"context"
 	"errors"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/worker"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"sync"
 	"time"
 )
 
-type Monitor struct {
+type Driver struct {
 	cfg *Config
 
 	jobsColl    *mongo.Collection
@@ -23,8 +25,17 @@ type Monitor struct {
 	quitc       chan struct{}
 }
 
-func NewMonitor(coll *mongo.Collection, cfg *Config, wg *sync.WaitGroup) (*Monitor, error) {
-	m := &Monitor{
+func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
+
+	const semLogContext = "driver::new"
+
+	coll, err := mongolks.GetCollection(context.Background(), cfg.Store.InstanceName, cfg.Store.CollectionId)
+	if err != nil {
+		log.Error().Err(err).Str("store", cfg.Store.InstanceName).Str("collection-id", cfg.Store.CollectionId).Msg("Failed to get collection")
+		return nil, err
+	}
+
+	m := &Driver{
 		cfg:       cfg,
 		wg:        wg,
 		workersWg: &sync.WaitGroup{},
@@ -42,20 +53,20 @@ func NewMonitor(coll *mongo.Collection, cfg *Config, wg *sync.WaitGroup) (*Monit
 	return m, nil
 }
 
-func (m *Monitor) Start() error {
+func (m *Driver) Start() error {
 	const semLogContext = "monitor::start"
 	m.wg.Add(1)
 	go m.workLoop()
 	return nil
 }
 
-func (m *Monitor) Close() error {
+func (m *Driver) Close() error {
 	const semLogContext = "monitor::close"
 	close(m.quitc)
 	return nil
 }
 
-func (m *Monitor) workLoop() {
+func (m *Driver) workLoop() {
 	const semLogContext = "monitor::work-loop"
 
 	startedTasks := m.findAndStartTasks()
@@ -85,7 +96,7 @@ func (m *Monitor) workLoop() {
 	log.Info().Msg(semLogContext + " - exiting from scheduler loop")
 }
 
-func (m *Monitor) findAndStartTasks() []beans.TaskReference {
+func (m *Driver) findAndStartTasks() []beans.TaskReference {
 	const semLogContext = "monitor::find-and-start-tasks"
 
 	tasks, err := m.FindTasks(m.jobsColl)
@@ -107,7 +118,7 @@ func (m *Monitor) findAndStartTasks() []beans.TaskReference {
 	return startedTasks
 }
 
-func (m *Monitor) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
+func (m *Driver) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
 	const semLogContext = "monitor::find-tasks"
 	var tasks []task.Task
 
@@ -130,7 +141,7 @@ func (m *Monitor) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
 	return tasks, nil
 }
 
-func (m *Monitor) startTasks(jobsColl *mongo.Collection, tasks []task.Task, workersConfigs []worker.Config) ([]beans.TaskReference, error) {
+func (m *Driver) startTasks(jobsColl *mongo.Collection, tasks []task.Task, workersConfigs []worker.Config) ([]beans.TaskReference, error) {
 	const semLogContext = "monitor::execute-tasks"
 
 	var startedTasks []beans.TaskReference
@@ -192,7 +203,7 @@ func (m *Monitor) startTasks(jobsColl *mongo.Collection, tasks []task.Task, work
 	return startedTasks, nil
 }
 
-func (m *Monitor) updateTasksStatus(tasks []beans.TaskReference) error {
+func (m *Driver) updateTasksStatus(tasks []beans.TaskReference) error {
 	const semLogContext = "monitor::update-tasks-status"
 
 	for _, tsk := range tasks {

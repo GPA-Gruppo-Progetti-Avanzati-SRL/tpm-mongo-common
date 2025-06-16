@@ -2,7 +2,7 @@ package jobs_test
 
 import (
 	"context"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/monitor"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/driver"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer"
@@ -65,10 +65,12 @@ func TestNewWorkerMessage(t *testing.T) {
 
 func TestScheduler(t *testing.T) {
 
-	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
-	require.NoError(t, err)
+	cfg := driver.Config{
+		Store: driver.StoreReference{
+			InstanceName: JobsInstanceId,
+			CollectionId: JobsCollectionId,
+		},
 
-	cfg := monitor.Config{
 		WorkersConfig: []worker.Config{
 			{
 				Name:          "my-worker",
@@ -88,7 +90,7 @@ func TestScheduler(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	m, err := monitor.NewMonitor(taskColl, &cfg, &wg)
+	m, err := driver.NewDriver(&cfg, &wg)
 	require.NoError(t, err)
 
 	err = m.Start()
