@@ -4,18 +4,16 @@ import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 
 const (
 	MetricLabelName       = "name"
-	MetricRewindsCounter  = "cdc-rewinds"
-	MetricBatchErrors     = "cdc-batch-errors"
-	MetricBatches         = "cdc-batches"
-	MetricBatchSize       = "cdc-batch-size"
-	MetricBatchDuration   = "cdc-batch-duration"
-	MetricMessageErrors   = "cdc-event-errors"
-	MetricMessages        = "cdc-events"
-	MetricMessageDuration = "cdc-event-duration"
+	MetricBatchErrors     = "wrk-batch-errors"
+	MetricBatches         = "wrk-batches"
+	MetricBatchSize       = "wrk-batch-size"
+	MetricBatchDuration   = "wrk-batch-duration"
+	MetricMessageErrors   = "wrk-event-errors"
+	MetricMessages        = "wrk-events"
+	MetricMessageDuration = "wrk-event-duration"
 )
 
 type Metrics struct {
-	Rewinds         int
 	BatchErrors     int
 	Batches         int
 	BatchSize       int
@@ -24,7 +22,6 @@ type Metrics struct {
 	Messages        int
 	MessageDuration float64
 
-	RewindsCounterMetric       promutil.CollectorWithLabels
 	BatchesCounterMetric       promutil.CollectorWithLabels
 	BatchErrorsCounterMetric   promutil.CollectorWithLabels
 	BatchSizeGaugeMetric       promutil.CollectorWithLabels
@@ -36,7 +33,6 @@ type Metrics struct {
 }
 
 func (stat *Metrics) Clear() *Metrics {
-	stat.Rewinds = 0
 	stat.BatchErrors = 0
 	stat.Batches = 0
 	stat.BatchSize = 0
@@ -45,13 +41,6 @@ func (stat *Metrics) Clear() *Metrics {
 	stat.Messages = 0
 	stat.MessageDuration = 0
 	return stat
-}
-
-func (stat *Metrics) IncRewinds() {
-	stat.Rewinds++
-	if !stat.metricErrors {
-		stat.RewindsCounterMetric.SetMetric(1)
-	}
 }
 
 func (stat *Metrics) IncBatchErrors() {
@@ -103,21 +92,13 @@ func (stat *Metrics) SetMessageDuration(dur float64) {
 	}
 }
 
-func NewProducerStatsInfo(whatcherId, metricGroupId string) *Metrics {
+func NewWorkerMetrics(whatcherId, metricGroupId string) *Metrics {
 	stat := &Metrics{}
 	mg, err := promutil.GetGroup(metricGroupId)
 	if err != nil {
 		stat.metricErrors = true
 		return stat
 	} else {
-		stat.RewindsCounterMetric, err = mg.CollectorByIdWithLabels(MetricRewindsCounter, map[string]string{
-			MetricLabelName: whatcherId,
-		})
-		if err != nil {
-			stat.metricErrors = true
-			return stat
-		}
-
 		stat.BatchErrorsCounterMetric, err = mg.CollectorByIdWithLabels(MetricBatchErrors, map[string]string{
 			MetricLabelName: whatcherId,
 		})

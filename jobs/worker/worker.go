@@ -58,7 +58,7 @@ func NewWorker(jobsCollection *mongo.Collection, task task.Task, cfg *Config, wg
 		Cfg:       cfg,
 		quitc:     make(chan struct{}),
 		wg:        wg,
-		statsInfo: NewProducerStatsInfo(cfg.Name, cfg.MetricsGId),
+		statsInfo: NewWorkerMetrics(cfg.Name, cfg.MetricsGId),
 		jobsColl:  jobsCollection,
 		task:      task,
 	}

@@ -46,27 +46,20 @@ type DataSource interface {
 }
 
 type Consumer struct {
-	cfg            *Config
-	task           task.Task
-	taskCollection *mongo.Collection
-	// qColl                    *mongo.Collection
+	cfg                      *Config
+	task                     task.Task
+	taskCollection           *mongo.Collection
+	metrics                  *Metrics
 	shuffledPartitionIndexes []int
-	// cfg                      StreamOptions
-	// cgColl                   *mongo.Collection
-
-	// prts []partition.Partition
-
-	curPrtNdx       int
-	curPrtIsEof     bool
-	curPrtWithFails int
-	dataSource      DataSource // *QueryStream
-	leaseHandler    *lease.Handler
-
-	uncommittedEvents  int
-	lastCommittedEvent datasource.Event
-	lastPolledEvent    datasource.Event
-
-	numEvents int
+	curPrtNdx                int
+	curPrtIsEof              bool
+	curPrtWithFails          int
+	dataSource               DataSource // *QueryStream
+	leaseHandler             *lease.Handler
+	uncommittedEvents        int
+	lastCommittedEvent       datasource.Event
+	lastPolledEvent          datasource.Event
+	numEvents                int
 }
 
 func NewConsumer(taskColl *mongo.Collection, task task.Task, cfg *Config, opts ...ConfigOption) (*Consumer, error) {
@@ -99,10 +92,10 @@ func NewConsumer(taskColl *mongo.Collection, task task.Task, cfg *Config, opts .
 	}
 
 	return &Consumer{
-		cfg:            cfg,
-		task:           task,
-		taskCollection: taskColl,
-		//qColl:                    qColl,
+		cfg:                      cfg,
+		task:                     task,
+		taskCollection:           taskColl,
+		metrics:                  NewMetrics(cfg.Id, cfg.MetricsGId),
 		shuffledPartitionIndexes: shuffledPartitionIndexes,
 		curPrtNdx:                -1,
 		curPrtIsEof:              true,
@@ -268,6 +261,7 @@ func (c *Consumer) Poll() (datasource.Event, error) {
 
 	if evt.IsDocument() {
 		c.lastPolledEvent = evt
+		c.metrics.IncNumEvents()
 	} else {
 		err = c.handleBoundaryEvent(evt)
 		if err != nil {
