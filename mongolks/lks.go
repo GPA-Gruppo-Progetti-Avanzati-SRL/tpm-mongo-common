@@ -2,9 +2,8 @@ package mongolks
 
 import (
 	"context"
-	"crypto/tls"
+	"go.mongodb.org/mongo-driver/mongo/readconcern"
 
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
 	mongoUtil "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,6 +16,9 @@ import (
 
 var DefaultWriteConcern = writeconcern.Majority()
 var DefaultWriteTimeout = 60 * time.Second
+var DefaultReadConcern = readconcern.Majority()
+
+const DefaultAuthMechanism = "SCRAM-SHA-256"
 
 type LinkedService struct {
 	cfg          Config
@@ -48,45 +50,19 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 
 	const semLogContext = "mongo-lks::connect"
 
-	var mongoOptions = options.Client().ApplyURI(mdb.cfg.Host).
-		SetMinPoolSize(uint64(mdb.cfg.Pool.MinConn)).
-		SetMaxPoolSize(uint64(mdb.cfg.Pool.MaxConn)).
-		SetMaxConnIdleTime(time.Duration(mdb.cfg.Pool.MaxConnectionIdleTime) * time.Millisecond).
-		SetConnectTimeout(time.Duration(mdb.cfg.Pool.MaxWaitTime) * time.Millisecond)
-
-	switch mdb.cfg.SecurityProtocol {
-	case "TLS":
-		log.Info().Bool("skip-verify", mdb.cfg.TLS.SkipVerify).Msg(semLogContext + " security-protocol set to TLS....")
-		tlsCfg := &tls.Config{
-			InsecureSkipVerify: mdb.cfg.TLS.SkipVerify,
-		}
-		mongoOptions.SetTLSConfig(tlsCfg)
-	case "PLAIN":
-		log.Info().Str("security-protocol", mdb.cfg.SecurityProtocol).Msg(semLogContext + " security-protocol set to PLAIN....nothing to do")
-	default:
-		log.Info().Str("security-protocol", mdb.cfg.SecurityProtocol).Msg(semLogContext + " skipping mongo security-protocol settings")
-	}
+	mongoOptions := mdb.cfg.getOptions(nil)
 
 	/*
-	 * Simple User/password authentication
-	 */
-	if mdb.cfg.User != "" {
-		authMechanism := "" // "SCRAM-SHA-256"
-		if mdb.cfg.AuthMechanism != "" {
-			authMechanism = mdb.cfg.AuthMechanism
-		}
-		authSource := mdb.cfg.DbName
-		if mdb.cfg.AuthSource != "" {
-			authSource = mdb.cfg.AuthSource
-		}
-		mongoOptions.SetAuth(options.Credential{
-			AuthSource: authSource, Username: mdb.cfg.User, Password: mdb.cfg.Pwd, AuthMechanism: authMechanism,
-		})
-	}
+		var mongoOptions = options.Client().ApplyURI(mdb.cfg.Host).
+			SetMinPoolSize(uint64(mdb.cfg.Pool.MinConn)).
+			SetMaxPoolSize(uint64(mdb.cfg.Pool.MaxConn)).
+			SetMaxConnIdleTime(time.Duration(mdb.cfg.Pool.MaxConnectionIdleTime) * time.Millisecond).
+			SetConnectTimeout(time.Duration(mdb.cfg.Pool.ConnectTimeout) * time.Millisecond)
+	*/
 
 	connTimeout := 10 * time.Second
-	if mdb.cfg.ConnectTimeout > 0 {
-		connTimeout = mdb.cfg.ConnectTimeout
+	if mdb.cfg.Pool.ConnectTimeout > 0 {
+		connTimeout = mdb.cfg.Pool.ConnectTimeout
 	}
 	log.Trace().Dur("connect-timeout", connTimeout).Msg(semLogContext)
 
@@ -122,9 +98,9 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 	mdb.writeConcern = EvalWriteConcern(mdb.cfg.WriteConcern)
 	mdb.writeTimeout = DefaultWriteTimeout
 
-	if mdb.cfg.WriteTimeout != "" {
-		mdb.writeTimeout = util.ParseDuration(mdb.cfg.WriteTimeout, DefaultWriteTimeout)
-	}
+	//if mdb.cfg.WriteTimeout != "" {
+	//	mdb.writeTimeout = util.ParseDuration(mdb.cfg.WriteTimeout, DefaultWriteTimeout)
+	//}
 
 	mdb.version, err = mdb.ServerVersion()
 	if err != nil {
