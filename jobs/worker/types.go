@@ -118,6 +118,8 @@ func (w *MessageDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponseSt
 		log.Error().Err(err).Msg(semLogContext)
 		w.numEvts = 0
 		return OnEventResponseUndefined, err
+	} else {
+		log.Trace().Int("num-doc-events", w.numEvts).Msg(semLogContext)
 	}
 
 	return OnEventResponseProcessed, nil
