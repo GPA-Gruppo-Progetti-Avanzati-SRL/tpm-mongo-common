@@ -135,6 +135,9 @@ func (m *Driver) workLoop() {
 	}
 
 	m.wg.Done()
+	if m.workersDone != nil {
+		close(m.workersDone)
+	}
 	log.Info().Msg(semLogContext + " - exiting from scheduler loop")
 }
 
@@ -235,10 +238,12 @@ func (m *Driver) startTasks(jobsColl *mongo.Collection, tasks []task.Task, worke
 	}
 
 	if len(startedTasks) > 0 {
-		m.workersDone = make(chan struct{})
+		if m.workersDone == nil {
+			m.workersDone = make(chan struct{})
+		}
 		go func() {
 			m.workersWg.Wait()
-			close(m.workersDone)
+			m.workersDone <- struct{}{}
 		}()
 	}
 
