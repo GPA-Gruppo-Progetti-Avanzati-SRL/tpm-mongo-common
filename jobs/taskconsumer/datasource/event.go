@@ -23,6 +23,7 @@ type Event struct {
 	Key       primitive.ObjectID `yaml:"key,omitempty" mapstructure:"key,omitempty" json:"key,omitempty"`
 	Partition int32              `yaml:"partition,omitempty" mapstructure:"partition,omitempty" json:"partition,omitempty"`
 	Document  bson.M             `yaml:"document,omitempty" mapstructure:"document,omitempty" json:"document,omitempty"`
+	Headers   map[string]string  `yaml:"headers,omitempty" mapstructure:"headers,omitempty" json:"headers,omitempty"`
 	// EofPartition  bool               `yaml:"eof-partition,omitempty" mapstructure:"eof-partition,omitempty" json:"eof-partition,omitempty"`
 	// Eof           bool               `yaml:"eof,omitempty" mapstructure:"eof,omitempty" json:"eof,omitempty"`
 	// EofQueryBatch bool               `yaml:"eof-batch,omitempty" mapstructure:"eof-batch,omitempty" json:"eof-batch,omitempty"`
