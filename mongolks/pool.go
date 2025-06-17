@@ -157,6 +157,10 @@ func (cfg *PoolConfig) newPoolMetrics() *poolMetric {
 
 	pm := &poolMetric{}
 
+	if cfg.MetricConfig == nil {
+		cfg.MetricConfig = &PoolConfigMetrics{}
+	}
+
 	if cfg.MetricConfig.Name == "" {
 		cfg.MetricConfig.Name = "tpm-mongo-common"
 	}
