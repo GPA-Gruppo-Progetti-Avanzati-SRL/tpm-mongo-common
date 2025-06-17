@@ -66,6 +66,8 @@ func TestNewWorkerMessage(t *testing.T) {
 func TestScheduler(t *testing.T) {
 
 	cfg := driver.Config{
+		ExitOnIdle:             true,
+		ExitAfterMaxIterations: 1,
 		Store: driver.StoreReference{
 			InstanceName: JobsInstanceId,
 			CollectionId: JobsCollectionId,
