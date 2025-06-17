@@ -62,3 +62,22 @@ func (evt Event) String() string {
 
 	return string(b)
 }
+
+func (e Event) AsExtendedJson(canonical bool) string {
+	const semLogContext = "query-event::as-extended-json"
+
+	b, err := bson.MarshalExtJSON(e, canonical, true)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return ""
+	}
+
+	return string(b)
+}
+
+func (e Event) DocumentKeyAsString() (string, bool) {
+	var docKey string
+	docKey = e.Key.Hex()
+
+	return docKey, true
+}
