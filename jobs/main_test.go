@@ -169,7 +169,7 @@ func populateJob(taskColl *mongo.Collection, aJobId string, aTaskId string) (job
 	aJob := job.Job{
 		Bid:    aJobId,
 		Et:     job.EType,
-		Typ:    job.TypeAny,
+		Ambit:  job.AmbitAny,
 		Status: job.StatusAvailable,
 		Tasks: []beans.TaskReference{
 			{
@@ -199,7 +199,7 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 		Status:         task.StatusAvailable,
 		DataSourceType: task.TypeQMongo,
 		StreamType:     dataSourceStreamType,
-		ProcessorId:    task.TypeAny,
+		ProcessorId:    task.ProcessorIdAny,
 		Info: beans.TaskInfo{
 			MdbInstance:   JobsInstanceId,
 			MdbCollection: QueryCollectionId,

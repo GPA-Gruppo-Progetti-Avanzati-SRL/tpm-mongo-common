@@ -152,6 +152,47 @@ func (ca *Criteria) AndStatusIn(p []string) *Criteria {
 // @tpm-schematics:end-region("status-field-filter-section")
 
 /*
+ * filter-string template: ambit
+ */
+
+// AndAmbitEqTo No Remarks
+func (ca *Criteria) AndAmbitEqTo(p string) *Criteria {
+
+	if p == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(AmbitFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: p} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// AndAmbitIsNullOrUnset No Remarks
+func (ca *Criteria) AndAmbitIsNullOrUnset() *Criteria {
+
+	mName := fmt.Sprintf(AmbitFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndAmbitIn(p []string) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(AmbitFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("ambit-field-filter-section")
+// @tpm-schematics:end-region("ambit-field-filter-section")
+
+/*
  * filter-string template: data_source_type
  */
 

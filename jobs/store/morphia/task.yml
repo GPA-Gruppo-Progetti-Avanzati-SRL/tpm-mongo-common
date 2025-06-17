@@ -9,6 +9,9 @@ attributes:
   - name: status
     type: string
     options: with-filter
+  - name: ambit
+    type: string
+    options: with-filter
   - name: data_source_type
     type: string
     options: with-filter

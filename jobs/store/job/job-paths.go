@@ -10,7 +10,7 @@ package job
 const (
 	BidFieldName           = "_bid"
 	EtFieldName            = "_et"
-	TypFieldName           = "typ"
+	AmbitFieldName         = "ambit"
 	StatusFieldName        = "status"
 	InfoFieldName          = "info"
 	Info_ReservedFieldName = "info.reserved"

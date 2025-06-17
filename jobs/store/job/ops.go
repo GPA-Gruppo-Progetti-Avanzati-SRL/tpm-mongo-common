@@ -32,9 +32,9 @@ func FindJobsByTypeAndStatus(coll *mongo.Collection, types []string, status stri
 
 	f := Filter{}
 	ca := f.Or().AndEtEqTo(EType).AndStatusEqTo(status)
-	if len(types) > 1 || len(types) == 1 && types[0] != TypeAny {
+	if len(types) > 1 || len(types) == 1 && types[0] != AmbitAny {
 		log.Info().Str("types", strings.Join(types, ",")).Msg(semLogContext + " - filtering by types")
-		ca.AndTypIn(types)
+		ca.AndAmbitIn(types)
 	} else {
 		log.Info().Str("types", strings.Join(types, ",")).Msg(semLogContext + " - accepting all job types")
 	}

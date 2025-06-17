@@ -11,6 +11,7 @@ const (
 	BidFieldName                = "_bid"
 	EtFieldName                 = "_et"
 	StatusFieldName             = "status"
+	AmbitFieldName              = "ambit"
 	DataSourceTypeFieldName     = "data_source_type"
 	StreamTypeFieldName         = "stream_type"
 	ProcessorIdFieldName        = "processor_id"

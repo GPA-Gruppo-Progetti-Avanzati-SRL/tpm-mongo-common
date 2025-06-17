@@ -108,7 +108,7 @@ func populateJobs() error {
 		Bid:    jobBid,
 		Et:     job.EType,
 		Status: job.StatusAvailable,
-		Typ:    job.TypeAny,
+		Ambit:  job.AmbitAny,
 		Info:   beans.JobInfo{},
 		Tasks: []beans.TaskReference{
 			{

@@ -111,45 +111,45 @@ func (ca *Criteria) AndEtIn(p []string) *Criteria {
 // @tpm-schematics:end-region("-et-field-filter-section")
 
 /*
- * filter-string template: typ
+ * filter-string template: ambit
  */
 
-// AndTypEqTo No Remarks
-func (ca *Criteria) AndTypEqTo(p string) *Criteria {
+// AndAmbitEqTo No Remarks
+func (ca *Criteria) AndAmbitEqTo(p string) *Criteria {
 
 	if p == "" {
 		return ca
 	}
 
-	mName := fmt.Sprintf(TypFieldName)
+	mName := fmt.Sprintf(AmbitFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: p} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// AndTypIsNullOrUnset No Remarks
-func (ca *Criteria) AndTypIsNullOrUnset() *Criteria {
+// AndAmbitIsNullOrUnset No Remarks
+func (ca *Criteria) AndAmbitIsNullOrUnset() *Criteria {
 
-	mName := fmt.Sprintf(TypFieldName)
+	mName := fmt.Sprintf(AmbitFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-func (ca *Criteria) AndTypIn(p []string) *Criteria {
+func (ca *Criteria) AndAmbitIn(p []string) *Criteria {
 
 	if len(p) == 0 {
 		return ca
 	}
 
-	mName := fmt.Sprintf(TypFieldName)
+	mName := fmt.Sprintf(AmbitFieldName)
 	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
 	*ca = append(*ca, c)
 	return ca
 }
 
-// @tpm-schematics:start-region("typ-field-filter-section")
-// @tpm-schematics:end-region("typ-field-filter-section")
+// @tpm-schematics:start-region("ambit-field-filter-section")
+// @tpm-schematics:end-region("ambit-field-filter-section")
 
 /*
  * filter-string template: status

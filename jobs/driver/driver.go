@@ -19,11 +19,12 @@ import (
 type Driver struct {
 	cfg *Config
 
-	jobsColl    *mongo.Collection
-	wg          *sync.WaitGroup
-	workersWg   *sync.WaitGroup
-	workersDone chan struct{}
-	quitc       chan struct{}
+	numIterations int
+	jobsColl      *mongo.Collection
+	wg            *sync.WaitGroup
+	workersWg     *sync.WaitGroup
+	workersDone   chan struct{}
+	quitc         chan struct{}
 
 	shutdownChannel chan error // channel used to quit the application. triggered when driver wants to exit.
 }
@@ -77,7 +78,7 @@ func (m *Driver) workLoop() {
 	hasTasks := len(startedTasks) > 0
 	log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
-	if !hasTasks && m.ExitOnNoTasks() {
+	if !hasTasks && m.cfg.ExitOnIdle {
 		log.Info().Msg(semLogContext + " no tasks available... exiting")
 		m.wg.Done()
 		if m.shutdownChannel != nil {
@@ -86,6 +87,7 @@ func (m *Driver) workLoop() {
 		return
 	}
 
+	m.numIterations++
 	ticker := time.NewTicker(m.cfg.TickInterval)
 	log.Info().Float64("tick-interval-ss", m.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting scheduler loop")
 
@@ -95,7 +97,7 @@ func (m *Driver) workLoop() {
 		select {
 		case <-ticker.C:
 			log.Info().Msg(semLogContext + " tick")
-			if !hasTasks && m.ExitOnNoTasks() {
+			if !hasTasks && m.cfg.ExitOnIdle {
 				log.Info().Msg(semLogContext + " no tasks available... exiting")
 				terminate = true
 			}
@@ -109,10 +111,18 @@ func (m *Driver) workLoop() {
 				terminate = true
 			}
 
-			hasTasks = false
-			if m.ExitOnNoTasks() {
-				log.Info().Msg(semLogContext + " no tasks available... exiting")
+			if m.cfg.ExitAfterMaxIterations > 0 && m.numIterations == m.cfg.ExitAfterMaxIterations {
+				log.Info().Msg(semLogContext + " max-iterations reached... exiting")
 				terminate = true
+			} else {
+				startedTasks = m.findAndStartTasks()
+				hasTasks = len(startedTasks) > 0
+				log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
+
+				if !hasTasks && m.cfg.ExitOnIdle {
+					log.Info().Msg(semLogContext + " no tasks available... exiting")
+					terminate = true
+				}
 			}
 		case <-m.quitc:
 			log.Info().Msg(semLogContext + " quit")
@@ -126,10 +136,6 @@ func (m *Driver) workLoop() {
 
 	m.wg.Done()
 	log.Info().Msg(semLogContext + " - exiting from scheduler loop")
-}
-
-func (m *Driver) ExitOnNoTasks() bool {
-	return true
 }
 
 func (m *Driver) findAndStartTasks() []beans.TaskReference {
@@ -185,7 +191,7 @@ func (m *Driver) startTasks(jobsColl *mongo.Collection, tasks []task.Task, worke
 
 		var prc worker.Config
 		var ok bool
-		if tsk.ProcessorId == task.TypeAny {
+		if tsk.ProcessorId == task.ProcessorIdAny {
 			prc = workersConfigs[0]
 			ok = true
 		} else {

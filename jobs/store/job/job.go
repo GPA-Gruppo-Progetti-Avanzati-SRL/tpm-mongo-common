@@ -6,7 +6,7 @@ import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/
 
 const (
 	EType           = "job"
-	TypeAny         = "any"
+	AmbitAny        = "any"
 	StatusAvailable = "available"
 	StatusDone      = "done"
 )
@@ -16,7 +16,7 @@ const (
 type Job struct {
 	Bid    string                `json:"_bid,omitempty" bson:"_bid,omitempty" yaml:"_bid,omitempty"`
 	Et     string                `json:"_et,omitempty" bson:"_et,omitempty" yaml:"_et,omitempty"`
-	Typ    string                `json:"typ,omitempty" bson:"typ,omitempty" yaml:"typ,omitempty"`
+	Ambit  string                `json:"ambit,omitempty" bson:"ambit,omitempty" yaml:"ambit,omitempty"`
 	Status string                `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
 	Info   beans.JobInfo         `json:"info,omitempty" bson:"info,omitempty" yaml:"info,omitempty"`
 	Tasks  []beans.TaskReference `json:"tasks,omitempty" bson:"tasks,omitempty" yaml:"tasks,omitempty"`
@@ -26,7 +26,7 @@ type Job struct {
 }
 
 func (s Job) IsZero() bool {
-	return s.Bid == "" && s.Et == "" && s.Typ == "" && s.Status == "" && s.Info.IsZero() && len(s.Tasks) == 0
+	return s.Bid == "" && s.Et == "" && s.Ambit == "" && s.Status == "" && s.Info.IsZero() && len(s.Tasks) == 0
 }
 
 // @tpm-schematics:start-region("bottom-file-section")

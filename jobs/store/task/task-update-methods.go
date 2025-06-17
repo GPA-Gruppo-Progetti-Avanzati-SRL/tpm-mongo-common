@@ -33,6 +33,7 @@ type UnsetOptions struct {
 	Bid            UnsetMode
 	Et             UnsetMode
 	Status         UnsetMode
+	Ambit          UnsetMode
 	DataSourceType UnsetMode
 	StreamType     UnsetMode
 	ProcessorId    UnsetMode
@@ -67,6 +68,11 @@ func WithEtUnsetMode(m UnsetMode) UnsetOption {
 func WithStatusUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.Status = m
+	}
+}
+func WithAmbitUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Ambit = m
 	}
 }
 func WithDataSourceTypeUnsetMode(m UnsetMode) UnsetOption {
@@ -128,6 +134,7 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
+	ud.setOrUnsetAmbit(obj.Ambit, uo.ResolveUnsetMode(uo.Ambit))
 	ud.setOrUnsetData_source_type(obj.DataSourceType, uo.ResolveUnsetMode(uo.DataSourceType))
 	ud.setOrUnsetStream_type(obj.StreamType, uo.ResolveUnsetMode(uo.StreamType))
 	ud.setOrUnsetProcessor_id(obj.ProcessorId, uo.ResolveUnsetMode(uo.ProcessorId))
@@ -275,6 +282,52 @@ func UpdateWithStatus(p string) UpdateOption {
 
 // @tpm-schematics:start-region("status-field-update-section")
 // @tpm-schematics:end-region("status-field-update-section")
+
+// SetAmbit No Remarks
+func (ud *UpdateDocument) SetAmbit(p string) *UpdateDocument {
+	mName := fmt.Sprintf(AmbitFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetAmbit No Remarks
+func (ud *UpdateDocument) UnsetAmbit() *UpdateDocument {
+	mName := fmt.Sprintf(AmbitFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetAmbit No Remarks
+func (ud *UpdateDocument) setOrUnsetAmbit(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetAmbit(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetAmbit()
+		case SetData2Default:
+			ud.UnsetAmbit()
+		}
+	}
+}
+
+func UpdateWithAmbit(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetAmbit(p)
+		} else {
+			ud.UnsetAmbit()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("ambit-field-update-section")
+// @tpm-schematics:end-region("ambit-field-update-section")
 
 // SetData_source_type No Remarks
 func (ud *UpdateDocument) SetData_source_type(p string) *UpdateDocument {
