@@ -97,9 +97,19 @@ func (m *Driver) workLoop() {
 		select {
 		case <-ticker.C:
 			log.Info().Msg(semLogContext + " tick")
-			if !hasTasks && m.cfg.ExitOnIdle {
-				log.Info().Msg(semLogContext + " no tasks available... exiting")
-				terminate = true
+			if !hasTasks {
+				if m.cfg.ExitOnIdle {
+					log.Info().Msg(semLogContext + " no tasks available... exiting")
+					terminate = true
+				}
+
+				startedTasks = m.findAndStartTasks()
+				hasTasks = len(startedTasks) > 0
+				log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
+
+				if hasTasks {
+					m.numIterations++
+				}
 			}
 
 		case <-m.workersDone:
@@ -119,7 +129,9 @@ func (m *Driver) workLoop() {
 				hasTasks = len(startedTasks) > 0
 				log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
-				if !hasTasks && m.cfg.ExitOnIdle {
+				if hasTasks {
+					m.numIterations++
+				} else if m.cfg.ExitOnIdle {
 					log.Info().Msg(semLogContext + " no tasks available... exiting")
 					terminate = true
 				}
