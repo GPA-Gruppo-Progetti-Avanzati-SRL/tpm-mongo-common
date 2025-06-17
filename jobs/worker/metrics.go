@@ -3,7 +3,8 @@ package worker
 import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 
 const (
-	MetricLabelName       = "name"
+	MetricLabelName = "name"
+
 	MetricBatchErrors     = "wrk-batch-errors"
 	MetricBatches         = "wrk-batches"
 	MetricBatchSize       = "wrk-batch-size"

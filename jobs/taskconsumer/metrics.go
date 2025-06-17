@@ -3,8 +3,10 @@ package taskconsumer
 import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 
 const (
-	MetricLabelName = "name"
-	MetricNumEvents = "qmdb-events"
+	MetricLabelName           = "name"
+	MetricLabelDataSourceType = "ds"
+	MetricLabelNumPartition   = "num-partition"
+	MetricNumEvents           = "ds-events"
 )
 
 type Metrics struct {
@@ -33,7 +35,8 @@ func NewMetrics(whatcherId, metricGroupId string) *Metrics {
 		return stat
 	} else {
 		stat.NumEventsCounterMetric, err = mg.CollectorByIdWithLabels(MetricNumEvents, map[string]string{
-			MetricLabelName: whatcherId,
+			MetricLabelName:           whatcherId,
+			MetricLabelDataSourceType: "mongo",
 		})
 		if err != nil {
 			stat.metricErrors = true
