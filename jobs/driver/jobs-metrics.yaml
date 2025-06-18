@@ -1,0 +1,91 @@
+namespace: tmp_mongo_common
+subsystem: jobs
+collectors:
+  # data source metrics
+  - help: numero eventi lavorati dal consumer
+    id: ds-events
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+      - default-value: N/A
+        id: ds
+        name: ds
+    name: ds_events
+    type: counter
+  - help: numero errori
+    id: ds-event-errors
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: ds_event_errors
+    type: counter
+  # Worker metrics
+  - help: numero eventi lavorati dal worker
+    id: wrk-events
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: wrk_events
+    type: counter
+  - help: numero errori worker
+    id: wrk-event-errors
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: wrk_event_errors
+    type: counter
+  - buckets:
+      count: 10
+      start: 0.5
+      type: linear
+      width-factor: 0.5
+    help: durata lavorazione
+    id: wrk-event-duration
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: wrk_event_duration
+    type: histogram
+  - help: numero batch
+    id: wrk-batches
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: wrk_batches
+    type: counter
+  - help: dimensione batch
+    id: wrk-batch-size
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: wrk_batch_size
+    type: gauge
+  - help: numero errori batch
+    id: wrk-batch-errors
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: wrk_batch_errors
+    type: counter
+  - buckets:
+      count: 10
+      start: 0.5
+      type: linear
+      width-factor: 0.5
+    help: durata lavorazione
+    id: wrk-batch-duration
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+    name: wrk_batch_duration
+    type: histogram
+

@@ -33,6 +33,10 @@ func (lks *LinkedService) Name() string {
 	return lks.cfg.Name
 }
 
+func (lks *LinkedService) Db() *mongo.Database {
+	return lks.db
+}
+
 func (lks *LinkedService) IsConnected() bool {
 	return lks.mongoClient != nil
 }
@@ -46,11 +50,11 @@ func NewLinkedServiceWithConfig(cfg Config) (*LinkedService, error) {
 	return &lks, nil
 }
 
-func (mdb *LinkedService) Connect(ctx context.Context) error {
+func (lks *LinkedService) Connect(ctx context.Context) error {
 
 	const semLogContext = "mongo-lks::connect"
 
-	mongoOptions := mdb.cfg.getOptions(nil)
+	mongoOptions := lks.cfg.getOptions(nil)
 
 	/*
 		var mongoOptions = options.Client().ApplyURI(mdb.cfg.Host).
@@ -61,8 +65,8 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 	*/
 
 	connTimeout := 10 * time.Second
-	if mdb.cfg.Pool.ConnectTimeout > 0 {
-		connTimeout = mdb.cfg.Pool.ConnectTimeout
+	if lks.cfg.Pool.ConnectTimeout > 0 {
+		connTimeout = lks.cfg.Pool.ConnectTimeout
 	}
 	log.Trace().Dur("connect-timeout", connTimeout).Msg(semLogContext)
 
@@ -93,16 +97,16 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 		return err
 	}
 
-	mdb.mongoClient = client
-	mdb.db = client.Database(mdb.cfg.DbName)
-	mdb.writeConcern = EvalWriteConcern(mdb.cfg.WriteConcern)
-	mdb.writeTimeout = DefaultWriteTimeout
+	lks.mongoClient = client
+	lks.db = client.Database(lks.cfg.DbName)
+	lks.writeConcern = EvalWriteConcern(lks.cfg.WriteConcern)
+	lks.writeTimeout = DefaultWriteTimeout
 
 	//if mdb.cfg.WriteTimeout != "" {
 	//	mdb.writeTimeout = util.ParseDuration(mdb.cfg.WriteTimeout, DefaultWriteTimeout)
 	//}
 
-	mdb.version, err = mdb.ServerVersion()
+	lks.version, err = lks.ServerVersion()
 	if err != nil {
 		return err
 	}
@@ -118,16 +122,16 @@ func (mdb *LinkedService) Connect(ctx context.Context) error {
 	return nil
 }
 
-func (mdb *LinkedService) ServerVersion() (mongoUtil.MongoDbVersion, error) {
+func (lks *LinkedService) ServerVersion() (mongoUtil.MongoDbVersion, error) {
 	const semLogContext = "mongo-lks::version"
 
-	if !mdb.version.IsZero() {
-		return mdb.version, nil
+	if !lks.version.IsZero() {
+		return lks.version, nil
 	}
 
 	buildInfoCmd := bson.D{bson.E{Key: "buildInfo", Value: 1}}
 	var buildInfoDoc bson.M
-	if err := mdb.db.RunCommand(context.Background(), buildInfoCmd).Decode(&buildInfoDoc); err != nil {
+	if err := lks.db.RunCommand(context.Background(), buildInfoCmd).Decode(&buildInfoDoc); err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return mongoUtil.MongoDbVersion{}, err
 	}
@@ -137,22 +141,22 @@ func (mdb *LinkedService) ServerVersion() (mongoUtil.MongoDbVersion, error) {
 	return mongoUtil.NewMongoDbVersion(v), nil
 }
 
-func (m *LinkedService) Disconnect(ctx context.Context) {
-	if m.mongoClient != nil {
-		defer m.mongoClient.Disconnect(ctx)
+func (lks *LinkedService) Disconnect(ctx context.Context) {
+	if lks.mongoClient != nil {
+		defer lks.mongoClient.Disconnect(ctx)
 	}
 }
 
-func (m *LinkedService) GetCollection(aCollectionId string, wcStr string) *mongo.Collection {
+func (lks *LinkedService) GetCollection(aCollectionId string, wcStr string) *mongo.Collection {
 
-	w := m.writeConcern
+	w := lks.writeConcern
 	if wcStr != "" {
 		w = EvalWriteConcern(wcStr)
 	}
 
-	for _, c := range m.cfg.Collections {
+	for _, c := range lks.cfg.Collections {
 		if c.Id == aCollectionId {
-			return m.db.Collection(c.Name, &options.CollectionOptions{WriteConcern: w})
+			return lks.db.Collection(c.Name, &options.CollectionOptions{WriteConcern: w})
 		}
 	}
 
