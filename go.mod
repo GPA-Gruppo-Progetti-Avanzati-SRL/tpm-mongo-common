@@ -5,13 +5,13 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.77
+	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.81
 	github.com/feliixx/mongoextjson v1.2.0
 	github.com/globocom/mongo-go-prometheus v0.1.1
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.10.0
-	go.mongodb.org/mongo-driver v1.17.3
+	go.mongodb.org/mongo-driver v1.17.4
 	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo v0.61.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/metric v1.36.0
