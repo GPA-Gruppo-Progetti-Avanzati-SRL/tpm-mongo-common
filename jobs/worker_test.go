@@ -33,7 +33,7 @@ func TestNewWorkerMessage(t *testing.T) {
 
 	wrkCfg := worker.Config{
 		Name:          "my-worker",
-		WorkMode:      worker.WorkModeMsg,
+		WorkMode:      worker.WorkModeOnEvent,
 		OnErrorPolicy: worker.OnErrorContinue,
 		Consumer: taskconsumer.Config{
 			Id:               "my-worker-consumer",
@@ -76,7 +76,7 @@ func TestScheduler(t *testing.T) {
 		WorkersConfig: []worker.Config{
 			{
 				Name:          "my-worker",
-				WorkMode:      worker.WorkModeMsg,
+				WorkMode:      worker.WorkModeOnEvent,
 				OnErrorPolicy: worker.OnErrorContinue,
 				Consumer: taskconsumer.Config{
 					Id:               "my-worker-consumer",
@@ -113,7 +113,7 @@ func TestNewWorkerBatch(t *testing.T) {
 
 	wrkCfg := worker.Config{
 		Name:          "my-worker",
-		WorkMode:      worker.WorkModeBatch,
+		WorkMode:      worker.WorkModeOnEvents,
 		OnErrorPolicy: worker.OnErrorContinue,
 		Consumer: taskconsumer.Config{
 			Id:               "my-worker-consumer",

@@ -13,8 +13,8 @@ const (
 	OnErrorExit     = "exit"
 	OnErrorContinue = "continue"
 
-	WorkModeMsg   = "msg-mode"
-	WorkModeBatch = "batch-mode"
+	WorkModeOnEvent  = "on-event-mode"
+	WorkModeOnEvents = "on-events-mode"
 )
 
 type ServerConfig struct {

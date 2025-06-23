@@ -50,8 +50,8 @@ type Worker struct {
 func NewWorker(jobsCollection *mongo.Collection, task task.Task, cfg *Config, wg *sync.WaitGroup) (*Worker, error) {
 	const semLogContext = "worker-factory::new"
 
-	if cfg.WorkMode != WorkModeBatch {
-		cfg.WorkMode = WorkModeMsg
+	if cfg.WorkMode != WorkModeOnEvents {
+		cfg.WorkMode = WorkModeOnEvent
 	}
 
 	t := Worker{
@@ -68,9 +68,9 @@ func NewWorker(jobsCollection *mongo.Collection, task task.Task, cfg *Config, wg
 		log.Error().Err(err).Msg(semLogContext)
 
 		switch cfg.WorkMode {
-		case WorkModeBatch:
+		case WorkModeOnEvents:
 			t.processor = &BatchDummyProcessor{}
-		case WorkModeMsg:
+		case WorkModeOnEvent:
 			t.processor = &MessageDummyProcessor{}
 		default:
 			err := errors.New("unknown work mode")
@@ -91,7 +91,7 @@ func NewWorker(jobsCollection *mongo.Collection, task task.Task, cfg *Config, wg
 		cfg.TickInterval = time.Second
 	}
 
-	if cfg.WorkMode == WorkModeBatch {
+	if cfg.WorkMode == WorkModeOnEvents {
 		if cfg.MaxBatchSize <= 0 {
 			cfg.MaxBatchSize = 100
 		}
@@ -221,7 +221,7 @@ func (tp *Worker) PollLoop() {
 			//
 			//} else {
 			//	tp.numberOfMessages++
-			//	if tp.Cfg.WorkMode == WorkModeBatch && tp.batchOfEvents.Size() == tp.Cfg.MaxBatchSize {
+			//	if tp.Cfg.WorkMode == WorkModeOnEvents && tp.batchOfEvents.Size() == tp.Cfg.MaxBatchSize {
 			//		err = tp.processBatch(context.Background())
 			//	}
 			//
@@ -248,33 +248,32 @@ func (tp *Worker) pollAndProcess() (string, error) {
 	case datasource.EventTypeError:
 	case datasource.EventTypeEof:
 		switch tp.Cfg.WorkMode {
-		case WorkModeBatch:
+		case WorkModeOnEvents:
 			if tp.batchOfEvents.Size() > 0 {
 				err = tp.processBatch(context.Background())
 			}
-		case WorkModeMsg:
+		case WorkModeOnEvent:
 			_, err = tp.processor.OnEofEvent()
 		}
 	case datasource.EventTypeEofPartition:
 		switch tp.Cfg.WorkMode {
-		case WorkModeBatch:
+		case WorkModeOnEvents:
 			if tp.batchOfEvents.Size() > 0 {
 				err = tp.processBatch(context.Background())
 			}
-		case WorkModeMsg:
+		case WorkModeOnEvent:
 			_, err = tp.processor.OnEofPartitionEvent()
 		}
 	case datasource.EventTypeDocument:
 		switch tp.Cfg.WorkMode {
-		case WorkModeBatch:
+		case WorkModeOnEvents:
 			tp.numberOfMessages++
 			tp.batchOfEvents.Add(evt)
-			tp.statsInfo.IncMessages()
 			if tp.batchOfEvents.Size() == tp.Cfg.MaxBatchSize {
 				err = tp.processBatch(context.Background())
 			}
 
-		case WorkModeMsg:
+		case WorkModeOnEvent:
 			err = tp.processMessage(evt)
 		}
 	}
@@ -336,7 +335,7 @@ func (tp *Worker) poll() (datasource.Event, error) {
 //	}
 //
 //	switch tp.Cfg.WorkMode {
-//	case WorkModeBatch:
+//	case WorkModeOnEvents:
 //		tp.numberOfMessages++
 //		tp.batchOfEvents.Add(ev)
 //		tp.statsInfo.IncMessages()
@@ -373,14 +372,14 @@ func (tp *Worker) processBatch(ctx context.Context) error {
 		return err
 	}
 
-	switch resp {
+	switch resp.Status {
 	case OnEventResponseProcessed:
 		tp.statsInfo.IncBatches()
 		tp.statsInfo.SetBatchDuration(time.Since(beginOfProcessing).Seconds())
 		err = tp.consumer.Commit(true)
 	case OnEventResponseDeferred:
 	default:
-		log.Error().Int("on-events-response", int(resp)).Msg(semLogContext)
+		log.Error().Int("on-events-response", int(resp.Status)).Msg(semLogContext)
 	}
 
 	return err
@@ -392,6 +391,7 @@ func (tp *Worker) processMessage(e datasource.Event) error {
 	var err error
 
 	beginOfProcessing := time.Now()
+	tp.statsInfo.SetBatchSize(1)
 
 	spanName := tp.Cfg.Tracing.SpanName
 	if spanName == "" {
@@ -401,7 +401,7 @@ func (tp *Worker) processMessage(e datasource.Event) error {
 	resp, err := tp.processor.OnEvent(e)
 	if err != nil {
 		log.Error().Err(err).Str("name", tp.Cfg.Name).Msg(semLogContext + " error processing message")
-		tp.statsInfo.IncMessageErrors()
+		tp.statsInfo.IncBatchErrors()
 		err1 := tp.consumer.AbortPartial(datasource.NoEvent)
 		if err1 != nil {
 			log.Error().Err(err1).Msg(semLogContext)
@@ -410,9 +410,9 @@ func (tp *Worker) processMessage(e datasource.Event) error {
 		return err
 	}
 
-	switch resp {
+	switch resp.Status {
 	case OnEventResponseProcessed:
-		tp.statsInfo.IncMessages()
+		tp.statsInfo.IncBatches()
 		tp.statsInfo.SetBatchDuration(time.Since(beginOfProcessing).Seconds())
 		tp.numberOfMessages++
 		err = tp.consumer.Commit(false)

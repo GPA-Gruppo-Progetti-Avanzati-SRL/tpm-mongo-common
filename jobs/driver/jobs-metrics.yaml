@@ -22,21 +22,22 @@ collectors:
     name: ds_event_errors
     type: counter
   # Worker metrics
-  - help: numero eventi lavorati dal worker
-    id: wrk-events
-    labels:
-      - default-value: N/A
-        id: name
-        name: name
+  - id: wrk-events
     name: wrk_events
     type: counter
+    help: numero eventi lavorati dal worker
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+
   - help: numero errori worker
-    id: wrk-event-errors
+    id: wrk-process-errors
     labels:
       - default-value: N/A
         id: name
         name: name
-    name: wrk_event_errors
+    name: wrk_process_errors
     type: counter
   - buckets:
       count: 10
@@ -44,48 +45,49 @@ collectors:
       type: linear
       width-factor: 0.5
     help: durata lavorazione
-    id: wrk-event-duration
+    id: wrk-process-duration
     labels:
       - default-value: N/A
         id: name
         name: name
-    name: wrk_event_duration
+    name: wrk_process_duration
     type: histogram
-  - help: numero batch
-    id: wrk-batches
-    labels:
-      - default-value: N/A
-        id: name
-        name: name
-    name: wrk_batches
+  - id: wrk-process-groups
+    name: wrk_process_groups
     type: counter
-  - help: dimensione batch
-    id: wrk-batch-size
+    help: numero batch
     labels:
       - default-value: N/A
         id: name
         name: name
-    name: wrk_batch_size
+  - name: wrk_process_size
     type: gauge
-  - help: numero errori batch
-    id: wrk-batch-errors
+    id: wrk-process-size
+    help: dimensione batch
     labels:
       - default-value: N/A
         id: name
         name: name
-    name: wrk_batch_errors
+  - id: wrk-process-errors
+    name: wrk_process_errors
     type: counter
-  - buckets:
+    help: numero errori batch
+    labels:
+      - default-value: N/A
+        id: name
+        name: name
+  - id: wrk-process-duration
+    name: wrk_process_duration
+    type: histogram
+    buckets:
       count: 10
       start: 0.5
       type: linear
       width-factor: 0.5
     help: durata lavorazione
-    id: wrk-batch-duration
     labels:
       - default-value: N/A
         id: name
         name: name
-    name: wrk_batch_duration
-    type: histogram
+
 

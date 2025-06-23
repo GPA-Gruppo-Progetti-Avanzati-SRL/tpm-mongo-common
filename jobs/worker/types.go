@@ -22,15 +22,16 @@ type DeferredCbEvent struct {
 }
 
 type OnEventResponse struct {
-	Status int
+	Status         OnEventResponseStatus
+	NumberOfEvents int
 }
 
 type Processor interface {
-	OnEvent(evt datasource.Event) (OnEventResponseStatus, error)
-	OnEvents(evt []datasource.Event) (OnEventResponseStatus, error)
-	OnTickEvent() (OnEventResponseStatus, error)
-	OnEofEvent() (OnEventResponseStatus, error)
-	OnEofPartitionEvent() (OnEventResponseStatus, error)
+	OnEvent(evt datasource.Event) (OnEventResponse, error)
+	OnEvents(evt []datasource.Event) (OnEventResponse, error)
+	OnTickEvent() (OnEventResponse, error)
+	OnEofEvent() (OnEventResponse, error)
+	OnEofPartitionEvent() (OnEventResponse, error)
 	NumberOfQueuedEvents() int
 
 	Start() error
@@ -44,27 +45,27 @@ type Processor interface {
 type UnimplementedProcessor struct {
 }
 
-func (w *UnimplementedProcessor) OnEvent(evt datasource.Event) (OnEventResponseStatus, error) {
+func (w *UnimplementedProcessor) OnEvent(evt datasource.Event) (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-event"
 	panic(semLogContext + " - implement me")
 }
 
-func (w *UnimplementedProcessor) OnEvents(evt []datasource.Event) (OnEventResponseStatus, error) {
+func (w *UnimplementedProcessor) OnEvents(evt []datasource.Event) (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-events"
 	panic(semLogContext + " - implement me")
 }
 
-func (w *UnimplementedProcessor) OnTickEvent() (OnEventResponseStatus, error) {
+func (w *UnimplementedProcessor) OnTickEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-tick-event"
 	panic(semLogContext + " - implement me")
 }
 
-func (w *UnimplementedProcessor) OnEofEvent() (OnEventResponseStatus, error) {
+func (w *UnimplementedProcessor) OnEofEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-eof-event"
 	panic(semLogContext + " - implement me")
 }
 
-func (w *UnimplementedProcessor) OnEofPartitionEvent() (OnEventResponseStatus, error) {
+func (w *UnimplementedProcessor) OnEofPartitionEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-eof-partition-event"
 	panic(semLogContext + " - implement me")
 }
@@ -109,7 +110,7 @@ type MessageDummyProcessor struct {
 	numEvts      int
 }
 
-func (w *MessageDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponseStatus, error) {
+func (w *MessageDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-event"
 	log.Info().Msg(semLogContext)
 	w.numEvts++
@@ -117,30 +118,30 @@ func (w *MessageDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponseSt
 		err := errors.New("error condition materialized")
 		log.Error().Err(err).Msg(semLogContext)
 		w.numEvts = 0
-		return OnEventResponseUndefined, err
+		return OnEventResponse{Status: OnEventResponseUndefined}, err
 	} else {
 		log.Trace().Int("num-doc-events", w.numEvts).Msg(semLogContext)
 	}
 
-	return OnEventResponseProcessed, nil
+	return OnEventResponse{Status: OnEventResponseProcessed, NumberOfEvents: 1}, nil
 }
 
-func (w *MessageDummyProcessor) OnTickEvent() (OnEventResponseStatus, error) {
+func (w *MessageDummyProcessor) OnTickEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-tick-event"
 	log.Info().Msg(semLogContext)
-	return OnEventResponseSkipped, nil
+	return OnEventResponse{Status: OnEventResponseSkipped}, nil
 }
 
-func (w *MessageDummyProcessor) OnEofEvent() (OnEventResponseStatus, error) {
+func (w *MessageDummyProcessor) OnEofEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-eof-event"
 	log.Info().Msg(semLogContext)
-	return OnEventResponseSkipped, nil
+	return OnEventResponse{Status: OnEventResponseSkipped}, nil
 }
 
-func (w *MessageDummyProcessor) OnEofPartitionEvent() (OnEventResponseStatus, error) {
+func (w *MessageDummyProcessor) OnEofPartitionEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-eof-partition-event"
 	log.Info().Msg(semLogContext)
-	return OnEventResponseSkipped, nil
+	return OnEventResponse{Status: OnEventResponseSkipped}, nil
 }
 
 type BatchDummyProcessor struct {
@@ -149,36 +150,36 @@ type BatchDummyProcessor struct {
 	numEvts      int
 }
 
-func (w *BatchDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponseStatus, error) {
+func (w *BatchDummyProcessor) OnEvent(evt datasource.Event) (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-event"
 	panic(semLogContext + " - implement me")
 }
 
-func (w *BatchDummyProcessor) OnTickEvent() (OnEventResponseStatus, error) {
+func (w *BatchDummyProcessor) OnTickEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-tick-event"
 	log.Info().Msg(semLogContext)
-	return OnEventResponseSkipped, nil
+	return OnEventResponse{Status: OnEventResponseSkipped}, nil
 }
 
-func (w *BatchDummyProcessor) OnEofEvent() (OnEventResponseStatus, error) {
+func (w *BatchDummyProcessor) OnEofEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-eof-event"
 	log.Info().Msg(semLogContext)
-	return OnEventResponseSkipped, nil
+	return OnEventResponse{Status: OnEventResponseSkipped}, nil
 }
 
-func (w *BatchDummyProcessor) OnEofPartitionEvent() (OnEventResponseStatus, error) {
+func (w *BatchDummyProcessor) OnEofPartitionEvent() (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-eof-partition-event"
 	log.Info().Msg(semLogContext)
-	return OnEventResponseSkipped, nil
+	return OnEventResponse{Status: OnEventResponseSkipped}, nil
 }
 
-func (w *BatchDummyProcessor) OnEvents(evt []datasource.Event) (OnEventResponseStatus, error) {
+func (w *BatchDummyProcessor) OnEvents(evt []datasource.Event) (OnEventResponse, error) {
 	const semLogContext = "worker-processor::on-events"
 	log.Info().Msg(semLogContext)
 	w.numEvts += len(evt)
 	if (w.numEvts%w.ErrorsStride) == 0 && w.ErrorsStride > 0 {
-		return OnEventResponseUndefined, errors.New("error condition materialized")
+		return OnEventResponse{Status: OnEventResponseUndefined}, errors.New("error condition materialized")
 	}
 
-	return OnEventResponseProcessed, nil
+	return OnEventResponse{Status: OnEventResponseProcessed, NumberOfEvents: len(evt)}, nil
 }

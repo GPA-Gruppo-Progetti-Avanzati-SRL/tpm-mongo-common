@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"os"
 	"testing"
+	"time"
 )
 
 const (
@@ -56,8 +57,8 @@ var cfg = mongolks.Config{
 		MinConn: 1,
 		MaxConn: 20,
 		//MaxWaitQueueSize:      1000,
-		ConnectTimeout:        1000,
-		MaxConnectionIdleTime: 30000,
+		ConnectTimeout:        1 * time.Second,
+		MaxConnectionIdleTime: 30 * time.Second,
 		//MaxConnectionLifeTime: 6000000,
 	},
 	//BulkWriteOrdered: true,
