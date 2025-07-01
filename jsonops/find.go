@@ -206,12 +206,17 @@ func newFindOptions(opts []byte) (options.FindOptions, error) {
 			return fo, err
 		}
 
-		if upsert, ok := m["limit"]; ok {
-			if b, ok := upsert.(int); ok {
-				fo.SetLimit(int64(b))
-			} else {
-				err = errors.New("unrecognized upsert flag")
-				log.Error().Msg(semLogContext)
+		if limitOpt, ok := m["limit"]; ok {
+			switch limitValue := limitOpt.(type) {
+			case float64:
+				fo.SetLimit(int64(limitValue))
+				log.Trace().Float64("float-limit", limitValue).Msg(semLogContext)
+			case int:
+				fo.SetLimit(int64(limitValue))
+				log.Trace().Int("int-limit", limitValue).Msg(semLogContext)
+			default:
+				err = errors.New("unrecognized limit value")
+				log.Error().Err(err).Str("param-type", fmt.Sprintf("%T", limitOpt)).Msg(semLogContext)
 			}
 		}
 	}
