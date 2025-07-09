@@ -38,6 +38,7 @@ func (poolMetric *poolMetric) getPoolMonitor() *event.PoolMonitor {
 
 	return &event.PoolMonitor{
 		Event: func(e *event.PoolEvent) {
+			const semLogContext = "mongo-lks::pool-monitor-event"
 			//log.Debug().Str("type", e.Type).Str("duration", e.Duration.String()).Str("address", e.Address).Str("id", fmt.Sprint(e.ConnectionID)).Msg("event from mongo pool")
 
 			attributes := attribute.String("address", e.Address)
@@ -88,9 +89,8 @@ func (poolMetric *poolMetric) getPoolMonitor() *event.PoolMonitor {
 				// ConnectionCheckOutStarted -> ConnectionCheckOutFailed quindi non serve se ascoltiamo ConnectionCheckedOut e ConnectionCheckedIn
 				//poolMetric.UsedConnection.Add(context.Background(), -1, metric.WithAttributeSet(attributesSet))
 
-				log.Error().Msg("Mongo Get Failed")
+				log.Error().Str("event", e.Type).Msg(semLogContext)
 				break
-
 			}
 		},
 	}
