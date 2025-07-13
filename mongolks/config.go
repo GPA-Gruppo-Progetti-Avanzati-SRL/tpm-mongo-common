@@ -148,7 +148,7 @@ func (cfg *Config) getAuthOptions(opts *options.ClientOptions) *options.ClientOp
 	 * Simple User/password authentication
 	 */
 	if cfg.User != "" {
-		authMechanism := DefaultAuthMechanism // "SCRAM-SHA-256"
+		authMechanism := "" // DefaultAuthMechanism // "SCRAM-SHA-256"
 		if cfg.AuthMechanism != "" {
 			authMechanism = cfg.AuthMechanism
 		}
