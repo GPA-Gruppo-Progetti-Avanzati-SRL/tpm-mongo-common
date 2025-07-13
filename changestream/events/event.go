@@ -28,7 +28,7 @@ type ChangeEvent struct {
 	Ns                       Namespace              `yaml:"ns,omitempty" mapstructure:"ns,omitempty" json:"ns,omitempty"`
 	TxnNumber                int64                  `bson:"txnNumber,omitempty" mapstructure:"txnNumber,omitempty" json:"txnNumber,omitempty"`
 	WallTime                 primitive.DateTime     `bson:"wall-time,omitempty" mapstructure:"wall-time,omitempty" json:"wall-time,omitempty"`
-	FullDocument             primitive.M            `yaml:"fullDocument,omitempty" mapstructure:"fullDocument,omitempty" json:"fullDocument,omitempty"`
+	FullDocument             primitive.M            `yaml:"fullDocument,omitempty" mapstructure:"fullDocument,omitempty" json:"fullDocument,omitempty"  bson:"fullDocument,omitempty"`
 	FullDocumentBeforeChange primitive.M            `yaml:"fullDocumentBeforeChange,omitempty" mapstructure:"fullDocumentBeforeChange,omitempty" json:"fullDocumentBeforeChange,omitempty"`
 	UpdateDescription        primitive.M            `yaml:"updateDescription,omitempty" mapstructure:"updateDescription,omitempty" json:"updateDescription,omitempty"`
 }
