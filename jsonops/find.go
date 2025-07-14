@@ -257,7 +257,7 @@ func executeFindOp(c *mongo.Collection, query bson.D, fo *options.FindOptions) (
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	return OperationResult{StatusCode: http.StatusOK}, resp, nil
+	return OperationResult{StatusCode: http.StatusOK, MatchedCount: int64(len(resp))}, resp, nil
 }
 
 func (op *FindOperation) NewWriteModel() (mongo.WriteModel, error) {
