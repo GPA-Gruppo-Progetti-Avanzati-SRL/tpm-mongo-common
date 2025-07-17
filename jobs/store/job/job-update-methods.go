@@ -33,6 +33,7 @@ type UnsetOptions struct {
 	Et          UnsetMode
 	Ambit       UnsetMode
 	Status      UnsetMode
+	DueDate     UnsetMode
 	Info        UnsetMode
 	Tasks       UnsetMode
 }
@@ -68,6 +69,11 @@ func WithAmbitUnsetMode(m UnsetMode) UnsetOption {
 func WithStatusUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.Status = m
+	}
+}
+func WithDueDateUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.DueDate = m
 	}
 }
 func WithInfoUnsetMode(m UnsetMode) UnsetOption {
@@ -110,6 +116,7 @@ func GetUpdateDocument(obj *Job, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetAmbit(obj.Ambit, uo.ResolveUnsetMode(uo.Ambit))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
+	ud.setOrUnsetDue_date(obj.DueDate, uo.ResolveUnsetMode(uo.DueDate))
 	ud.setOrUnsetInfo(&obj.Info, uo.ResolveUnsetMode(uo.Info))
 	ud.setOrUnsetTasks(obj.Tasks, uo.ResolveUnsetMode(uo.Tasks))
 
@@ -299,6 +306,52 @@ func UpdateWithStatus(p string) UpdateOption {
 
 // @tpm-schematics:start-region("status-field-update-section")
 // @tpm-schematics:end-region("status-field-update-section")
+
+// SetDue_date No Remarks
+func (ud *UpdateDocument) SetDue_date(p string) *UpdateDocument {
+	mName := fmt.Sprintf(DueDateFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetDue_date No Remarks
+func (ud *UpdateDocument) UnsetDue_date() *UpdateDocument {
+	mName := fmt.Sprintf(DueDateFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetDue_date No Remarks
+func (ud *UpdateDocument) setOrUnsetDue_date(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetDue_date(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetDue_date()
+		case SetData2Default:
+			ud.UnsetDue_date()
+		}
+	}
+}
+
+func UpdateWithDue_date(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetDue_date(p)
+		} else {
+			ud.UnsetDue_date()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("due-date-field-update-section")
+// @tpm-schematics:end-region("due-date-field-update-section")
 
 // SetInfo No Remarks
 func (ud *UpdateDocument) SetInfo(p *beans.JobInfo) *UpdateDocument {

@@ -192,5 +192,46 @@ func (ca *Criteria) AndStatusIn(p []string) *Criteria {
 // @tpm-schematics:start-region("status-field-filter-section")
 // @tpm-schematics:end-region("status-field-filter-section")
 
+/*
+ * filter-string template: due_date
+ */
+
+// AndDueDateEqTo No Remarks
+func (ca *Criteria) AndDueDateEqTo(p string) *Criteria {
+
+	if p == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(DueDateFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: p} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// AndDueDateIsNullOrUnset No Remarks
+func (ca *Criteria) AndDueDateIsNullOrUnset() *Criteria {
+
+	mName := fmt.Sprintf(DueDateFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndDueDateIn(p []string) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(DueDateFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("due-date-field-filter-section")
+// @tpm-schematics:end-region("due-date-field-filter-section")
+
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

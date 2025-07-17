@@ -12,6 +12,9 @@ attributes:
   - name: status
     type: string
     options: with-filter
+  - name: due_date
+    type: string
+    options: with-filter
   - name: info
     struct-ref:
       name: JobInfo

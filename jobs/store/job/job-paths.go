@@ -12,6 +12,7 @@ const (
 	EtFieldName            = "_et"
 	AmbitFieldName         = "ambit"
 	StatusFieldName        = "status"
+	DueDateFieldName       = "due_date"
 	InfoFieldName          = "info"
 	Info_ReservedFieldName = "info.reserved"
 	TasksFieldName         = "tasks"
