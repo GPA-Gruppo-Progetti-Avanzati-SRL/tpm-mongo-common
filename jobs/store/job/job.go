@@ -8,6 +8,7 @@ const (
 	EType           = "job"
 	AmbitAny        = "any"
 	StatusAvailable = "available"
+	StatusWaiting   = "waiting"
 	StatusDone      = "done"
 )
 
