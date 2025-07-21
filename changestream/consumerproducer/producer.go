@@ -277,6 +277,8 @@ func NewConsumerProducer(cfg *ProducerConfig, wg *sync.WaitGroup, processor Proc
 				log.Info().Int64("tick-interval-ms", cfg.TickInterval.Milliseconds()).Msg(semLogContext + " - working in tick-interval mode")
 			}
 		}
+
+		log.Info().Str("batch-work-strategy", cfg.BatchWorkStrategy).Msg(semLogContext)
 	}
 	return &t, nil
 }
@@ -405,7 +407,7 @@ func (tp *producerImpl) onError(errIn error) error {
 }
 
 func (tp *producerImpl) maxBatchSizePollLoop() {
-	const semLogContext = "change-stream-cp::poll-loop"
+	const semLogContext = "change-stream-cp::max-batch-size-poll-loop"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Int("batch-size", tp.cfg.MaxBatchSize).Msg(semLogContext + " starting polling loop")
 
 	if tp.consumer == nil {
@@ -481,7 +483,7 @@ func (tp *producerImpl) maxBatchSizePollLoop() {
 }
 
 func (tp *producerImpl) tickIntervalPollLoop() {
-	const semLogContext = "change-stream-cp::poll-loop"
+	const semLogContext = "change-stream-cp::tick-interval-poll-loop"
 	log.Info().Str("cs-prod-id", tp.cfg.Name).Float64("tick-interval", tp.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting polling loop")
 
 	if tp.consumer == nil {
