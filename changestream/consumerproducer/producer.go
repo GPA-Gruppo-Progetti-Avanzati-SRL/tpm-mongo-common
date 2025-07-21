@@ -542,6 +542,104 @@ func (tp *producerImpl) tickIntervalPollLoop() {
 	}
 }
 
+func (tp *producerImpl) maxBatchSizeWithTickPollLoop() {
+	const semLogContext = "change-stream-cp::max-batch-size-with-tick-poll-loop"
+	log.Info().Str("cs-prod-id", tp.cfg.Name).Float64("tick-interval", tp.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting polling loop")
+
+	if tp.consumer == nil {
+		tp.shutDown(errors.New("consumer not initialized"))
+		return
+	}
+
+	ticker := time.NewTicker(tp.cfg.TickInterval)
+	var lastBatchProcessedTimestamp time.Time
+
+	var cbEvt BatchProcessedCbEvent
+	var ok bool
+	for {
+		now := time.Now()
+		select {
+		case <-ticker.C:
+
+			if tp.cfg.WorkMode == WorkModeBatch || tp.cfg.WorkMode == WorkModeBatchFF {
+				var err error
+				if lastBatchProcessedTimestamp.IsZero() || now.Sub(lastBatchProcessedTimestamp) > tp.cfg.TickInterval {
+					log.Info().Float64("tick", now.Sub(lastBatchProcessedTimestamp).Seconds()).Msg(semLogContext + " - force batch processing on tick")
+					lastBatchProcessedTimestamp = now
+					if tp.processor.IsProcessorDeferred() {
+						err = tp.deferredProcessBatch(context.Background())
+					} else {
+						err = tp.processBatch(context.Background())
+					}
+				} else {
+					log.Trace().Float64("tick", now.Sub(lastBatchProcessedTimestamp).Seconds()).Msg(semLogContext + " - skipper batch processing on tick")
+				}
+
+				if err != nil && tp.onError(err) != nil {
+					ticker.Stop()
+					tp.shutDown(err)
+					return
+				}
+			}
+
+		case cbEvt, ok = <-tp.batchProcessedCbChannel:
+			if ok {
+				if cbEvt.Err != nil && tp.onError(cbEvt.Err) != nil {
+					ticker.Stop()
+					tp.shutDown(cbEvt.Err)
+					return
+				}
+			}
+
+		case <-tp.quitc:
+			log.Info().Str("cs-prod-id", tp.cfg.Name).Msg(semLogContext + " terminating poll loop")
+			ticker.Stop()
+			tp.shutDown(nil)
+			return
+
+		default:
+			//if isMsg, err := tp.poll(); err != nil {
+			//	if tp.onError(err) != nil {
+			//		ticker.Stop()
+			//		tp.shutDown(err)
+			//		return
+			//	}
+			//} else if isMsg {
+			//	tp.numberOfMessages++
+			//}
+			log.Trace().Msg(semLogContext + " doing default")
+			isMsg, err := tp.poll()
+			if err != nil {
+				if tp.onError(err) != nil {
+					ticker.Stop()
+					tp.shutDown(err)
+					return
+				}
+			}
+
+			shouldProcessBatch := false
+			if (tp.cfg.WorkMode == WorkModeBatch && ((isMsg && tp.processor.ProcessorBatchSize() == tp.cfg.MaxBatchSize) || !isMsg)) || (tp.cfg.WorkMode == WorkModeBatchFF && ((isMsg && len(tp.batchOfChangeEvents.Events) == tp.cfg.MaxBatchSize) || !isMsg)) {
+				shouldProcessBatch = true
+			}
+
+			if shouldProcessBatch {
+				lastBatchProcessedTimestamp = now
+				if tp.processor.IsProcessorDeferred() {
+					err = tp.deferredProcessBatch(context.Background())
+				} else {
+					err = tp.processBatch(context.Background())
+				}
+
+				if err != nil && tp.onError(err) != nil {
+					ticker.Stop()
+					tp.shutDown(err)
+					return
+				}
+			}
+		}
+	}
+}
+
 func (tp *producerImpl) BatchProcessedCommitAtCb(cbEvt BatchProcessedCbEvent) {
 	const semLogContext = "change-stream-cp::batch-processed-commit-at"
 	log.Trace().Msg(semLogContext + " - in")
