@@ -26,6 +26,10 @@ const (
 	MetricMessageDuration = "cdc-event-duration"
 )
 
+const WorkModeBatchStrategyTickInterval = "tick-interval"
+const WorkModeBatchStrategyMaxBatchSize = "max-batch-size"
+const WorkModeBatchStrategyMaxBatchSizeWithTick = "max-batch-size-with-tick"
+
 type StatsInfo struct {
 	Rewinds         int
 	BatchErrors     int
@@ -234,15 +238,44 @@ func NewConsumerProducer(cfg *ProducerConfig, wg *sync.WaitGroup, processor Proc
 	t.processor = processor
 
 	if cfg.WorkMode == WorkModeBatch || cfg.WorkMode == WorkModeBatchFF {
-		if cfg.MaxBatchSize > 0 {
-			cfg.TickInterval = 0
-			log.Info().Int("max-batch-size", cfg.MaxBatchSize).Msg(semLogContext + " - working in batch-size mode")
-		} else {
+		switch cfg.BatchWorkStrategy {
+		case WorkModeBatchStrategyTickInterval:
 			if cfg.TickInterval == 0 {
-				err := errors.New("max-batch-size or tick-interval have to be set")
-				return nil, err
+				err := errors.New("tick-interval have to be set on this mode")
+				log.Warn().Err(err).Int("tick-interval-ms", 100).Msg(semLogContext + " - using default")
+				cfg.TickInterval = 100 * time.Millisecond
 			}
-			log.Info().Int64("tick-interval-ms", cfg.TickInterval.Milliseconds()).Msg(semLogContext + " - working in tick-interval mode")
+		case WorkModeBatchStrategyMaxBatchSize:
+			if cfg.MaxBatchSize == 0 {
+				err := errors.New("max-batch-size have to be set in this mode")
+				cfg.MaxBatchSize = 1000
+				log.Warn().Err(err).Int("max-batch-size", cfg.MaxBatchSize).Msg(semLogContext + " - using default")
+			}
+		case WorkModeBatchStrategyMaxBatchSizeWithTick:
+			if cfg.TickInterval == 0 {
+				err := errors.New("tick-interval have to be set on this mode")
+				log.Warn().Err(err).Int("tick-interval-s", 5).Msg(semLogContext + " - using default")
+				cfg.TickInterval = 100 * time.Second
+			}
+
+			if cfg.MaxBatchSize == 0 {
+				err := errors.New("max-batch-size have to be set in this mode")
+				cfg.MaxBatchSize = 1000
+				log.Warn().Err(err).Int("max-batch-size", cfg.MaxBatchSize).Msg(semLogContext + " - using default")
+			}
+		default:
+			if cfg.MaxBatchSize > 0 {
+				cfg.TickInterval = 0
+				cfg.BatchWorkStrategy = WorkModeBatchStrategyMaxBatchSize
+				log.Info().Int("max-batch-size", cfg.MaxBatchSize).Msg(semLogContext + " - working in batch-size mode")
+			} else {
+				if cfg.TickInterval == 0 {
+					err := errors.New("max-batch-size or tick-interval have to be set")
+					return nil, err
+				}
+				cfg.BatchWorkStrategy = WorkModeBatchStrategyTickInterval
+				log.Info().Int64("tick-interval-ms", cfg.TickInterval.Milliseconds()).Msg(semLogContext + " - working in tick-interval mode")
+			}
 		}
 	}
 	return &t, nil
@@ -293,10 +326,14 @@ func (tp *producerImpl) Start() error {
 
 	tp.processor.StartProcessor()
 
-	if tp.cfg.MaxBatchSize > 0 {
-		go tp.maxBatchSizePollLoop()
-	} else {
+	switch tp.cfg.BatchWorkStrategy {
+	case WorkModeBatchStrategyTickInterval:
 		go tp.tickIntervalPollLoop()
+	case WorkModeBatchStrategyMaxBatchSize:
+		go tp.maxBatchSizePollLoop()
+	case WorkModeBatchStrategyMaxBatchSizeWithTick:
+		err = errors.New("not implemented yet")
+		log.Fatal().Err(err).Msg(semLogContext)
 	}
 
 	return nil
