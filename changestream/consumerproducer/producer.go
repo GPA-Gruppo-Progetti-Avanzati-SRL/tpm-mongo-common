@@ -334,8 +334,7 @@ func (tp *producerImpl) Start() error {
 	case WorkModeBatchStrategyMaxBatchSize:
 		go tp.maxBatchSizePollLoop()
 	case WorkModeBatchStrategyMaxBatchSizeWithTick:
-		err = errors.New("not implemented yet")
-		log.Fatal().Err(err).Msg(semLogContext)
+		go tp.maxBatchSizeWithTickPollLoop()
 	}
 
 	return nil
