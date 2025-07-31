@@ -104,7 +104,7 @@ func (j Job) UpdateStatus(jobsColl *mongo.Collection, jobId string, st string) e
 	return nil
 }
 
-func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) error {
+func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, error) {
 	const semLogContext = "job::update-many-status"
 
 	updOpts := UpdateOptions{
@@ -117,11 +117,11 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) error {
 	resp, err := jobsColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
-		return err
+		return -1, err
 	}
 
 	log.Info().Interface("resp", resp).Msg(semLogContext)
-	return nil
+	return resp.ModifiedCount, nil
 }
 
 func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st string) (int, error) {
