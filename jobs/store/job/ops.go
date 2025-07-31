@@ -27,16 +27,16 @@ func FindById(coll *mongo.Collection, jobId string) (Job, error) {
 	return job, nil
 }
 
-func FindJobsByTypeAndStatus(coll *mongo.Collection, types []string, status string) ([]Job, error) {
+func FindJobsByAmbitAndStatus(coll *mongo.Collection, ambits []string, status string) ([]Job, error) {
 	const semLogContext = "job::find-all-by-type-and-status"
 
 	f := Filter{}
 	ca := f.Or().AndEtEqTo(EType).AndStatusEqTo(status)
-	if len(types) > 1 || len(types) == 1 && types[0] != AmbitAny {
-		log.Info().Str("types", strings.Join(types, ",")).Msg(semLogContext + " - filtering by types")
-		ca.AndAmbitIn(types)
+	if len(ambits) > 1 || len(ambits) == 1 && ambits[0] != AmbitAny {
+		log.Info().Str("types", strings.Join(ambits, ",")).Msg(semLogContext + " - filtering by types")
+		ca.AndAmbitIn(ambits)
 	} else {
-		log.Info().Str("types", strings.Join(types, ",")).Msg(semLogContext + " - accepting all job types")
+		log.Info().Str("types", strings.Join(ambits, ",")).Msg(semLogContext + " - accepting all job types")
 	}
 
 	opts := options.FindOptions{}
@@ -92,6 +92,26 @@ func (j Job) UpdateStatus(jobsColl *mongo.Collection, jobId string, st string) e
 
 	f := Filter{}
 	f.Or().AndEtEqTo(EType).AndBidEqTo(jobId)
+
+	updDoc := GetUpdateDocumentFromOptions(updOpts...)
+	resp, err := jobsColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	log.Info().Interface("resp", resp).Msg(semLogContext)
+	return nil
+}
+
+func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) error {
+	const semLogContext = "job::update-many-status"
+
+	updOpts := UpdateOptions{
+		UpdateWithStatus(st),
+	}
+
+	f.Or().AndEtEqTo(EType)
 
 	updDoc := GetUpdateDocumentFromOptions(updOpts...)
 	resp, err := jobsColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())

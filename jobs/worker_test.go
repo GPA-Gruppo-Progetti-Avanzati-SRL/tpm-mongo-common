@@ -23,7 +23,7 @@ func TestNewWorkerMessage(t *testing.T) {
 	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
 	require.NoError(t, err)
 
-	jobs, err := job.FindJobsByTypeAndStatus(taskColl, []string{job.AmbitAny}, job.StatusAvailable)
+	jobs, err := job.FindJobsByAmbitAndStatus(taskColl, []string{job.AmbitAny}, job.StatusAvailable)
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(jobs) > 0 }, "expected jobs to be available")
 
