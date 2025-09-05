@@ -254,8 +254,8 @@ func (ca *Criteria) AndDueDateBetween(p1, p2 string) *Criteria {
 	} else {
 		c := func() bson.E {
 			return bson.E{"$and", bson.A{
-				bson.D{{"rating", bson.D{{"$gte", p1}}}},
-				bson.D{{"rating", bson.D{{"$lte", p2}}}},
+				bson.D{{mName, bson.D{{"$gte", p1}}}},
+				bson.D{{mName, bson.D{{"$lte", p2}}}},
 			}}
 		}
 
