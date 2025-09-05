@@ -3,11 +3,12 @@ package job
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"strings"
 )
 
 func FindById(coll *mongo.Collection, jobId string) (Job, error) {
@@ -110,8 +111,6 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, 
 	updOpts := UpdateOptions{
 		UpdateWithStatus(st),
 	}
-
-	f.Or().AndEtEqTo(EType)
 
 	updDoc := GetUpdateDocumentFromOptions(updOpts...)
 	resp, err := jobsColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
