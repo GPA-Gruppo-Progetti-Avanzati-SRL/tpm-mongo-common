@@ -113,7 +113,7 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, 
 	}
 
 	updDoc := GetUpdateDocumentFromOptions(updOpts...)
-	resp, err := jobsColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
+	resp, err := jobsColl.UpdateMany(context.Background(), f.Build(), updDoc.Build())
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return -1, err
