@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -112,14 +113,15 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, 
 		UpdateWithStatus(st),
 	}
 
+	filterDocument := f.Build()
 	updDoc := GetUpdateDocumentFromOptions(updOpts...)
-	resp, err := jobsColl.UpdateMany(context.Background(), f.Build(), updDoc.Build())
+	resp, err := jobsColl.UpdateMany(context.Background(), filterDocument, updDoc.Build())
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return -1, err
 	}
 
-	log.Info().Interface("resp", resp).Msg(semLogContext)
+	log.Info().Str("filter", util.MustToExtendedJsonString(filterDocument, false, false)).Interface("resp", resp).Msg(semLogContext)
 	return resp.ModifiedCount, nil
 }
 
