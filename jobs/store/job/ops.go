@@ -114,6 +114,8 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, 
 	}
 
 	filterDocument := f.Build()
+	log.Info().Str("filter", util.MustToExtendedJsonString(filterDocument, false, false)).Msg(semLogContext)
+
 	updDoc := GetUpdateDocumentFromOptions(updOpts...)
 	resp, err := jobsColl.UpdateMany(context.Background(), filterDocument, updDoc.Build())
 	if err != nil {
@@ -121,7 +123,7 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, 
 		return -1, err
 	}
 
-	log.Info().Str("filter", util.MustToExtendedJsonString(filterDocument, false, false)).Interface("resp", resp).Msg(semLogContext)
+	log.Info().Interface("resp", resp).Msg(semLogContext)
 	return resp.ModifiedCount, nil
 }
 
