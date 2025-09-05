@@ -2,8 +2,9 @@ package job
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // @tpm-schematics:start-region("top-file-section")
@@ -240,13 +241,24 @@ func (ca *Criteria) AndDueDateBetween(p1, p2 string) *Criteria {
 
 	mName := fmt.Sprintf(DueDateFieldName)
 
-	if p1 != "" {
-		c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$gte", p1}}} }
-		*ca = append(*ca, c)
-	}
+	if p1 == "" || p2 == "" {
+		if p1 != "" {
+			c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$gte", p1}}} }
+			*ca = append(*ca, c)
+		}
 
-	if p2 != "" {
-		c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$lte", p2}}} }
+		if p2 != "" {
+			c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$lte", p2}}} }
+			*ca = append(*ca, c)
+		}
+	} else {
+		c := func() bson.E {
+			return bson.E{Key: "$and", Value: bson.A{
+				bson.E{Key: mName, Value: bson.D{{"$gte", p1}}},
+				bson.E{Key: mName, Value: bson.D{{"$lte", p2}}},
+			}}
+		}
+
 		*ca = append(*ca, c)
 	}
 
