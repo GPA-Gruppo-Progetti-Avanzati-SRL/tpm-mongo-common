@@ -37,7 +37,7 @@ func UpdateDueDate(coll *mongo.Collection, bid string, dueDate string) error {
 	f := Filter{}
 	f.Or().AndBidEqTo(bid).AndEtEqTo(EType)
 
-	upd := GetUpdateDocumentFromOptions(UpdateWithDue_date(dueDate))
+	upd := GetUpdateDocumentFromOptions(UpdateWith_et(EType), UpdateWith_bid(bid), UpdateWithDue_date(dueDate))
 	opts := options.UpdateOptions{}
 	opts.SetUpsert(true)
 	resp, err := coll.UpdateOne(context.Background(), f.Build(), upd.Build(), &opts)
