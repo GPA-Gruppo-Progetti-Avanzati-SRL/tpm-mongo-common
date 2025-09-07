@@ -1,0 +1,17 @@
+name: DueDateTriggerCheckPoint
+attributes:
+  - name: _bid
+    type: string
+    options: with-filter
+  - name: _et
+    type: string
+    options: with-filter
+  - name: ambit
+    type: string
+    options: with-filter
+  - name: status
+    type: string
+    options: with-filter
+  - name: due_date
+    type: string
+    options: with-filter
