@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -38,15 +39,16 @@ func UpdateDueDate(coll *mongo.Collection, bid string, dueDate string) error {
 	f.Or().AndBidEqTo(bid).AndEtEqTo(EType)
 
 	upd := GetUpdateDocumentFromOptions(UpdateWith_et(EType), UpdateWith_bid(bid), UpdateWithDue_date(dueDate))
+	updDoc := upd.Build()
 	opts := options.UpdateOptions{}
 	opts.SetUpsert(true)
-	resp, err := coll.UpdateOne(context.Background(), f.Build(), upd.Build(), &opts)
+	resp, err := coll.UpdateOne(context.Background(), f.Build(), updDoc, &opts)
 	if err != nil {
 		log.Error().Err(err).Str("bid", bid).Str("due_date", dueDate).Msg(semLogContext)
 		return err
 	}
 
-	log.Info().Str("bid", bid).Str("due_date", dueDate).Interface("update-op", resp).Msg(semLogContext)
+	log.Info().Str("bid", bid).Str("due_date", dueDate).Str("op", util.MustToExtendedJsonString(updDoc, false, false)).Interface("update-resp", resp).Msg(semLogContext)
 	if resp.MatchedCount > 1 {
 		log.Warn().Msg(semLogContext + " - more than one trigger found")
 	}
