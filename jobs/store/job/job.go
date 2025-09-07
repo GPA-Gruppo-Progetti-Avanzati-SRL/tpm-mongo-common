@@ -10,6 +10,7 @@ const (
 	StatusAvailable = "available"
 	StatusWaiting   = "waiting"
 	StatusDone      = "done"
+	DueDateLayout   = "20060102"
 )
 
 // @tpm-schematics:end-region("top-file-section")

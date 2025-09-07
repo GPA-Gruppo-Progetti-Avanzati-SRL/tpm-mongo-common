@@ -1,9 +1,16 @@
 package ddtcheckpoint
 
+import (
+	"time"
+
+	"github.com/rs/zerolog/log"
+)
+
 // @tpm-schematics:start-region("top-file-section")
 
 const (
-	EType = "ddtchk"
+	EType         = "ddtchk"
+	DueDateLayout = "20060102" // Should be same as Job.
 )
 
 // @tpm-schematics:end-region("top-file-section")
@@ -24,4 +31,17 @@ func (s DueDateTriggerCheckPoint) IsZero() bool {
 }
 
 // @tpm-schematics:start-region("bottom-file-section")
+
+func IncDueDate(ddt string) (string, error) {
+	const semLogContext = "ddt-checkpoint::inc-due-date"
+
+	tm, err := time.Parse(DueDateLayout, ddt)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return "", err
+	}
+	ddt = tm.AddDate(0, 0, 1).Format(DueDateLayout)
+	return ddt, nil
+}
+
 // @tpm-schematics:end-region("bottom-file-section")
