@@ -2,6 +2,7 @@ package mongolks
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 
@@ -159,6 +160,7 @@ func (lks *LinkedService) Disconnect(ctx context.Context) {
 }
 
 func (lks *LinkedService) GetCollection(aCollectionId string, wcStr string) *mongo.Collection {
+	const semLogContext = "mongo-lks::get-collection"
 
 	w := lks.writeConcern
 	if wcStr != "" {
@@ -171,6 +173,8 @@ func (lks *LinkedService) GetCollection(aCollectionId string, wcStr string) *mon
 		}
 	}
 
+	err := fmt.Errorf("cannot find collection by id %s", aCollectionId)
+	log.Error().Err(err).Str("id", aCollectionId).Str("instance", lks.cfg.Name).Msg(semLogContext)
 	return nil
 }
 
