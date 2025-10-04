@@ -2,7 +2,10 @@ package mongolks
 
 import (
 	"context"
+
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
+
+	"time"
 
 	mongoUtil "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
@@ -11,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
-	"time"
 )
 
 var DefaultWriteConcern = writeconcern.Majority()
@@ -161,4 +163,15 @@ func (lks *LinkedService) GetCollection(aCollectionId string, wcStr string) *mon
 	}
 
 	return nil
+}
+
+func (lks *LinkedService) GetCollectionName(aCollectionId string) string {
+
+	for _, c := range lks.cfg.Collections {
+		if c.Id == aCollectionId {
+			return c.Name
+		}
+	}
+
+	return ""
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -71,6 +72,24 @@ func GetCollection(ctx context.Context, instanceName string, collectionId string
 
 	c := lks.GetCollection(collectionId, "")
 	if c == nil {
+		err = fmt.Errorf("cannot find collection by id %s", collectionId)
+		log.Error().Err(err).Str("name", collectionId).Str("instance", instanceName).Msg(semLogContext)
+		return c, err
+	}
+
+	return c, nil
+}
+
+func GetCollectionName(ctx context.Context, instanceName string, collectionId string) (string, error) {
+	const semLogContext = "mongo-lks-registry::get-collection-name"
+	lks, err := GetLinkedService(ctx, instanceName)
+	if err != nil {
+		log.Error().Err(err).Str("name", collectionId).Str("instance", instanceName).Msg(semLogContext)
+		return "", err
+	}
+
+	c := lks.GetCollectionName(collectionId)
+	if c == "" {
 		err = fmt.Errorf("cannot find collection by id %s", collectionId)
 		log.Error().Err(err).Str("name", collectionId).Str("instance", instanceName).Msg(semLogContext)
 		return c, err

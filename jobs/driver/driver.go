@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
@@ -12,8 +15,6 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
-	"sync"
-	"time"
 )
 
 type Driver struct {
@@ -192,7 +193,11 @@ func (m *Driver) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
 			continue
 		}
 
-		tasks = append(tasks, tsks...)
+		if len(tsks) == 0 {
+			log.Info().Str("job-id", j.Bid).Msg(semLogContext + " no tasks available")
+		} else {
+			tasks = append(tasks, tsks...)
+		}
 	}
 
 	return tasks, nil

@@ -6,16 +6,18 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jsonops"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/feliixx/mongoextjson"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
 	"go.mongodb.org/mongo-driver/mongo"
-	"testing"
-	"time"
 )
 
 var insertOneTestDocument1 = []byte(`{ "year": 2030, "title": "the 2030 movie", "summary": "the 2030 movie summary", "relaxed_date": {"$date":"2019-08-11T17:54:14.692Z"}, "canonical_date": {"$date": 1741089118537}}`)
@@ -380,4 +382,125 @@ func getBsonD(operazioneData string, obj interface{}) bson.A {
 		},
 	}
 
+}
+
+var samplePipeline = []byte(`
+ [
+        {
+            "$match": {
+                "_et": "BOX"
+            }
+        },
+        {
+            "$limit": 10
+        },
+        {
+            "$skip": 20
+        },
+        {
+            "$lookup": {
+                "from": "mag_magazzini",
+                "let": {
+                    "et": "MAGAZZINO",
+                    "bid": "$magazzino.bid"
+                },
+                "pipeline": [
+                    {
+                        "$match": {
+                            "$expr": {
+                                "$and": [
+                                    {
+                                        "$eq": ["$_et", "$$et"]
+                                    },
+                                    {
+                                        "$eq": ["$_bid", "$$bid"]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "as": "doc_magazzino"
+            }
+        },
+        {
+            "$lookup": {
+                "from": "prd_prodotto",
+                "let": {
+                    "et": "PRODOTTO",
+                    "bid": "$prodotto.bid"
+                },
+                "pipeline": [
+                    {
+                        "$match": {
+                            "$expr": {
+                                "$and": [
+                                    {
+                                        "$eq": ["$_et", "$$et"]
+                                    },
+                                    {
+                                        "$eq": ["$_bid", "$$bid"]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "as": "doc_prodotto"
+            }
+        },
+        {
+            "$project": {
+                "_bid": 1,
+                "_et": 1,
+                "domain": 1,
+                "site": 1,
+                "info": 1,
+                "status": 1,
+                "recipient": 1,
+                "sys_info": 1,
+                "doc_magazzino": {
+                    "$arrayElemAt": ["$doc_magazzino", 0]
+                },
+                "doc_prodotto": {
+                    "$arrayElemAt": ["$doc_prodotto", 0]
+                }
+            }
+        },
+        {
+            "$project": {
+                "_bid": 1,
+                "_et": 1,
+                "domain": 1,
+                "site": 1,
+                "info": 1,
+                "status": 1,
+                "recipient": 1,
+                "sys_info": 1,
+                "magazzino.bid": "$doc_magazzino._bid",
+                "prodotto.bid": "$doc_prodotto._bid", 
+                "prodotto.text": { "$concat": [ "$doc_prodotto._bid", " - ", "$doc_prodotto.name" ] },
+                "focal_point.bid":
+                    "$doc_magazzino.focal_point.bid"
+            }
+        }
+    ]
+`)
+
+func TestSaplePipeline(t *testing.T) {
+	log.Info().Msg("test-sample-pipeline")
+
+	filter := bson.D{
+		{"pippo", bson.D{
+			{"tizio", "caio"},
+		}},
+	}
+
+	b, err := json.Marshal(filter)
+	require.NoError(t, err)
+	fmt.Println(string(b))
+	fmt.Printf("%#v\n", filter)
+	fmt.Printf("%v\n", filter)
+	statementQuery, err := util.UnmarshalJson2ArrayOfBsonD(samplePipeline, true)
+	fmt.Println(statementQuery)
 }
