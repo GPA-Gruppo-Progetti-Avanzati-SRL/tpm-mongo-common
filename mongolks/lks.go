@@ -23,12 +23,13 @@ var DefaultReadConcern = readconcern.Majority()
 const DefaultAuthMechanism = "SCRAM-SHA-256"
 
 type LinkedService struct {
-	cfg          Config
-	version      mongoUtil.MongoDbVersion
-	mongoClient  *mongo.Client
-	db           *mongo.Database
-	writeConcern *writeconcern.WriteConcern
-	writeTimeout time.Duration
+	cfg               Config
+	collectionsCfgMap map[string]CollectionCfg
+	version           mongoUtil.MongoDbVersion
+	mongoClient       *mongo.Client
+	db                *mongo.Database
+	writeConcern      *writeconcern.WriteConcern
+	writeTimeout      time.Duration
 }
 
 func (lks *LinkedService) Name() string {
@@ -49,6 +50,14 @@ func (lks *LinkedService) WriteTimeout() time.Duration {
 
 func NewLinkedServiceWithConfig(cfg Config) (*LinkedService, error) {
 	lks := LinkedService{cfg: cfg}
+
+	if len(cfg.Collections) > 0 {
+		lks.collectionsCfgMap = make(map[string]CollectionCfg)
+		for _, collCfg := range cfg.Collections {
+			lks.collectionsCfgMap[collCfg.Name] = collCfg
+		}
+	}
+
 	return &lks, nil
 }
 
@@ -174,4 +183,8 @@ func (lks *LinkedService) GetCollectionName(aCollectionId string) string {
 	}
 
 	return ""
+}
+
+func (lks *LinkedService) GetCollectionsCfg() map[string]CollectionCfg {
+	return lks.collectionsCfgMap
 }
