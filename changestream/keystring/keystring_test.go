@@ -2,9 +2,11 @@ package keystring_test
 
 import (
 	"fmt"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/keystring"
 	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
+
 	"testing"
 )
 
@@ -51,7 +53,7 @@ func TestSingleValueKeyStringToBsonPartial(t *testing.T) {
 
 	val, err = ks.ToSingleValueBsonPartial()
 	require.NoError(t, err)
-	t.Log("uuid: ", fmt.Sprintf("%x", val.(primitive.Binary).Data))
+	t.Log("uuid: ", fmt.Sprintf("%x", val.(bson.Binary).Data))
 
 	val, err = ks.ToSingleValueBsonPartial()
 	require.NoError(t, err)

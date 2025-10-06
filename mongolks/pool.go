@@ -2,15 +2,17 @@ package mongolks
 
 import (
 	"context"
-	mongoprom "github.com/globocom/mongo-go-prometheus"
+
+	"time"
+
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks/mongoprom"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/event"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
+	"go.mongodb.org/mongo-driver/v2/event"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"time"
 )
 
 type PoolConfigMetrics struct {
@@ -48,14 +50,14 @@ func (poolMetric *poolMetric) getPoolMonitor() *event.PoolMonitor {
 			switch e.Type {
 			// Created when an operation successfully acquires a connection for execution.
 			// Have duration
-			case event.GetSucceeded:
+			case event.ConnectionCheckedOut:
 				poolMetric.TimeToAcquireConnection.Record(context.Background(), e.Duration.Microseconds(), metric.WithAttributeSet(attributesSet))
 				poolMetric.UsedConnection.Add(context.Background(), 1, metric.WithAttributeSet(attributesSet))
 				break
 
 			// Created when a connection is checked back into the pool after an operation is executed.
 			// Do not have duration
-			case event.ConnectionReturned:
+			case event.ConnectionCheckedIn:
 				poolMetric.TotalReturnedConnection.Add(context.Background(), 1, metric.WithAttributeSet(attributesSet))
 				poolMetric.UsedConnection.Add(context.Background(), -1, metric.WithAttributeSet(attributesSet))
 				break
@@ -80,11 +82,11 @@ func (poolMetric *poolMetric) getPoolMonitor() *event.PoolMonitor {
 				break
 			// Created when a connection pool is ready.
 			// No connection seems to be created before this event
-			case event.PoolReady:
+			case event.ConnectionPoolReady:
 				break
 
 			// Created when an operation cannot acquire a connection for execution.
-			case event.GetFailed:
+			case event.ConnectionCheckOutFailed:
 				poolMetric.TotalFailedAcquireConnection.Add(context.Background(), 1, metric.WithAttributeSet(attributesSet))
 				// ConnectionCheckOutStarted -> ConnectionCheckOutFailed quindi non serve se ascoltiamo ConnectionCheckedOut e ConnectionCheckedIn
 				//poolMetric.UsedConnection.Add(context.Background(), -1, metric.WithAttributeSet(attributesSet))

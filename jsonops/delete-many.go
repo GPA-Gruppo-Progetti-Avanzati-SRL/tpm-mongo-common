@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
-	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"strings"
+
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util/mdboptions"
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 const (
@@ -114,15 +115,12 @@ func DeleteMany(lks *mongolks.LinkedService, collectionId string, filter []byte,
 	//	opFilter = bson.D{}
 	//}
 
-	uo := options.DeleteOptions{}
-	if len(opts) > 0 {
-		err = json.Unmarshal(opts, &uo)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
-		}
+	uo, err := mdboptions.DeleteManyOptionsFromJson(opts)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
-	res, err := c.DeleteMany(context.Background(), opFilter, &uo)
+	res, err := c.DeleteMany(context.Background(), opFilter, uo)
 	if err != nil {
 		mongoErrorCode := util.MongoErrorCode(err, util.MongoDbVersion{})
 		log.Error().Err(err).Int32("mongo-error", mongoErrorCode).Msg(semLogContext)
@@ -148,13 +146,10 @@ func (op *DeleteManyOperation) NewWriteModel() (mongo.WriteModel, error) {
 		return nil, err
 	}
 
-	uo := options.DeleteOptions{}
-	if len(op.Options) > 0 {
-		err = json.Unmarshal(op.Options, &uo)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return nil, err
-		}
+	_, err = mdboptions.DeleteManyOptionsFromJson(op.Options)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
 	}
 
 	return mongo.NewDeleteManyModel().SetFilter(statementFilter), nil

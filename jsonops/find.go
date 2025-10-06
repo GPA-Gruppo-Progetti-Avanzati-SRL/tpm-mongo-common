@@ -6,14 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
-	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"strings"
+
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util/mdboptions"
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -142,33 +144,33 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, projec
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	fo, err := newFindOptions(opts)
+	fo, err := mdboptions.FindOptionsFromJson(opts, sort, projection)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	srt, err := util.UnmarshalJson2BsonD(sort, false)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
-	}
+	//srt, err := util.UnmarshalJson2BsonD(sort, false)
+	//if err != nil {
+	//	log.Error().Err(err).Msg(semLogContext)
+	//	return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
+	//}
+	//
+	//if len(srt) > 0 {
+	//	fo.SetSort(srt)
+	//}
+	//
+	//prj, err := util.UnmarshalJson2BsonD(projection, false)
+	//if err != nil {
+	//	log.Error().Err(err).Msg(semLogContext)
+	//	return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
+	//}
+	//
+	//if len(prj) > 0 {
+	//	fo.SetProjection(prj)
+	//}
 
-	if len(srt) > 0 {
-		fo.SetSort(srt)
-	}
-
-	prj, err := util.UnmarshalJson2BsonD(projection, false)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
-	}
-
-	if len(prj) > 0 {
-		fo.SetProjection(prj)
-	}
-
-	sc, body, err := executeFindOp(c, statementQuery, &fo)
+	sc, body, err := executeFindOp(c, statementQuery, fo)
 	if err != nil {
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
@@ -195,36 +197,36 @@ func Find(lks *mongolks.LinkedService, collectionId string, query []byte, projec
 	return sc, nil, nil
 }
 
-func newFindOptions(opts []byte) (options.FindOptions, error) {
-	const semLogContext = "json-ops::new-find-options"
-	fo := options.FindOptions{}
-	if len(opts) > 0 {
-		var m map[string]interface{}
-		err := json.Unmarshal(opts, &m)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return fo, err
-		}
+//func newFindOptions(opts []byte) (*options.FindOptionsBuilder, error) {
+//	const semLogContext = "json-ops::new-find-options"
+//	fo := options.Find()
+//	if len(opts) > 0 {
+//		var m map[string]interface{}
+//		err := json.Unmarshal(opts, &m)
+//		if err != nil {
+//			log.Error().Err(err).Msg(semLogContext)
+//			return fo, err
+//		}
+//
+//		if limitOpt, ok := m["limit"]; ok {
+//			switch limitValue := limitOpt.(type) {
+//			case float64:
+//				fo.SetLimit(int64(limitValue))
+//				log.Trace().Float64("float-limit", limitValue).Msg(semLogContext)
+//			case int:
+//				fo.SetLimit(int64(limitValue))
+//				log.Trace().Int("int-limit", limitValue).Msg(semLogContext)
+//			default:
+//				err = errors.New("unrecognized limit value")
+//				log.Error().Err(err).Str("param-type", fmt.Sprintf("%T", limitOpt)).Msg(semLogContext)
+//			}
+//		}
+//	}
+//
+//	return fo, nil
+//}
 
-		if limitOpt, ok := m["limit"]; ok {
-			switch limitValue := limitOpt.(type) {
-			case float64:
-				fo.SetLimit(int64(limitValue))
-				log.Trace().Float64("float-limit", limitValue).Msg(semLogContext)
-			case int:
-				fo.SetLimit(int64(limitValue))
-				log.Trace().Int("int-limit", limitValue).Msg(semLogContext)
-			default:
-				err = errors.New("unrecognized limit value")
-				log.Error().Err(err).Str("param-type", fmt.Sprintf("%T", limitOpt)).Msg(semLogContext)
-			}
-		}
-	}
-
-	return fo, nil
-}
-
-func executeFindOp(c *mongo.Collection, query bson.D, fo *options.FindOptions) (OperationResult, [][]byte, error) {
+func executeFindOp(c *mongo.Collection, query bson.D, fo options.Lister[options.FindOptions]) (OperationResult, [][]byte, error) {
 	const semLogContext = "mongo-operation::execute-find-op"
 
 	crs, err := c.Find(context.Background(), query, fo)

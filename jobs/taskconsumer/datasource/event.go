@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 const (
@@ -15,17 +14,17 @@ const (
 	EventTypeEof          = "eof"
 )
 
-var NoEvent = Event{Key: primitive.NilObjectID}
-var ErrEvent = Event{Key: primitive.NilObjectID /* IsErr: true,*/, Typ: EventTypeError}
-var EofPartition = Event{Key: primitive.NilObjectID /*Eof: false, EofPartition: true, EofQueryBatch: true,*/, Typ: EventTypeEofPartition}
-var EofEvent = Event{Key: primitive.NilObjectID /*Eof: true, EofPartition: true, EofQueryBatch: true,*/, Typ: EventTypeEof}
+var NoEvent = Event{Key: bson.NilObjectID}
+var ErrEvent = Event{Key: bson.NilObjectID /* IsErr: true,*/, Typ: EventTypeError}
+var EofPartition = Event{Key: bson.NilObjectID /*Eof: false, EofPartition: true, EofQueryBatch: true,*/, Typ: EventTypeEofPartition}
+var EofEvent = Event{Key: bson.NilObjectID /*Eof: true, EofPartition: true, EofQueryBatch: true,*/, Typ: EventTypeEof}
 
 type Event struct {
-	Key       primitive.ObjectID `yaml:"key,omitempty" mapstructure:"key,omitempty" json:"key,omitempty"`
-	Partition int32              `yaml:"partition,omitempty" mapstructure:"partition,omitempty" json:"partition,omitempty"`
-	Document  bson.M             `yaml:"document,omitempty" mapstructure:"document,omitempty" json:"document,omitempty"`
-	Span      opentracing.Span   `yaml:"-" mapstructure:"-" json:"-"`
-	Headers   map[string]string  `yaml:"-" mapstructure:"-" json:"-"`
+	Key       bson.ObjectID     `yaml:"key,omitempty" mapstructure:"key,omitempty" json:"key,omitempty"`
+	Partition int32             `yaml:"partition,omitempty" mapstructure:"partition,omitempty" json:"partition,omitempty"`
+	Document  bson.M            `yaml:"document,omitempty" mapstructure:"document,omitempty" json:"document,omitempty"`
+	Span      opentracing.Span  `yaml:"-" mapstructure:"-" json:"-"`
+	Headers   map[string]string `yaml:"-" mapstructure:"-" json:"-"`
 	// EofPartition  bool               `yaml:"eof-partition,omitempty" mapstructure:"eof-partition,omitempty" json:"eof-partition,omitempty"`
 	// Eof           bool               `yaml:"eof,omitempty" mapstructure:"eof,omitempty" json:"eof,omitempty"`
 	// EofQueryBatch bool               `yaml:"eof-batch,omitempty" mapstructure:"eof-batch,omitempty" json:"eof-batch,omitempty"`
@@ -34,20 +33,20 @@ type Event struct {
 }
 
 func NewEvent(m bson.M, isEofBatch bool) Event {
-	key := m["_id"].(primitive.ObjectID)
+	key := m["_id"].(bson.ObjectID)
 	return Event{Key: key, Document: m, Typ: EventTypeDocument /*, EofQueryBatch: isEofBatch*/}
 }
 
 func (evt Event) IsZero() bool {
-	return evt.Key == primitive.NilObjectID && evt.Document == nil && evt.Typ == "" /*!evt.Eof && !evt.EofQueryBatch && !evt.IsErr && !evt.EofPartition*/ && evt.Partition == 0
+	return evt.Key == bson.NilObjectID && evt.Document == nil && evt.Typ == "" /*!evt.Eof && !evt.EofQueryBatch && !evt.IsErr && !evt.EofPartition*/ && evt.Partition == 0
 }
 
 func (evt Event) IsDocument() bool {
-	return evt.Key != primitive.NilObjectID
+	return evt.Key != bson.NilObjectID
 }
 
 func (evt Event) IsBoundary() bool {
-	b := evt.Key == primitive.NilObjectID && evt.Document == nil && evt.Typ != EventTypeDocument
+	b := evt.Key == bson.NilObjectID && evt.Document == nil && evt.Typ != EventTypeDocument
 	return b
 }
 

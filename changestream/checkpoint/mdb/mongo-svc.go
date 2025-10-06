@@ -2,13 +2,14 @@ package mdb
 
 import (
 	"context"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint/mdb/checkpointcollection"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type CheckpointSvcConfig struct {
@@ -231,8 +232,7 @@ func (svc *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) e
 
 	f := checkpointcollection.Filter{}
 	f.Or().AndBidEqTo(watcherId).AndStatusEqTo(checkpointcollection.CheckPointStatusActive)
-	opts := options.UpdateOptions{}
-	opts.SetUpsert(true)
+	opts := options.UpdateOne().SetUpsert(true)
 
 	ud := checkpointcollection.GetUpdateDocumentFromOptions(
 		checkpointcollection.UpdateWith_bid(watcherId),
@@ -244,7 +244,7 @@ func (svc *CheckpointSvc) save(watcherId string, token checkpoint.ResumeToken) e
 		checkpointcollection.UpdateWithIncrementOp_count(1),
 	)
 
-	resp, err := svc.coll.UpdateOne(context.Background(), f.Build(), ud.Build(), &opts)
+	resp, err := svc.coll.UpdateOne(context.Background(), f.Build(), ud.Build(), opts)
 	if err != nil {
 		return err
 	}
@@ -281,12 +281,12 @@ func (svc *CheckpointSvc) Clear(watcherId string) error {
 
 	f := checkpointcollection.Filter{}
 	f.Or().AndBidEqTo(doc.Bid).AndStatusEqTo(doc.Status)
-	opts := options.UpdateOptions{}
+	opts := options.UpdateOne()
 	ud := checkpointcollection.GetUpdateDocumentFromOptions(
 		checkpointcollection.UpdateWithStatus(checkpointcollection.CheckPointStatusCleared),
 	)
 
-	resp, err := svc.coll.UpdateOne(context.Background(), f.Build(), ud.Build(), &opts)
+	resp, err := svc.coll.UpdateOne(context.Background(), f.Build(), ud.Build(), opts)
 	if err != nil {
 		return err
 	}

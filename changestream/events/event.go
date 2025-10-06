@@ -6,8 +6,8 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 )
 
@@ -21,16 +21,16 @@ type ChangeEvent struct {
 	Headers                  map[string]string      `yaml:"-" mapstructure:"-" json:"-"`
 	OpType                   string                 `yaml:"operationType,omitempty" mapstructure:"operationType,omitempty" json:"operationType,omitempty"`
 	Id                       EventId                `yaml:"_id,omitempty" mapstructure:"_id,omitempty" json:"_id,omitempty"`
-	ClusterTime              primitive.Timestamp    `yaml:"clusterTime,omitempty" mapstructure:"clusterTime,omitempty" json:"clusterTime,omitempty"`
-	DocumentKey              primitive.M            `yaml:"documentKey,omitempty" mapstructure:"documentKey,omitempty" json:"documentKey,omitempty"`
-	OperationDescription     primitive.M            `yaml:"operationDescription,omitempty" mapstructure:"operationDescription,omitempty" json:"operationDescription,omitempty"`
-	Lsid                     primitive.M            `yaml:"lsid,omitempty" mapstructure:"lsid,omitempty" json:"lsid,omitempty"`
+	ClusterTime              bson.Timestamp         `yaml:"clusterTime,omitempty" mapstructure:"clusterTime,omitempty" json:"clusterTime,omitempty"`
+	DocumentKey              bson.M                 `yaml:"documentKey,omitempty" mapstructure:"documentKey,omitempty" json:"documentKey,omitempty"`
+	OperationDescription     bson.M                 `yaml:"operationDescription,omitempty" mapstructure:"operationDescription,omitempty" json:"operationDescription,omitempty"`
+	Lsid                     bson.M                 `yaml:"lsid,omitempty" mapstructure:"lsid,omitempty" json:"lsid,omitempty"`
 	Ns                       Namespace              `yaml:"ns,omitempty" mapstructure:"ns,omitempty" json:"ns,omitempty"`
 	TxnNumber                int64                  `bson:"txnNumber,omitempty" mapstructure:"txnNumber,omitempty" json:"txnNumber,omitempty"`
-	WallTime                 primitive.DateTime     `bson:"wall-time,omitempty" mapstructure:"wall-time,omitempty" json:"wall-time,omitempty"`
-	FullDocument             primitive.M            `yaml:"fullDocument,omitempty" mapstructure:"fullDocument,omitempty" json:"fullDocument,omitempty"`
-	FullDocumentBeforeChange primitive.M            `yaml:"fullDocumentBeforeChange,omitempty" mapstructure:"fullDocumentBeforeChange,omitempty" json:"fullDocumentBeforeChange,omitempty"`
-	UpdateDescription        primitive.M            `yaml:"updateDescription,omitempty" mapstructure:"updateDescription,omitempty" json:"updateDescription,omitempty"`
+	WallTime                 bson.DateTime          `bson:"wall-time,omitempty" mapstructure:"wall-time,omitempty" json:"wall-time,omitempty"`
+	FullDocument             bson.M                 `yaml:"fullDocument,omitempty" mapstructure:"fullDocument,omitempty" json:"fullDocument,omitempty"`
+	FullDocumentBeforeChange bson.M                 `yaml:"fullDocumentBeforeChange,omitempty" mapstructure:"fullDocumentBeforeChange,omitempty" json:"fullDocumentBeforeChange,omitempty"`
+	UpdateDescription        bson.M                 `yaml:"updateDescription,omitempty" mapstructure:"updateDescription,omitempty" json:"updateDescription,omitempty"`
 }
 
 func (e *ChangeEvent) AsExtendedJson(canonical bool) string {
@@ -63,7 +63,7 @@ func (e *ChangeEvent) DocumentKeyAsString() (string, bool) {
 	if e.DocumentKey != nil {
 		if k, ok := e.DocumentKey["_id"]; ok {
 			switch tk := k.(type) {
-			case primitive.ObjectID:
+			case bson.ObjectID:
 				docKey = tk.Hex()
 			default:
 				docKey = fmt.Sprint(tk)

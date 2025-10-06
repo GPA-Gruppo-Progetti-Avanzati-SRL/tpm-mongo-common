@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
-	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"strings"
+
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util/mdboptions"
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 const (
@@ -131,15 +132,13 @@ func UpdateOne(lks *mongolks.LinkedService, collectionId string, filter []byte, 
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	uo := options.UpdateOptions{}
-	if len(opts) > 0 {
-		err = json.Unmarshal(opts, &uo)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
-		}
+	uo, _, err := mdboptions.UpdateOneOptionsFromJson(opts)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
-	res, err := c.UpdateOne(context.Background(), statementFilter, statementUpdate, &uo)
+
+	res, err := c.UpdateOne(context.Background(), statementFilter, statementUpdate, uo)
 	if err != nil {
 		mongoErrorCode := util.MongoErrorCode(err, util.MongoDbVersion{})
 		log.Error().Err(err).Int32("mongo-error", mongoErrorCode).Msg(semLogContext)
@@ -172,17 +171,11 @@ func (op *UpdateOneOperation) NewWriteModel() (mongo.WriteModel, error) {
 	}
 
 	upsert := false
-	uo := options.UpdateOptions{}
-	if len(op.Options) > 0 {
-		err = json.Unmarshal(op.Options, &uo)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return nil, err
-		}
+	_, upsert, err = mdboptions.UpdateOneOptionsFromJson(op.Options)
 
-		if uo.Upsert != nil {
-			upsert = *uo.Upsert
-		}
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
 	}
 
 	return mongo.NewUpdateOneModel().SetFilter(statementFilter).SetUpdate(statementUpdate).SetUpsert(upsert), nil

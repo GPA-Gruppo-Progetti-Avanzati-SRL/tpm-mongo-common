@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type Handler struct {
@@ -29,8 +30,8 @@ func findLeaseByGroupIdAndLeasedObjectId(coll *mongo.Collection, leaseGroupId st
 
 	f := Filter{}
 	f.Or().AndBidEqTo(leasedObjectId).AndGidEqTo(leaseGroupId).AndEtEqTo(EntityType)
-	opts := options.FindOneOptions{}
-	err := coll.FindOne(context.Background(), f.Build(), &opts).Decode(&doc)
+	opts := options.FindOne()
+	err := coll.FindOne(context.Background(), f.Build(), opts).Decode(&doc)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			log.Info().Str("lease-gid", leaseGroupId).Str("leased-object-id", leasedObjectId).Msg(semLogContext + " - no lease found")

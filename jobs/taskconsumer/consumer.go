@@ -8,8 +8,8 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/taskconsumer/datasource"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"io"
 	"math/rand"
 )
@@ -110,7 +110,7 @@ func (c *Consumer) UpdateLeaseData(evt datasource.Event, status string, withErro
 
 	if c.leaseHandler != nil {
 		renew := false
-		if evt.Key != primitive.NilObjectID {
+		if evt.Key != bson.NilObjectID {
 			if c.leaseHandler.Lease.Bid == partition.Id(c.task.Bid, evt.Partition) {
 				c.lastCommittedEvent = evt
 				c.leaseHandler.SetLeaseData(LeaseDataResumeId, evt.Key.Hex())
@@ -147,7 +147,7 @@ func (c *Consumer) CommitEvent(evt datasource.Event, forceSync bool, withErrors 
 		return nil
 	}
 
-	if evt.Key != primitive.NilObjectID {
+	if evt.Key != bson.NilObjectID {
 		if c.leaseHandler != nil && c.leaseHandler.Lease.Bid == partition.Id(c.task.Bid, evt.Partition) {
 			c.lastCommittedEvent = evt
 			c.uncommittedEvents++
@@ -171,7 +171,7 @@ func (c *Consumer) Commit(forceSync bool) error {
 	return c.CommitEvent(c.lastPolledEvent, forceSync, false)
 	//const semLogContext = "consumer::commit"
 	//var err error
-	//if s.lastPolledEvent.Key != primitive.NilObjectID {
+	//if s.lastPolledEvent.Key != bson.NilObjectID {
 	//	if s.leaseHandler != nil && s.leaseHandler.Lease.Bid == partition.Id(s.task.Bid, s.lastPolledEvent.Partition) {
 	//		log.Info().Msg(semLogContext + ": commit lease")
 	//		err = s.leaseHandler.SetLeaseData("resume_id", s.lastPolledEvent.Key.Hex(), true)
@@ -310,7 +310,7 @@ func (c *Consumer) handleBoundaryEvent(evt datasource.Event) error {
 			}
 
 			evt1 := datasource.NoEvent
-			if c.uncommittedEvents > 0 && c.lastCommittedEvent.Key != primitive.NilObjectID {
+			if c.uncommittedEvents > 0 && c.lastCommittedEvent.Key != bson.NilObjectID {
 				if c.leaseHandler != nil && c.leaseHandler.Lease.Bid == partition.Id(c.task.Bid, c.lastCommittedEvent.Partition) {
 					evt1 = c.lastCommittedEvent
 				} else {

@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
+
 	"testing"
 )
 
@@ -135,7 +136,7 @@ func TestDecodeExtendedTest2Json(t *testing.T) {
 	t.Log(m)
 
 	t.Logf("%T", m["legati"])
-	if a, ok := m["legati"].(primitive.A); ok {
+	if a, ok := m["legati"].(bson.A); ok {
 		t.Logf("%T", a[0])
 	}
 

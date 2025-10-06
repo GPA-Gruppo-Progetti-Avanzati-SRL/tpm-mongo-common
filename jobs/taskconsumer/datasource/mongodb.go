@@ -3,16 +3,16 @@ package datasource
 import (
 	"context"
 	"errors"
+	"io"
+	"strings"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"io"
-	"strings"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type ResumableFilter struct {
@@ -23,7 +23,7 @@ type ResumableFilter struct {
 
 func NewResumableFilter(filter string, prtNumber int32, resumeId string) ResumableFilter {
 	if resumeId == "" {
-		resumeId = primitive.NilObjectID.Hex()
+		resumeId = bson.NilObjectID.Hex()
 	}
 
 	return ResumableFilter{filter, prtNumber, resumeId}
@@ -31,7 +31,7 @@ func NewResumableFilter(filter string, prtNumber int32, resumeId string) Resumab
 
 func (f ResumableFilter) Filter(resumeId string) string {
 	if resumeId == "" {
-		resumeId = primitive.NilObjectID.Hex()
+		resumeId = bson.NilObjectID.Hex()
 	}
 
 	return strings.Replace(f.filter, "{resumeObjectId}", resumeId, -1)
@@ -39,7 +39,7 @@ func (f ResumableFilter) Filter(resumeId string) string {
 
 func (f ResumableFilter) UpdateResumeId(resumeId string) ResumableFilter {
 	if resumeId == "" {
-		resumeId = primitive.NilObjectID.String()
+		resumeId = bson.NilObjectID.String()
 	}
 
 	f.resumeId = resumeId
@@ -102,7 +102,7 @@ func (sb *MongoDbConnector) loadPage() error {
 
 	findOpts := options.Find()
 	findOpts.SetLimit(sb.batchSize)
-	findOpts.Sort = bson.D{{"_id", 1}}
+	findOpts.SetSort(bson.D{{"_id", 1}})
 	crs, err := sb.coll.Find(context.Background(), filterBsonObj, findOpts)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -120,7 +120,7 @@ func (sb *MongoDbConnector) loadPage() error {
 	sb.currentDoc = -1
 	if len(docs) > 0 {
 		lastDoc := docs[len(docs)-1]
-		sb.filter = sb.filter.UpdateResumeId((lastDoc["_id"].(primitive.ObjectID)).Hex())
+		sb.filter = sb.filter.UpdateResumeId((lastDoc["_id"].(bson.ObjectID)).Hex())
 	} else {
 		sb.isEof = true
 	}

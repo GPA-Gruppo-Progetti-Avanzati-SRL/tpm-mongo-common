@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"strings"
+
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+
+	"net/http"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"net/http"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -135,9 +137,8 @@ func Aggregate(lks *mongolks.LinkedService, collectionId string, pipeline []byte
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	fo := options.AggregateOptions{}
-
-	sc, resp, err := executeAggregateOp(c, statementQuery, &fo)
+	fo := options.Aggregate()
+	sc, resp, err := executeAggregateOp(c, statementQuery, fo)
 	if err != nil {
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
@@ -155,7 +156,7 @@ func Aggregate(lks *mongolks.LinkedService, collectionId string, pipeline []byte
 	return sc, nil, nil
 }
 
-func executeAggregateOp(c *mongo.Collection, pipeline interface{}, fo *options.AggregateOptions) (OperationResult, [][]byte, error) {
+func executeAggregateOp(c *mongo.Collection, pipeline interface{}, fo options.Lister[options.AggregateOptions] /* fo *options.AggregateOptions*/) (OperationResult, [][]byte, error) {
 	const semLogContext = "mongo-operation::execute-aggregate-op"
 
 	crs, err := c.Aggregate(context.Background(), pipeline, fo)

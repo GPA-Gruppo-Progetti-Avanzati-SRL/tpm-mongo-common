@@ -1,7 +1,7 @@
 package util
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func MustToExtendedJsonString(document bson.D, canonical, escapeHtml bool) string {

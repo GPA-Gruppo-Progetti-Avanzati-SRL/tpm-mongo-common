@@ -5,19 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
-	"github.com/rs/zerolog/log"
-	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func TestNonBlockingChangeStream(t *testing.T) {
@@ -27,20 +27,24 @@ func TestNonBlockingChangeStream(t *testing.T) {
 
 	coll := lks.GetCollection(WatchCollectionId, "")
 
-	opt := options.ChangeStreamOptions{
-		BatchSize:                nil,
-		Collation:                nil,
-		Comment:                  nil,
-		FullDocument:             nil,
-		FullDocumentBeforeChange: nil,
-		MaxAwaitTime:             nil,
-		ResumeAfter:              nil,
-		ShowExpandedEvents:       nil,
-		StartAtOperationTime:     nil,
-		StartAfter:               nil,
-		Custom:                   nil,
-		CustomPipeline:           nil,
-	}
+	/*
+		opt := options.ChangeStreamOptions{
+			BatchSize:                nil,
+			Collation:                nil,
+			Comment:                  nil,
+			FullDocument:             nil,
+			FullDocumentBeforeChange: nil,
+			MaxAwaitTime:             nil,
+			ResumeAfter:              nil,
+			ShowExpandedEvents:       nil,
+			StartAtOperationTime:     nil,
+			StartAfter:               nil,
+			Custom:                   nil,
+			CustomPipeline:           nil,
+		}
+	*/
+
+	opt := options.ChangeStream()
 
 	var resumeTokenMap bson.M
 	if ResumeTokenValueJson != "" {
@@ -56,7 +60,7 @@ func TestNonBlockingChangeStream(t *testing.T) {
 				opt.SetResumeAfter(tok)
 			}
 		} else {
-			startTs := primitive.Timestamp{T: uint32(time.Now().Add(-2 * time.Hour).Unix())}
+			startTs := bson.Timestamp{T: uint32(time.Now().Add(-2 * time.Hour).Unix())}
 			opt.SetStartAtOperationTime(&startTs)
 		}
 	}
@@ -69,7 +73,7 @@ func TestNonBlockingChangeStream(t *testing.T) {
 		shutdownChannel <- fmt.Errorf("signal received: %v", <-c)
 	}()
 
-	collStream, err := coll.Watch(context.TODO(), mongo.Pipeline{}, &opt)
+	collStream, err := coll.Watch(context.TODO(), mongo.Pipeline{}, opt)
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup

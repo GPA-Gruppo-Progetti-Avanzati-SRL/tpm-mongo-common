@@ -1,13 +1,14 @@
 package consumerproducer
 
 import (
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -76,25 +77,48 @@ func WithCheckpointSvc(svc checkpoint.ResumeTokenCheckpointSvc) ConsumerConfigOp
 	}
 }
 
-func (cfg *ConsumerConfig) ChangeOptions() (options.ChangeStreamOptions, error) {
+func (cfg *ConsumerConfig) ChangeOptions() (*options.ChangeStreamOptionsBuilder, error) {
 	const semLogContext = "watcher::config-change-options"
 
 	var err error
 	var token checkpoint.ResumeToken
 
-	opts := options.ChangeStreamOptions{
-		BatchSize:                cfg.ChangeStream.BatchSize,
-		Collation:                nil,
-		Comment:                  nil,
-		FullDocument:             cfg.ChangeStream.FullDocument,
-		FullDocumentBeforeChange: cfg.ChangeStream.FullDocumentBeforeChange,
-		MaxAwaitTime:             cfg.ChangeStream.MaxAwaitTime,
-		ResumeAfter:              nil,
-		ShowExpandedEvents:       cfg.ChangeStream.ShowExpandedEvents,
-		StartAtOperationTime:     nil,
-		StartAfter:               nil,
-		Custom:                   nil,
-		CustomPipeline:           nil,
+	/*
+		opts := options.ChangeStreamOptions{
+			BatchSize:                cfg.ChangeStream.BatchSize,
+			Collation:                nil,
+			Comment:                  nil,
+			FullDocument:             cfg.ChangeStream.FullDocument,
+			FullDocumentBeforeChange: cfg.ChangeStream.FullDocumentBeforeChange,
+			MaxAwaitTime:             cfg.ChangeStream.MaxAwaitTime,
+			ResumeAfter:              nil,
+			ShowExpandedEvents:       cfg.ChangeStream.ShowExpandedEvents,
+			StartAtOperationTime:     nil,
+			StartAfter:               nil,
+			Custom:                   nil,
+			CustomPipeline:           nil,
+		}
+	*/
+
+	opts := options.ChangeStream()
+	if cfg.ChangeStream.BatchSize != nil {
+		opts.SetBatchSize(*cfg.ChangeStream.BatchSize)
+	}
+
+	if cfg.ChangeStream.FullDocument != nil {
+		opts.SetFullDocument(*cfg.ChangeStream.FullDocument)
+	}
+
+	if cfg.ChangeStream.FullDocumentBeforeChange != nil {
+		opts.SetFullDocumentBeforeChange(*cfg.ChangeStream.FullDocumentBeforeChange)
+	}
+
+	if cfg.ChangeStream.MaxAwaitTime != nil {
+		opts.SetMaxAwaitTime(*cfg.ChangeStream.MaxAwaitTime)
+	}
+
+	if cfg.ChangeStream.ShowExpandedEvents != nil {
+		opts.SetShowExpandedEvents(*cfg.ChangeStream.ShowExpandedEvents)
 	}
 
 	if cfg.CheckPointSvc != nil {

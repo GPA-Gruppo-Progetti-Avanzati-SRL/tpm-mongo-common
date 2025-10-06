@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"net/http"
-	"strings"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -141,7 +142,7 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	fo := options.FindOneOptions{}
+	fo := options.FindOne()
 	srt, err := util.UnmarshalJson2BsonD(sort, false)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -162,7 +163,7 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 		fo.SetProjection(prj)
 	}
 
-	sc, body, err := executeFindOneOp(c, statementQuery, &fo)
+	sc, body, err := executeFindOneOp(c, statementQuery, fo)
 	if err != nil {
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
@@ -180,7 +181,7 @@ func FindOne(lks *mongolks.LinkedService, collectionId string, query []byte, pro
 	return sc, nil, nil
 }
 
-func executeFindOneOp(c *mongo.Collection, query bson.D, fo *options.FindOneOptions) (OperationResult, bson.M, error) {
+func executeFindOneOp(c *mongo.Collection, query bson.D, fo options.Lister[options.FindOneOptions]) (OperationResult, bson.M, error) {
 	const semLogContext = "mongo-operation::execute-find-one-op"
 
 	result := c.FindOne(context.Background(), query, fo)

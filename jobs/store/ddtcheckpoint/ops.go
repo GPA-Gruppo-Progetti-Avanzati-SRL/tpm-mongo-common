@@ -6,8 +6,8 @@ import (
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func RetrieveDueDate(coll *mongo.Collection, bid string, startDueDate string) (string, error) {
@@ -17,8 +17,8 @@ func RetrieveDueDate(coll *mongo.Collection, bid string, startDueDate string) (s
 
 	f := Filter{}
 	f.Or().AndBidEqTo(bid).AndEtEqTo(EType)
-	opts := options.FindOneOptions{}
-	err := coll.FindOne(context.Background(), f.Build(), &opts).Decode(&doc)
+	opts := options.FindOne()
+	err := coll.FindOne(context.Background(), f.Build(), opts).Decode(&doc)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			log.Info().Str("bid", bid).Msg(semLogContext + " - no active checkpoint found")
@@ -40,9 +40,8 @@ func UpdateDueDate(coll *mongo.Collection, bid string, dueDate string) error {
 
 	upd := GetUpdateDocumentFromOptions(UpdateWith_et(EType), UpdateWith_bid(bid), UpdateWithDue_date(dueDate))
 	updDoc := upd.Build()
-	opts := options.UpdateOptions{}
-	opts.SetUpsert(true)
-	resp, err := coll.UpdateOne(context.Background(), f.Build(), updDoc, &opts)
+	opts := options.UpdateOne().SetUpsert(true)
+	resp, err := coll.UpdateOne(context.Background(), f.Build(), updDoc, opts)
 	if err != nil {
 		log.Error().Err(err).Str("bid", bid).Str("due_date", dueDate).Msg(semLogContext)
 		return err
