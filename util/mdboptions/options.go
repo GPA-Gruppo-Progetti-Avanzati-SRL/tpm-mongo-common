@@ -128,6 +128,7 @@ func FindOneAndUpdateOptionsFromJson(opts []byte, sort, projection []byte) (*opt
 
 func ReplaceOptionsFromJson(opts []byte) (*options.ReplaceOptionsBuilder, error) {
 	const semLogContext = "mongo-options::replace-options-from-json"
+	var isUpsert bool
 	uo := options.Replace()
 	if len(opts) > 0 {
 		delOpts := options.ReplaceOptions{}
@@ -135,6 +136,10 @@ func ReplaceOptionsFromJson(opts []byte) (*options.ReplaceOptionsBuilder, error)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return nil, err
+		}
+		if delOpts.Upsert != nil {
+			isUpsert = *delOpts.Upsert
+			uo.SetUpsert(isUpsert)
 		}
 	}
 
@@ -171,6 +176,7 @@ func UpdateOneOptionsFromJson(opts []byte) (*options.UpdateOneOptionsBuilder, bo
 
 		if delOpts.Upsert != nil {
 			isUpsert = *delOpts.Upsert
+			uo.SetUpsert(isUpsert)
 		}
 	}
 
@@ -192,6 +198,7 @@ func UpdateManyOptionsFromJson(opts []byte) (*options.UpdateManyOptionsBuilder, 
 
 		if delOpts.Upsert != nil {
 			isUpsert = *delOpts.Upsert
+			uo.SetUpsert(isUpsert)
 		}
 	}
 
