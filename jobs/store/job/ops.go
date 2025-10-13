@@ -8,8 +8,8 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func FindById(coll *mongo.Collection, jobId string) (Job, error) {
@@ -17,10 +17,10 @@ func FindById(coll *mongo.Collection, jobId string) (Job, error) {
 
 	f := Filter{}
 	f.Or().AndEtEqTo(EType).AndBidEqTo(jobId)
-	opts := options.FindOneOptions{}
+	opts := options.FindOne()
 
 	var job Job
-	err := coll.FindOne(context.Background(), f.Build(), &opts).Decode(&job)
+	err := coll.FindOne(context.Background(), f.Build(), opts).Decode(&job)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return Job{}, err
@@ -41,9 +41,9 @@ func FindJobsByAmbitAndStatus(coll *mongo.Collection, ambits []string, status st
 		log.Info().Str("types", strings.Join(ambits, ",")).Msg(semLogContext + " - accepting all job types")
 	}
 
-	opts := options.FindOptions{}
+	opts := options.Find()
 
-	crs, err := coll.Find(context.Background(), f.Build(), &opts)
+	crs, err := coll.Find(context.Background(), f.Build(), opts)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

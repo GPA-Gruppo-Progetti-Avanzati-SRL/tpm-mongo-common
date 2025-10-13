@@ -7,8 +7,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/keystring"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 )
 
@@ -48,7 +47,7 @@ func (rt ResumeToken) Parse() (ResumeTokenInfo, error) {
 		log.Error().Err(err).Str("resume-token", tok).Msg(semLogContext)
 		return info, err
 	}
-	if ts, ok := val.(primitive.Timestamp); ok {
+	if ts, ok := val.(bson.Timestamp); ok {
 		info.Timestamp = fmt.Sprintf("%v", ts)
 	} else {
 		info.Timestamp = fmt.Sprintf("%v", val)
@@ -105,7 +104,7 @@ func (rt ResumeToken) Parse() (ResumeTokenInfo, error) {
 		return info, err
 	}
 	if val != nil {
-		if bin, ok := val.(primitive.Binary); ok {
+		if bin, ok := val.(bson.Binary); ok {
 			info.UUID = fmt.Sprintf("%x", bin.Data)
 		} else {
 			info.UUID = fmt.Sprintf("%v", val)

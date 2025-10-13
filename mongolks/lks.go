@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/mongo/readconcern"
+	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
 
 	"time"
 
 	mongoUtil "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
+	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
 )
 
 var DefaultWriteConcern = writeconcern.Majority()
@@ -85,7 +85,7 @@ func (lks *LinkedService) Connect(ctx context.Context) error {
 	deadline := time.Now().Add(connTimeout)
 	ctx, cancelCtx := context.WithDeadline(ctx, deadline)
 	defer cancelCtx()
-	client, err := mongo.Connect(ctx, mongoOptions)
+	client, err := mongo.Connect(mongoOptions)
 
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
@@ -169,7 +169,7 @@ func (lks *LinkedService) GetCollection(aCollectionId string, wcStr string) *mon
 
 	for _, c := range lks.cfg.Collections {
 		if c.Id == aCollectionId {
-			return lks.db.Collection(c.Name, &options.CollectionOptions{WriteConcern: w})
+			return lks.db.Collection(c.Name, options.Collection().SetWriteConcern(w))
 		}
 	}
 

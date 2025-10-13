@@ -3,17 +3,18 @@ package watcherproducer
 import (
 	"context"
 	"errors"
+	"io"
+	"sync"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util/promutil"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/events"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"io"
-	"sync"
-	"time"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 const (
@@ -268,7 +269,7 @@ func (s *watcherImpl) newChangeStream() (*mongo.ChangeStream, error) {
 
 	counter := 1
 	log.Info().Err(err).Int("retry-num", counter).Msg(semLogContext)
-	collStream, err := coll.Watch(context.TODO(), pipeline, &opts)
+	collStream, err := coll.Watch(context.TODO(), pipeline, opts)
 	for err != nil && counter < s.cfg.RetryCount {
 		mongoCode := util.MongoErrorCode(err, s.ServerVersion)
 		// TODO add logic to retry with the start after time depending on config
@@ -287,7 +288,7 @@ func (s *watcherImpl) newChangeStream() (*mongo.ChangeStream, error) {
 
 		counter++
 		log.Info().Err(err).Int("retry-num", counter).Msg(semLogContext)
-		collStream, err = coll.Watch(context.TODO(), mongo.Pipeline{}, &opts)
+		collStream, err = coll.Watch(context.TODO(), mongo.Pipeline{}, opts)
 	}
 
 	if err != nil {

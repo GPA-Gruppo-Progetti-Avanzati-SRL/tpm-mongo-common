@@ -15,9 +15,9 @@ import (
 	"github.com/feliixx/mongoextjson"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/bsonrw"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 var insertOneTestDocument1 = []byte(`{ "year": 2030, "title": "the 2030 movie", "summary": "the 2030 movie summary", "relaxed_date": {"$date":"2019-08-11T17:54:14.692Z"}, "canonical_date": {"$date": 1741089118537}}`)
@@ -244,11 +244,13 @@ func TestExtJson(t *testing.T) {
 
 	// Create a Decoder that reads the Extended JSON document and use it to
 	// unmarshal the document into a Product struct.
-	vr, err := bsonrw.NewExtJSONValueReader(bytes.NewReader(data), false)
+	vr, err := bson.NewExtJSONValueReader(bytes.NewReader(data), false)
 	require.NoError(t, err)
 
-	decoder, err := bson.NewDecoder(vr)
-	require.NoError(t, err)
+	decoder := bson.NewDecoder(vr)
+	// V2
+	//decoder, err := bson.NewDecoder(vr)
+	//require.NoError(t, err)
 
 	type Product struct {
 		Name  string    `bson:"name"`
@@ -261,11 +263,13 @@ func TestExtJson(t *testing.T) {
 	err = decoder.Decode(&res)
 	require.NoError(t, err)
 
-	vr, err = bsonrw.NewExtJSONValueReader(bytes.NewReader(data), false)
+	vr, err = bson.NewExtJSONValueReader(bytes.NewReader(data), false)
 	require.NoError(t, err)
 
-	decoder, err = bson.NewDecoder(vr)
-	require.NoError(t, err)
+	decoder = bson.NewDecoder(vr)
+	// V2
+	//decoder, err = bson.NewDecoder(vr)
+	//require.NoError(t, err)
 
 	var resMap map[string]interface{}
 	err = decoder.Decode(&resMap)
@@ -276,7 +280,7 @@ func TestExtJson(t *testing.T) {
 		t.Logf("jey: %s, value: %v of type %T", n, v, v)
 	}
 
-	vr, err = bsonrw.NewExtJSONValueReader(bytes.NewReader(data), false)
+	vr, err = bson.NewExtJSONValueReader(bytes.NewReader(data), false)
 	require.NoError(t, err)
 	vr.ReadCodeWithScope()
 }

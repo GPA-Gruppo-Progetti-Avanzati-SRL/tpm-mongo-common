@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/bsonrw"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"sort"
 	"strings"
 )
@@ -202,7 +200,7 @@ func (o *OrderedMap) ToBsonD() (bson.D, error) {
 				return nil, err
 			}
 			a = append(a, bson.E{Key: k, Value: val})
-		case primitive.A:
+		case bson.A:
 			val, err := adaptSlice(tv)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
@@ -385,7 +383,7 @@ func decodeOrderedMap(dec *json.Decoder, o *OrderedMap) error {
 					if err = decodeSlice(dec, values, o.escapeHTML); err != nil {
 						return err
 					}
-				case primitive.A:
+				case bson.A:
 					if err = decodeSlice(dec, values, o.escapeHTML); err != nil {
 						return err
 					}
@@ -485,15 +483,17 @@ func (o OrderedMap) MarshalJSON() ([]byte, error) {
 }
 
 func UnmarshalMongoJson(data []byte, v any) error {
-	vr, err := bsonrw.NewExtJSONValueReader(bytes.NewReader(data), false)
+	vr, err := bson.NewExtJSONValueReader(bytes.NewReader(data), false)
 	if err != nil {
 		return err
 	}
 
-	decoder, err := bson.NewDecoder(vr)
-	if err != nil {
-		return err
-	}
+	decoder := bson.NewDecoder(vr)
+	// V2 doesn't return an error.
+	//decoder, err := bson.NewDecoder(vr)
+	//if err != nil {
+	//	return err
+	//}
 
 	err = decoder.Decode(v)
 	if err != nil {

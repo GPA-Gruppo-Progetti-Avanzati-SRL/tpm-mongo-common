@@ -2,8 +2,7 @@ package events
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func getString(m bson.M, fieldName string, mandatory bool) (string, error) {
@@ -46,7 +45,7 @@ func getNumberLong(m bson.M, fieldName string, mandatory bool) (int64, error) {
 	return v, nil
 }
 
-func getTimestamp(m bson.M, fieldName string, mandatory bool) (primitive.Timestamp, error) {
+func getTimestamp(m bson.M, fieldName string, mandatory bool) (bson.Timestamp, error) {
 
 	var err error
 	i, ok := m[fieldName]
@@ -54,19 +53,19 @@ func getTimestamp(m bson.M, fieldName string, mandatory bool) (primitive.Timesta
 		if mandatory {
 			err = fmt.Errorf("missing %s", fieldName)
 		}
-		return primitive.Timestamp{}, err
+		return bson.Timestamp{}, err
 	}
 
-	v, ok := i.(primitive.Timestamp)
+	v, ok := i.(bson.Timestamp)
 	if !ok {
 		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
-		return primitive.Timestamp{}, err
+		return bson.Timestamp{}, err
 	}
 
 	return v, nil
 }
 
-func getDateTime(m bson.M, fieldName string, mandatory bool) (primitive.DateTime, error) {
+func getDateTime(m bson.M, fieldName string, mandatory bool) (bson.DateTime, error) {
 
 	var err error
 	i, ok := m[fieldName]
@@ -77,7 +76,7 @@ func getDateTime(m bson.M, fieldName string, mandatory bool) (primitive.DateTime
 		return 0, err
 	}
 
-	v, ok := i.(primitive.DateTime)
+	v, ok := i.(bson.DateTime)
 	if !ok {
 		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
 		return 0, err
@@ -86,7 +85,7 @@ func getDateTime(m bson.M, fieldName string, mandatory bool) (primitive.DateTime
 	return v, nil
 }
 
-func getDocument(m bson.M, fieldName string, mandatory bool) (primitive.M, error) {
+func getDocument(m bson.M, fieldName string, mandatory bool) (bson.M, error) {
 
 	var err error
 	i, ok := m[fieldName]
@@ -106,7 +105,7 @@ func getDocument(m bson.M, fieldName string, mandatory bool) (primitive.M, error
 		return nil, err
 	}
 
-	v, ok := i.(primitive.M)
+	v, ok := i.(bson.M)
 	if !ok {
 		err = fmt.Errorf("invalid type %T for %s", i, fieldName)
 		return nil, err

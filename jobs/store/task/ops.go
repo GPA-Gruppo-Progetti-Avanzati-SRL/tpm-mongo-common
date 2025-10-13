@@ -2,9 +2,10 @@ package task
 
 import (
 	"context"
+
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func FindById(coll *mongo.Collection, taskId string) (Task, error) {
@@ -12,10 +13,10 @@ func FindById(coll *mongo.Collection, taskId string) (Task, error) {
 
 	f := Filter{}
 	f.Or().AndEtEqTo(EType).AndBidEqTo(taskId)
-	opts := options.FindOneOptions{}
+	opts := options.FindOne()
 
 	var tsk Task
-	err := coll.FindOne(context.Background(), f.Build(), &opts).Decode(&tsk)
+	err := coll.FindOne(context.Background(), f.Build(), opts).Decode(&tsk)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return Task{}, err
@@ -29,9 +30,9 @@ func FindByJobBidAndStatus(coll *mongo.Collection, jobBid string, status string)
 
 	f := Filter{}
 	f.Or().AndEtEqTo(EType).AndJobIdEqTo(jobBid).AndStatusEqTo(status)
-	opts := options.FindOptions{}
+	opts := options.Find()
 
-	crs, err := coll.Find(context.Background(), f.Build(), &opts)
+	crs, err := coll.Find(context.Background(), f.Build(), opts)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

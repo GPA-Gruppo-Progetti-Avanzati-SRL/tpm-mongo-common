@@ -5,14 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
-	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"strings"
+
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util/mdboptions"
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -139,43 +141,43 @@ func (op *FindOneAndUpdateOperation) Execute(lks *mongolks.LinkedService, collec
 	return sc, resp, err
 }
 
-func newFindOneAndUpdateOptions(opts []byte) (options.FindOneAndUpdateOptions, error) {
-	const semLogContext = "json-ops::new-find-one-and-update-options"
-	fo := options.FindOneAndUpdateOptions{}
-	if len(opts) > 0 {
-		var m map[string]interface{}
-		err := json.Unmarshal(opts, &m)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return fo, err
-		}
-
-		if upsert, ok := m["upsert"]; ok {
-			if b, ok := upsert.(bool); ok {
-				fo.SetUpsert(b)
-			} else {
-				err = errors.New("unrecognized upsert flag")
-				log.Error().Msg(semLogContext)
-			}
-		}
-
-		if rd, ok := m["returnDocument"]; ok {
-			if s, ok := rd.(string); ok {
-				switch s {
-				case "before":
-					fo.SetReturnDocument(options.Before)
-				case "after":
-					fo.SetReturnDocument(options.After)
-				default:
-					err = errors.New("unrecognized returnDocument")
-					log.Error().Err(err).Str("returnDocument", s).Msg(semLogContext)
-				}
-			}
-		}
-	}
-
-	return fo, nil
-}
+//func newFindOneAndUpdateOptions(opts []byte) (*options.FindOneAndUpdateOptionsBuilder, error) {
+//	const semLogContext = "json-ops::new-find-one-and-update-options"
+//	fo := options.FindOneAndUpdate()
+//	if len(opts) > 0 {
+//		var m map[string]interface{}
+//		err := json.Unmarshal(opts, &m)
+//		if err != nil {
+//			log.Error().Err(err).Msg(semLogContext)
+//			return fo, err
+//		}
+//
+//		if upsert, ok := m["upsert"]; ok {
+//			if b, ok := upsert.(bool); ok {
+//				fo.SetUpsert(b)
+//			} else {
+//				err = errors.New("unrecognized upsert flag")
+//				log.Error().Msg(semLogContext)
+//			}
+//		}
+//
+//		if rd, ok := m["returnDocument"]; ok {
+//			if s, ok := rd.(string); ok {
+//				switch s {
+//				case "before":
+//					fo.SetReturnDocument(options.Before)
+//				case "after":
+//					fo.SetReturnDocument(options.After)
+//				default:
+//					err = errors.New("unrecognized returnDocument")
+//					log.Error().Err(err).Str("returnDocument", s).Msg(semLogContext)
+//				}
+//			}
+//		}
+//	}
+//
+//	return fo, nil
+//}
 
 func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []byte, projection []byte, sort []byte, update []byte, opts []byte) (OperationResult, []byte, error) {
 	const semLogContext = "json-ops::find-one-and-update"
@@ -200,33 +202,13 @@ func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	fo, err := newFindOneAndUpdateOptions(opts)
+	fo, upsert, err := mdboptions.FindOneAndUpdateOptionsFromJson(opts, sort, projection)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
 	}
 
-	srt, err := util.UnmarshalJson2BsonD(sort, false)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
-	}
-
-	if len(srt) > 0 {
-		fo.SetSort(srt)
-	}
-
-	prj, err := util.UnmarshalJson2BsonD(projection, false)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return OperationResult{StatusCode: http.StatusInternalServerError}, nil, err
-	}
-
-	if len(prj) > 0 {
-		fo.SetProjection(prj)
-	}
-
-	sc, body, err := executeFindOneAndUpdateOp(c, statementQuery, statementUpdate, &fo)
+	sc, body, err := executeFindOneAndUpdateOp(c, statementQuery, statementUpdate, fo, upsert)
 	if err != nil {
 		mongoErrorCode := util.MongoErrorCode(err, util.MongoDbVersion{})
 		log.Error().Err(err).Int32("mongo-error", mongoErrorCode).Msg(semLogContext)
@@ -246,12 +228,12 @@ func FindOneAndUpdate(lks *mongolks.LinkedService, collectionId string, query []
 	return sc, nil, nil
 }
 
-func executeFindOneAndUpdateOp(c *mongo.Collection, query bson.D, update any, fo *options.FindOneAndUpdateOptions) (OperationResult, bson.M, error) {
+func executeFindOneAndUpdateOp(c *mongo.Collection, query bson.D, update any, fo options.Lister[options.FindOneAndUpdateOptions], isUpsert bool) (OperationResult, bson.M, error) {
 	const semLogContext = "mongo-operation::execute-find-one-and-update-op"
 
 	result := c.FindOneAndUpdate(context.Background(), query, update, fo)
 	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-		if fo.Upsert != nil && *fo.Upsert {
+		if isUpsert {
 			return OperationResult{StatusCode: http.StatusNoContent}, nil, nil
 		}
 		return OperationResult{StatusCode: http.StatusNotFound}, nil, nil

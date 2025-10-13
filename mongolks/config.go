@@ -2,12 +2,13 @@ package mongolks
 
 import (
 	"crypto/tls"
-	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readconcern"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
+	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
 )
 
 const MongoDbDefaultInstanceName = "default"
@@ -190,12 +191,12 @@ func EvalWriteConcern(wstr string) *writeconcern.WriteConcern {
 	if wstr != "" {
 		switch wstr {
 		case "majority":
-			writeconcern.New(writeconcern.WMajority())
+			w = writeconcern.Majority()
 		case "1":
-			w = writeconcern.New(writeconcern.W(1))
+			w = &writeconcern.WriteConcern{W: 1}
 		default:
 			if i, err := strconv.Atoi(wstr); err == nil {
-				w = writeconcern.New(writeconcern.W(i))
+				w = &writeconcern.WriteConcern{W: i}
 			}
 		}
 	}

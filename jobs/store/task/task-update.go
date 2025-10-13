@@ -1,6 +1,6 @@
 package task
 
-import "go.mongodb.org/mongo-driver/bson"
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 // @tpm-schematics:start-region("top-file-section")
 // @tpm-schematics:end-region("top-file-section")
