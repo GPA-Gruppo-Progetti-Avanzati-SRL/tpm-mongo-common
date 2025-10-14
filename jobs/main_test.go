@@ -2,47 +2,38 @@ package jobs_test
 
 import (
 	"context"
-	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"os"
-	"testing"
-	"time"
 )
 
 const (
 	NumPartitions           = 5
 	NumDocumentPerPartition = 20
 
-	jobId                = "my-job-id"
-	taskId               = jobId + "-t1"
-	dataSourceStreamType = task.DataStreamTypeFinite
-
-	QueryInstanceId     = "default"
-	QueryCollectionId   = "query-collection"
-	QueryCollectionName = "task_query_docs"
+	jobId  = "my-job-id"
+	taskId = jobId + "-t1"
 
 	JobsInstanceId     = "default"
 	JobsCollectionId   = "jobs-collection"
 	JobsCollectionName = "jobs"
 
 	Host   = "mongodb://localhost:27017"
-	DbName = "tpm_morphia"
+	DbName = "tpm_mongo_common"
 
 	WithPopulateTasks = true
-	WithPopulateData  = true
 	WithClearData     = false
-
-	WithOnEventErrorsStride  = 14
-	WithOnEventsErrorsStride = 14
 )
 
 var cfg = mongolks.Config{
@@ -65,10 +56,6 @@ var cfg = mongolks.Config{
 	WriteConcern: "majority",
 	//WriteTimeout: "120s",
 	Collections: []mongolks.CollectionCfg{
-		{
-			Id:   QueryCollectionId,
-			Name: QueryCollectionName,
-		},
 		{
 			Id:   JobsCollectionId,
 			Name: JobsCollectionName,
@@ -97,53 +84,12 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	if WithPopulateData {
-		err = initData()
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to populate data")
-		}
-	}
-
 	exitVal := m.Run()
 	if WithClearData {
 		defer clearJobAndData()
 	}
 
 	os.Exit(exitVal)
-}
-
-func initData() error {
-	qcoll, err := mongolks.GetCollection(context.Background(), QueryInstanceId, QueryCollectionId)
-	if err != nil {
-		return err
-	}
-
-	err = populatePartitionedDocuments(qcoll)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func populatePartitionedDocuments(coll *mongo.Collection) error {
-
-	// it populates all partitions but one.
-	for i := 1; i <= NumPartitions-1; i++ {
-		for j := 1; j <= NumDocumentPerPartition; j++ {
-			doc := bson.M{
-				partition.QueryDocumentPartitionFieldName: int32(i),
-				"name": fmt.Sprintf("name-%d-%d", i, j),
-			}
-
-			insertResp, err := coll.InsertOne(context.Background(), doc)
-			if err != nil {
-				return err
-			}
-			log.Info().Interface("resp", insertResp).Msgf("inserted documents")
-		}
-	}
-	return nil
 }
 
 func initJob() error {
@@ -174,10 +120,8 @@ func populateJob(taskColl *mongo.Collection, aJobId string, aTaskId string) (job
 		Status: job.StatusAvailable,
 		Tasks: []beans.TaskReference{
 			{
-				Id:             aTaskId,
-				Status:         task.StatusAvailable,
-				DataSourceType: task.TypeQMongo,
-				StreamType:     dataSourceStreamType,
+				Id:     aTaskId,
+				Status: task.StatusAvailable,
 			},
 		},
 	}
@@ -194,32 +138,22 @@ func populateJob(taskColl *mongo.Collection, aJobId string, aTaskId string) (job
 func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (task.Task, error) {
 
 	aTask := task.Task{
-		Bid:            aTaskId,
-		Et:             task.EType,
-		JobId:          aJobId,
-		Ambit:          "test-mongo-common",
-		Status:         task.StatusAvailable,
-		DataSourceType: task.TypeQMongo,
-		StreamType:     dataSourceStreamType,
-		ProcessorId:    task.ProcessorIdAny,
-		Info: beans.TaskInfo{
-			MdbInstance:   JobsInstanceId,
-			MdbCollection: QueryCollectionId,
-		},
+		Bid:    aTaskId,
+		Et:     task.EType,
+		JobId:  aJobId,
+		Ambit:  "test-mongo-common",
+		Status: task.StatusAvailable,
 	}
 
 	for j := 1; j <= NumPartitions; j++ {
 		aTask.Partitions = append(aTask.Partitions,
-			partition.Partition{
-				Bid:             partition.Id(aTaskId, int32(j)),
+			beans.Partition{
+				Bid:             beans.PartitionId(aTaskId, int32(j)),
 				Gid:             "",
-				Et:              partition.EType,
+				Et:              beans.PartitionEType,
 				PartitionNumber: int32(j),
-				Status:          partition.StatusAvailable,
+				Status:          beans.PartitionStatusAvailable,
 				Etag:            0,
-				Info: beans.PartitionInfo{
-					MdbFilter: fmt.Sprintf(`{ "$and": [ {"%s": %d }, { "_id": { "$gt": { "$oid": "{resumeObjectId}" } } }  ] }`, partition.QueryDocumentPartitionFieldName, j),
-				},
 			},
 		)
 	}
@@ -235,17 +169,6 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 
 func clearJobAndData() {
 	const semLogContext = "main::clear-task-and-data"
-	qcoll, err := mongolks.GetCollection(context.Background(), QueryInstanceId, QueryCollectionId)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return
-	}
-
-	err = clearPartitionedDocuments(qcoll)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return
-	}
 
 	taskColl, err := mongolks.GetCollection(context.Background(), JobsInstanceId, JobsCollectionId)
 	if err != nil {
@@ -265,22 +188,6 @@ func clearJobAndData() {
 		return
 	}
 
-}
-
-func clearPartitionedDocuments(coll *mongo.Collection) error {
-	log.Info().Msg("clear partitioned documents")
-	for i := 1; i <= NumPartitions; i++ {
-		filter := bson.M{
-			"_np": int32(i),
-		}
-		resp, err := coll.DeleteMany(context.Background(), filter)
-		if err != nil {
-			log.Error().Err(err).Msg("error deleting partitioned documents")
-			return err
-		}
-		log.Info().Interface("resp", resp).Msgf("deleted documents")
-	}
-	return nil
 }
 
 func clearJob(taskColl *mongo.Collection, aJobId string) error {

@@ -2,8 +2,9 @@ package job
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 )
@@ -34,7 +35,7 @@ type UnsetOptions struct {
 	Ambit       UnsetMode
 	Status      UnsetMode
 	DueDate     UnsetMode
-	Info        UnsetMode
+	Properties  UnsetMode
 	Tasks       UnsetMode
 }
 
@@ -76,9 +77,9 @@ func WithDueDateUnsetMode(m UnsetMode) UnsetOption {
 		uopt.DueDate = m
 	}
 }
-func WithInfoUnsetMode(m UnsetMode) UnsetOption {
+func WithPropertiesUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Info = m
+		uopt.Properties = m
 	}
 }
 func WithTasksUnsetMode(m UnsetMode) UnsetOption {
@@ -117,7 +118,7 @@ func GetUpdateDocument(obj *Job, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnsetAmbit(obj.Ambit, uo.ResolveUnsetMode(uo.Ambit))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
 	ud.setOrUnsetDue_date(obj.DueDate, uo.ResolveUnsetMode(uo.DueDate))
-	ud.setOrUnsetInfo(&obj.Info, uo.ResolveUnsetMode(uo.Info))
+	ud.setOrUnsetProperties(obj.Properties, uo.ResolveUnsetMode(uo.Properties))
 	ud.setOrUnsetTasks(obj.Tasks, uo.ResolveUnsetMode(uo.Tasks))
 
 	return ud
@@ -353,51 +354,51 @@ func UpdateWithDue_date(p string) UpdateOption {
 // @tpm-schematics:start-region("due-date-field-update-section")
 // @tpm-schematics:end-region("due-date-field-update-section")
 
-// SetInfo No Remarks
-func (ud *UpdateDocument) SetInfo(p *beans.JobInfo) *UpdateDocument {
-	mName := fmt.Sprintf(InfoFieldName)
+// SetProperties No Remarks
+func (ud *UpdateDocument) SetProperties(p bson.M) *UpdateDocument {
+	mName := fmt.Sprintf(PropertiesFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetInfo No Remarks
-func (ud *UpdateDocument) UnsetInfo() *UpdateDocument {
-	mName := fmt.Sprintf(InfoFieldName)
+// UnsetProperties No Remarks
+func (ud *UpdateDocument) UnsetProperties() *UpdateDocument {
+	mName := fmt.Sprintf(PropertiesFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetInfo No Remarks - here2
-func (ud *UpdateDocument) setOrUnsetInfo(p *beans.JobInfo, um UnsetMode) {
-	if p != nil && !p.IsZero() {
-		ud.SetInfo(p)
+// setOrUnsetProperties No Remarks
+func (ud *UpdateDocument) setOrUnsetProperties(p bson.M, um UnsetMode) {
+	if len(p) != 0 {
+		ud.SetProperties(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetInfo()
+			ud.UnsetProperties()
 		case SetData2Default:
-			ud.UnsetInfo()
+			ud.UnsetProperties()
 		}
 	}
 }
 
-func UpdateWithInfo(p *beans.JobInfo) UpdateOption {
+func UpdateWithProperties(p bson.M) UpdateOption {
 	return func(ud *UpdateDocument) {
-		if p != nil && !p.IsZero() {
-			ud.SetInfo(p)
+		if len(p) != 0 {
+			ud.SetProperties(p)
 		} else {
-			ud.UnsetInfo()
+			ud.UnsetProperties()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("info-field-update-section")
-// @tpm-schematics:end-region("info-field-update-section")
+// @tpm-schematics:start-region("properties-field-update-section")
+// @tpm-schematics:end-region("properties-field-update-section")
 
 // SetTasks No Remarks
 func (ud *UpdateDocument) SetTasks(p []beans.TaskReference) *UpdateDocument {

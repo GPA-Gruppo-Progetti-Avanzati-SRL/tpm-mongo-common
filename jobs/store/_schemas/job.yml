@@ -15,10 +15,8 @@ attributes:
   - name: due_date
     type: string
     options: with-filter
-  - name: info
-    struct-ref:
-      name: JobInfo
-    type: struct
+  - name: properties
+    type: document
   - name: tasks
     type: array
     item:

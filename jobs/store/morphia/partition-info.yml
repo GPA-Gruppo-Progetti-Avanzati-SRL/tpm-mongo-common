@@ -1,4 +1,0 @@
-name: PartitionInfo
-attributes:
-  - name: mdbFilter
-    type: string

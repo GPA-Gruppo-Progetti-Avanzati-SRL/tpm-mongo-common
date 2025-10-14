@@ -1,9 +1,0 @@
-name: TaskInfo
-attributes:
-  - name: mdbInstance
-    type: string
-  - name: mdbCollection
-    type: string
-  - name: mdbBatchSize
-    type: int
-

@@ -25,10 +25,8 @@ attributes:
         value: etag
       - name: yaml
         value: etag
-  - name: info
-    struct-ref:
-      name: PartitionInfo
-    type: struct
+  - name: properties
+    type: document
   - name: errors
     type: int
   - name: acquisitions

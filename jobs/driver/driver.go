@@ -2,7 +2,6 @@ package driver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/worker"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
@@ -20,6 +20,7 @@ import (
 type Driver struct {
 	cfg *Config
 
+	workerFactory worker.Factory
 	numIterations int
 	jobsColl      *mongo.Collection
 	wg            *sync.WaitGroup
@@ -30,7 +31,7 @@ type Driver struct {
 	shutdownChannel chan error // channel used to quit the application. triggered when driver wants to exit.
 }
 
-func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
+func NewDriver(cfg *Config, workerFactory worker.Factory, wg *sync.WaitGroup) (*Driver, error) {
 
 	const semLogContext = "driver::new"
 
@@ -41,15 +42,12 @@ func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
 	}
 
 	m := &Driver{
-		cfg:       cfg,
-		wg:        wg,
-		workersWg: &sync.WaitGroup{},
-		jobsColl:  coll,
-		quitc:     make(chan struct{}),
-	}
-
-	if len(cfg.WorkersConfig) == 0 {
-		return nil, errors.New("must specify at least one worker configuration")
+		cfg:           cfg,
+		wg:            wg,
+		workerFactory: workerFactory,
+		workersWg:     &sync.WaitGroup{},
+		jobsColl:      coll,
+		quitc:         make(chan struct{}),
 	}
 
 	if cfg.TickInterval == 0 {
@@ -155,7 +153,7 @@ func (m *Driver) workLoop() {
 }
 
 func (m *Driver) findAndStartTasks() []beans.TaskReference {
-	const semLogContext = "monitor::find-and-start-tasks"
+	const semLogContext = "driver::find-and-start-tasks"
 
 	tasks, err := m.FindTasks(m.jobsColl)
 	if err != nil {
@@ -165,7 +163,7 @@ func (m *Driver) findAndStartTasks() []beans.TaskReference {
 
 	var startedTasks []beans.TaskReference
 	if len(tasks) > 0 {
-		startedTasks, err = m.startTasks(m.jobsColl, tasks, m.cfg.WorkersConfig)
+		startedTasks, err = m.startTasks(m.jobsColl, tasks, m.workerFactory)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 		}
@@ -177,7 +175,7 @@ func (m *Driver) findAndStartTasks() []beans.TaskReference {
 }
 
 func (m *Driver) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
-	const semLogContext = "monitor::find-tasks"
+	const semLogContext = "driver::find-tasks"
 	var tasks []task.Task
 
 	jobs, err := job.FindJobsByAmbitAndStatus(jobsColl, m.cfg.JobTypes, job.StatusAvailable)
@@ -203,54 +201,30 @@ func (m *Driver) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
 	return tasks, nil
 }
 
-func (m *Driver) startTasks(jobsColl *mongo.Collection, tasks []task.Task, workersConfigs []worker.Config) ([]beans.TaskReference, error) {
-	const semLogContext = "monitor::execute-tasks"
+func (m *Driver) startTasks(coll *mongo.Collection, tasks []task.Task, workerFactory worker.Factory) ([]beans.TaskReference, error) {
+	const semLogContext = "driver::execute-tasks"
 
 	var startedTasks []beans.TaskReference
 	for _, tsk := range tasks {
 
-		var prc worker.Config
-		var ok bool
-		if tsk.ProcessorId == task.ProcessorIdAny {
-			prc = workersConfigs[0]
-			ok = true
-		} else {
-			for _, wc := range workersConfigs {
-				if tsk.ProcessorId == wc.Name {
-					prc = wc
-					ok = true
-					break
-				}
-			}
-		}
-
-		if !ok {
-			err := errors.New("processor not found in processorGroup")
-			log.Error().Err(err).Str("processor-id", tsk.ProcessorId).Msg(semLogContext)
-			// keep processing others....
-			continue
-		}
-
-		wrk, err := worker.NewWorker(jobsColl, tsk, &prc, m.workersWg)
+		wrk, err := workerFactory(coll, tsk, m.workersWg)
 		if err != nil {
-			log.Error().Err(err).Str("processor-id", tsk.ProcessorId).Msg(semLogContext)
+			log.Error().Err(err).Msg(semLogContext)
 			// keep processing others....
 			continue
 		}
 
 		err = wrk.Start()
 		if err != nil {
-			log.Error().Err(err).Str("processor-id", tsk.ProcessorId).Msg(semLogContext)
+			log.Error().Err(err).Msg(semLogContext)
 			// keep processing others....
 			continue
 		}
 
 		startedTasks = append(startedTasks, beans.TaskReference{
-			Id:             tsk.Bid,
-			JobId:          tsk.JobId,
-			Status:         tsk.Status,
-			DataSourceType: tsk.DataSourceType,
-			StreamType:     tsk.StreamType,
+			Id:     tsk.Bid,
+			JobId:  tsk.JobId,
+			Status: tsk.Status,
 		})
 	}
 
@@ -268,13 +242,9 @@ func (m *Driver) startTasks(jobsColl *mongo.Collection, tasks []task.Task, worke
 }
 
 func (m *Driver) onWorkersDone(tasks []beans.TaskReference) error {
-	const semLogContext = "monitor::on-workers-done"
+	const semLogContext = "driver::on-workers-done"
 
 	for _, tsk := range tasks {
-
-		if tsk.StreamType == task.DataStreamTypeInfinite {
-			continue
-		}
 
 		// issue.... in here a contention skips the job..... that doesn't get updated ...
 		lh, ok, err := lease.AcquireLease(m.jobsColl, "all", tsk.JobId, true)

@@ -8,11 +8,7 @@ entities:
   document: true
   package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task
 - file-name: ./partition.yml
-  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/partition
-- file-name: ./job-info.yml
 - file-name: ./task-ref.yml
-- file-name: ./task-info.yml
-- file-name: ./partition-info.yml
 - file-name: ./dd-trigger-chk.yml
   document: true
   package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/ddtcheckpoint

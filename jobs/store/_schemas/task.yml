@@ -12,21 +12,11 @@ attributes:
   - name: ambit
     type: string
     options: with-filter
-  - name: data_source_type
-    type: string
-    options: with-filter
-  - name: stream_type
-    type: string
-    options: with-filter
-  - name: processor_id
-    type: string
   - name: job_id
     type: string
     options: with-filter
-  - name: info
-    type: struct
-    struct-ref:
-      name: taskInfo
+  - name: properties
+    type: document
   - name: partitions
     type: array
     item:

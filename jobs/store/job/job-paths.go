@@ -8,15 +8,14 @@ package job
 // @tpm-schematics:end-region("top-file-section")
 
 const (
-	BidFieldName           = "_bid"
-	EtFieldName            = "_et"
-	AmbitFieldName         = "ambit"
-	StatusFieldName        = "status"
-	DueDateFieldName       = "due_date"
-	InfoFieldName          = "info"
-	Info_ReservedFieldName = "info.reserved"
-	TasksFieldName         = "tasks"
-	Tasks_IFieldName       = "tasks.%d"
+	BidFieldName        = "_bid"
+	EtFieldName         = "_et"
+	AmbitFieldName      = "ambit"
+	StatusFieldName     = "status"
+	DueDateFieldName    = "due_date"
+	PropertiesFieldName = "properties"
+	TasksFieldName      = "tasks"
+	Tasks_IFieldName    = "tasks.%d"
 )
 
 // @tpm-schematics:start-region("bottom-file-section")

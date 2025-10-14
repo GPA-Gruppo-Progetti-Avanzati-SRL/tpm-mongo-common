@@ -4,9 +4,5 @@ attributes:
     type: string
   - name: status
     type: string
-  - name: data_source_type
-    type: string
-  - name: stream_type
-    type: string
   - name: job_id
     type: string

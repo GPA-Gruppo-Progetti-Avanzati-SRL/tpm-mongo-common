@@ -1,18 +1,6 @@
 package ddtcheckpoint
 
-import (
-	"time"
-
-	"github.com/rs/zerolog/log"
-)
-
 // @tpm-schematics:start-region("top-file-section")
-
-const (
-	EType         = "ddtchk"
-	DueDateLayout = "20060102" // Should be same as Job.
-)
-
 // @tpm-schematics:end-region("top-file-section")
 
 type DueDateTriggerCheckPoint struct {
@@ -30,18 +18,10 @@ func (s DueDateTriggerCheckPoint) IsZero() bool {
 	return s.Bid == "" && s.Et == "" && s.Ambit == "" && s.Status == "" && s.DueDate == ""
 }
 
-// @tpm-schematics:start-region("bottom-file-section")
-
-func IncDueDate(ddt string) (string, error) {
-	const semLogContext = "ddt-checkpoint::inc-due-date"
-
-	tm, err := time.Parse(DueDateLayout, ddt)
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return "", err
-	}
-	ddt = tm.AddDate(0, 0, 1).Format(DueDateLayout)
-	return ddt, nil
+type QueryResult struct {
+	Records int                        `json:"records,omitempty" bson:"records,omitempty" yaml:"records,omitempty"`
+	Data    []DueDateTriggerCheckPoint `json:"data,omitempty" bson:"data,omitempty" yaml:"data,omitempty"`
 }
 
+// @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

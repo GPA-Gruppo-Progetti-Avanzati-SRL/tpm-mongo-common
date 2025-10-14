@@ -66,10 +66,6 @@ func (j Job) GetTasks(coll *mongo.Collection) ([]task.Task, error) {
 
 	var tsks []task.Task
 	for _, refTsk := range j.Tasks {
-		// TODO verificare se ha senso
-		if refTsk.DataSourceType != task.TypeQMongo {
-			return tsks, nil
-		}
 
 		if refTsk.Status == task.StatusAvailable {
 			tsk, err := task.FindById(coll, refTsk.Id)

@@ -8,20 +8,14 @@ package task
 // @tpm-schematics:end-region("top-file-section")
 
 const (
-	BidFieldName                = "_bid"
-	EtFieldName                 = "_et"
-	StatusFieldName             = "status"
-	AmbitFieldName              = "ambit"
-	DataSourceTypeFieldName     = "data_source_type"
-	StreamTypeFieldName         = "stream_type"
-	ProcessorIdFieldName        = "processor_id"
-	JobIdFieldName              = "job_id"
-	InfoFieldName               = "info"
-	Info_MdbInstanceFieldName   = "info.mdbInstance"
-	Info_MdbCollectionFieldName = "info.mdbCollection"
-	Info_MdbBatchSizeFieldName  = "info.mdbBatchSize"
-	PartitionsFieldName         = "partitions"
-	Partitions_IFieldName       = "partitions.%d"
+	BidFieldName          = "_bid"
+	EtFieldName           = "_et"
+	StatusFieldName       = "status"
+	AmbitFieldName        = "ambit"
+	JobIdFieldName        = "job_id"
+	PropertiesFieldName   = "properties"
+	PartitionsFieldName   = "partitions"
+	Partitions_IFieldName = "partitions.%d"
 )
 
 // @tpm-schematics:start-region("bottom-file-section")

@@ -232,39 +232,6 @@ func (ca *Criteria) AndDueDateIn(p []string) *Criteria {
 }
 
 // @tpm-schematics:start-region("due-date-field-filter-section")
-
-func (ca *Criteria) AndDueDateBetween(p1, p2 string) *Criteria {
-
-	if p1 == "" && p2 == "" {
-		return ca
-	}
-
-	mName := fmt.Sprintf(DueDateFieldName)
-
-	if p1 == "" || p2 == "" {
-		if p1 != "" {
-			c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$gte", p1}}} }
-			*ca = append(*ca, c)
-		}
-
-		if p2 != "" {
-			c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$lte", p2}}} }
-			*ca = append(*ca, c)
-		}
-	} else {
-		c := func() bson.E {
-			return bson.E{"$and", bson.A{
-				bson.D{{mName, bson.D{{"$gte", p1}}}},
-				bson.D{{mName, bson.D{{"$lte", p2}}}},
-			}}
-		}
-
-		*ca = append(*ca, c)
-	}
-
-	return ca
-}
-
 // @tpm-schematics:end-region("due-date-field-filter-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
