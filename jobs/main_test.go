@@ -2,6 +2,7 @@ package jobs_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -73,7 +74,7 @@ func TestMain(m *testing.M) {
 	}
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 
 	clearJobAndData()
 
@@ -143,6 +144,9 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 		JobId:  aJobId,
 		Ambit:  "test-mongo-common",
 		Status: task.StatusAvailable,
+		Properties: bson.M{
+			"task-property-1": "task-property-1-value",
+		},
 	}
 
 	for j := 1; j <= NumPartitions; j++ {
@@ -154,6 +158,9 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 				PartitionNumber: int32(j),
 				Status:          beans.PartitionStatusAvailable,
 				Etag:            0,
+				Properties: bson.M{
+					fmt.Sprintf("prt-%d-property-1", j): fmt.Sprintf("prt-%d-property-1-value", j),
+				},
 			},
 		)
 	}

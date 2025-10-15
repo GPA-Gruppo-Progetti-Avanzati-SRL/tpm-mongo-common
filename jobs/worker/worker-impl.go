@@ -36,19 +36,21 @@ type workerImpl struct {
 }
 
 func NewWorker(taskColl *mongo.Collection, task task.Task, partitionWorker PartitionWorker, wg *sync.WaitGroup) (Worker, error) {
-	w := &workerImpl{wg: wg, partitionWorker: partitionWorker}
-	err := w.init(taskColl, task)
-	return w, err
-}
-
-func (worker *workerImpl) init(taskColl *mongo.Collection, task task.Task) error {
 	const semLogContext = "worker-impl::new"
 	var err error
+
+	w := &workerImpl{
+		task:            task,
+		taskCollection:  taskColl,
+		curPrtNdx:       -1,
+		workerId:        util.NewUUID(),
+		wg:              wg,
+		partitionWorker: partitionWorker}
 
 	if len(task.Partitions) == 0 {
 		err = errors.New("no partitions available in task")
 		log.Error().Err(err).Str("task-id", task.Bid).Msg(semLogContext)
-		return err
+		return w, err
 	}
 
 	shuffledPartitionIndexes := make([]int, len(task.Partitions))
@@ -60,12 +62,8 @@ func (worker *workerImpl) init(taskColl *mongo.Collection, task task.Task) error
 		shuffledPartitionIndexes[i], shuffledPartitionIndexes[j] = shuffledPartitionIndexes[j], shuffledPartitionIndexes[i]
 	})
 
-	worker.task = task
-	worker.taskCollection = taskColl
-	worker.shuffledPartitionIndexes = shuffledPartitionIndexes
-	worker.curPrtNdx = -1
-	worker.workerId = util.NewUUID()
-	return nil
+	w.shuffledPartitionIndexes = shuffledPartitionIndexes
+	return w, nil
 }
 
 func (w *workerImpl) Start() error {
@@ -87,15 +85,15 @@ func (w *workerImpl) work() error {
 	const semLogContext = "worker-impl::do-work"
 	log.Info().Msg(semLogContext)
 
-	p, ok, err := w.nextPartition()
-	for ok && err == nil {
-		err = w.partitionWorker.Work(p)
+	partitionNumber, err := w.nextPartitionNumber()
+	for partitionNumber >= 0 && err == nil {
+		err = w.partitionWorker.Work(w.task, partitionNumber)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return err
 		}
 
-		err = w.task.UpdatePartitionStatus(w.taskCollection, w.task.Bid, p.PartitionNumber, beans.PartitionStatusEOF, false)
+		err = w.task.UpdatePartitionStatus(w.taskCollection, w.task.Bid, int32(partitionNumber), beans.PartitionStatusEOF, false)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return err
@@ -105,7 +103,7 @@ func (w *workerImpl) work() error {
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 		}
-		p, ok, err = w.nextPartition()
+		partitionNumber, err = w.nextPartitionNumber()
 	}
 
 	if err != nil {
@@ -164,19 +162,19 @@ func (c *workerImpl) close(cts context.Context) error {
 	return nil
 }
 
-func (c *workerImpl) nextPartition() (beans.Partition, bool, error) {
+func (c *workerImpl) nextPartitionNumber() (int, error) {
 	const semLogContext = "worker-impl::next-partition"
 	var err error
 
 	c.curPrtNdx, err = c.acquirePartition()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			return beans.Partition{}, false, nil
+			return -1, nil
 		}
-		return beans.Partition{}, false, err
+		return -1, err
 	}
 
-	return c.task.Partitions[c.shuffledPartitionIndexes[c.curPrtNdx]], true, nil
+	return c.shuffledPartitionIndexes[c.curPrtNdx] + 1, nil
 }
 
 func (c *workerImpl) acquirePartition() (int, error) {
