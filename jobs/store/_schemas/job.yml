@@ -6,7 +6,7 @@ attributes:
   - name: _et
     type: string
     options: with-filter
-  - name: ambit
+  - name: group
     type: string
     options: with-filter
   - name: status

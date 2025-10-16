@@ -117,7 +117,7 @@ func populateJob(taskColl *mongo.Collection, aJobId string, aTaskId string) (job
 	aJob := job.Job{
 		Bid:    aJobId,
 		Et:     job.EType,
-		Ambit:  "test-mongo-common",
+		Group:  "test-mongo-common",
 		Status: job.StatusAvailable,
 		Tasks: []beans.TaskReference{
 			{
@@ -142,7 +142,7 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 		Bid:    aTaskId,
 		Et:     task.EType,
 		JobId:  aJobId,
-		Ambit:  "test-mongo-common",
+		Group:  "test-mongo-common",
 		Status: task.StatusAvailable,
 		Properties: bson.M{
 			"task-property-1": "task-property-1-value",

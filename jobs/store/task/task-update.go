@@ -16,6 +16,7 @@ const (
 	CurrentDate UpdateOperator = "$currentDate"
 	AddToSet    UpdateOperator = "$addToSet"
 	Pull        UpdateOperator = "$pull"
+	Push        UpdateOperator = "$push"
 )
 
 type Update func() bson.E
@@ -46,6 +47,10 @@ func (ud *UpdateDocument) AddToSet() *Updates {
 
 func (ud *UpdateDocument) Pull() *Updates {
 	return ud.op(Pull)
+}
+
+func (ud *UpdateDocument) Push() *Updates {
+	return ud.op(Push)
 }
 
 func (ud *UpdateDocument) op(op UpdateOperator) *Updates {

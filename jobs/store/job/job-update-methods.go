@@ -2,9 +2,8 @@ package job
 
 import (
 	"fmt"
-	"time"
-
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"time"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 )
@@ -32,7 +31,7 @@ type UnsetOptions struct {
 	DefaultMode UnsetMode
 	Bid         UnsetMode
 	Et          UnsetMode
-	Ambit       UnsetMode
+	Group       UnsetMode
 	Status      UnsetMode
 	DueDate     UnsetMode
 	Properties  UnsetMode
@@ -62,9 +61,9 @@ func WithEtUnsetMode(m UnsetMode) UnsetOption {
 		uopt.Et = m
 	}
 }
-func WithAmbitUnsetMode(m UnsetMode) UnsetOption {
+func WithGroupUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Ambit = m
+		uopt.Group = m
 	}
 }
 func WithStatusUnsetMode(m UnsetMode) UnsetOption {
@@ -115,7 +114,7 @@ func GetUpdateDocument(obj *Job, opts ...UnsetOption) UpdateDocument {
 	ud := UpdateDocument{}
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
-	ud.setOrUnsetAmbit(obj.Ambit, uo.ResolveUnsetMode(uo.Ambit))
+	ud.setOrUnsetGroup(obj.Group, uo.ResolveUnsetMode(uo.Group))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
 	ud.setOrUnsetDue_date(obj.DueDate, uo.ResolveUnsetMode(uo.DueDate))
 	ud.setOrUnsetProperties(obj.Properties, uo.ResolveUnsetMode(uo.Properties))
@@ -216,51 +215,51 @@ func UpdateWith_et(p string) UpdateOption {
 // @tpm-schematics:start-region("-et-field-update-section")
 // @tpm-schematics:end-region("-et-field-update-section")
 
-// SetAmbit No Remarks
-func (ud *UpdateDocument) SetAmbit(p string) *UpdateDocument {
-	mName := fmt.Sprintf(AmbitFieldName)
+// SetGroup No Remarks
+func (ud *UpdateDocument) SetGroup(p string) *UpdateDocument {
+	mName := fmt.Sprintf(GroupFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetAmbit No Remarks
-func (ud *UpdateDocument) UnsetAmbit() *UpdateDocument {
-	mName := fmt.Sprintf(AmbitFieldName)
+// UnsetGroup No Remarks
+func (ud *UpdateDocument) UnsetGroup() *UpdateDocument {
+	mName := fmt.Sprintf(GroupFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetAmbit No Remarks
-func (ud *UpdateDocument) setOrUnsetAmbit(p string, um UnsetMode) {
+// setOrUnsetGroup No Remarks
+func (ud *UpdateDocument) setOrUnsetGroup(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetAmbit(p)
+		ud.SetGroup(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetAmbit()
+			ud.UnsetGroup()
 		case SetData2Default:
-			ud.UnsetAmbit()
+			ud.UnsetGroup()
 		}
 	}
 }
 
-func UpdateWithAmbit(p string) UpdateOption {
+func UpdateWithGroup(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetAmbit(p)
+			ud.SetGroup(p)
 		} else {
-			ud.UnsetAmbit()
+			ud.UnsetGroup()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("ambit-field-update-section")
-// @tpm-schematics:end-region("ambit-field-update-section")
+// @tpm-schematics:start-region("group-field-update-section")
+// @tpm-schematics:end-region("group-field-update-section")
 
 // SetStatus No Remarks
 func (ud *UpdateDocument) SetStatus(p string) *UpdateDocument {

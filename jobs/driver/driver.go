@@ -178,7 +178,7 @@ func (m *Driver) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
 	const semLogContext = "driver::find-tasks"
 	var tasks []task.Task
 
-	jobs, err := job.FindJobsByAmbitAndStatus(jobsColl, m.cfg.JobTypes, job.StatusAvailable)
+	jobs, err := job.FindJobsByGroupAndStatus(jobsColl, m.cfg.JobTypes, job.StatusAvailable)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

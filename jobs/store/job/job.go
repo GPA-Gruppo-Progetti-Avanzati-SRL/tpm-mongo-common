@@ -7,7 +7,7 @@ import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/
 
 const (
 	EType           = "job"
-	AmbitAny        = "any"
+	GroupAny        = "any"
 	StatusAvailable = "available"
 	StatusWaiting   = "waiting"
 	StatusDone      = "done"
@@ -19,7 +19,7 @@ const (
 type Job struct {
 	Bid        string                `json:"_bid,omitempty" bson:"_bid,omitempty" yaml:"_bid,omitempty"`
 	Et         string                `json:"_et,omitempty" bson:"_et,omitempty" yaml:"_et,omitempty"`
-	Ambit      string                `json:"ambit,omitempty" bson:"ambit,omitempty" yaml:"ambit,omitempty"`
+	Group      string                `json:"group,omitempty" bson:"group,omitempty" yaml:"group,omitempty"`
 	Status     string                `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
 	DueDate    string                `json:"due_date,omitempty" bson:"due_date,omitempty" yaml:"due_date,omitempty"`
 	Properties bson.M                `json:"properties,omitempty" bson:"properties,omitempty" yaml:"properties,omitempty"`
@@ -30,7 +30,7 @@ type Job struct {
 }
 
 func (s Job) IsZero() bool {
-	return s.Bid == "" && s.Et == "" && s.Ambit == "" && s.Status == "" && s.DueDate == "" && len(s.Properties) == 0 && len(s.Tasks) == 0
+	return s.Bid == "" && s.Et == "" && s.Group == "" && s.Status == "" && s.DueDate == "" && len(s.Properties) == 0 && len(s.Tasks) == 0
 }
 
 type QueryResult struct {

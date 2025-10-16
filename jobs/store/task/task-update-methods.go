@@ -32,7 +32,8 @@ type UnsetOptions struct {
 	Bid         UnsetMode
 	Et          UnsetMode
 	Status      UnsetMode
-	Ambit       UnsetMode
+	Group       UnsetMode
+	Name        UnsetMode
 	JobId       UnsetMode
 	Properties  UnsetMode
 	Partitions  UnsetMode
@@ -66,9 +67,14 @@ func WithStatusUnsetMode(m UnsetMode) UnsetOption {
 		uopt.Status = m
 	}
 }
-func WithAmbitUnsetMode(m UnsetMode) UnsetOption {
+func WithGroupUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Ambit = m
+		uopt.Group = m
+	}
+}
+func WithNameUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Name = m
 	}
 }
 func WithJobIdUnsetMode(m UnsetMode) UnsetOption {
@@ -115,7 +121,8 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
-	ud.setOrUnsetAmbit(obj.Ambit, uo.ResolveUnsetMode(uo.Ambit))
+	ud.setOrUnsetGroup(obj.Group, uo.ResolveUnsetMode(uo.Group))
+	ud.setOrUnsetName(obj.Name, uo.ResolveUnsetMode(uo.Name))
 	ud.setOrUnsetJob_id(obj.JobId, uo.ResolveUnsetMode(uo.JobId))
 	ud.setOrUnsetProperties(obj.Properties, uo.ResolveUnsetMode(uo.Properties))
 	ud.setOrUnsetPartitions(obj.Partitions, uo.ResolveUnsetMode(uo.Partitions))
@@ -261,51 +268,97 @@ func UpdateWithStatus(p string) UpdateOption {
 // @tpm-schematics:start-region("status-field-update-section")
 // @tpm-schematics:end-region("status-field-update-section")
 
-// SetAmbit No Remarks
-func (ud *UpdateDocument) SetAmbit(p string) *UpdateDocument {
-	mName := fmt.Sprintf(AmbitFieldName)
+// SetGroup No Remarks
+func (ud *UpdateDocument) SetGroup(p string) *UpdateDocument {
+	mName := fmt.Sprintf(GroupFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetAmbit No Remarks
-func (ud *UpdateDocument) UnsetAmbit() *UpdateDocument {
-	mName := fmt.Sprintf(AmbitFieldName)
+// UnsetGroup No Remarks
+func (ud *UpdateDocument) UnsetGroup() *UpdateDocument {
+	mName := fmt.Sprintf(GroupFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetAmbit No Remarks
-func (ud *UpdateDocument) setOrUnsetAmbit(p string, um UnsetMode) {
+// setOrUnsetGroup No Remarks
+func (ud *UpdateDocument) setOrUnsetGroup(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetAmbit(p)
+		ud.SetGroup(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetAmbit()
+			ud.UnsetGroup()
 		case SetData2Default:
-			ud.UnsetAmbit()
+			ud.UnsetGroup()
 		}
 	}
 }
 
-func UpdateWithAmbit(p string) UpdateOption {
+func UpdateWithGroup(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetAmbit(p)
+			ud.SetGroup(p)
 		} else {
-			ud.UnsetAmbit()
+			ud.UnsetGroup()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("ambit-field-update-section")
-// @tpm-schematics:end-region("ambit-field-update-section")
+// @tpm-schematics:start-region("group-field-update-section")
+// @tpm-schematics:end-region("group-field-update-section")
+
+// SetName No Remarks
+func (ud *UpdateDocument) SetName(p string) *UpdateDocument {
+	mName := fmt.Sprintf(NameFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetName No Remarks
+func (ud *UpdateDocument) UnsetName() *UpdateDocument {
+	mName := fmt.Sprintf(NameFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetName No Remarks
+func (ud *UpdateDocument) setOrUnsetName(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetName(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetName()
+		case SetData2Default:
+			ud.UnsetName()
+		}
+	}
+}
+
+func UpdateWithName(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetName(p)
+		} else {
+			ud.UnsetName()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("name-field-update-section")
+// @tpm-schematics:end-region("name-field-update-section")
 
 // SetJob_id No Remarks
 func (ud *UpdateDocument) SetJob_id(p string) *UpdateDocument {

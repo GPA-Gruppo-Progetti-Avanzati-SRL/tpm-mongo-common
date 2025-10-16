@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const jobAmbit = "pipeline-hpyb"
+const jobGroup = "pipeline-hpyb"
 
 var triggerConfig = duedatetrigger.Config{
 	StartDate:    "20250901",
@@ -22,7 +22,7 @@ var triggerConfig = duedatetrigger.Config{
 		CollectionId: "jobs-collection",
 	},
 	Filter: duedatetrigger.Filter{
-		JobAmbit:  jobAmbit,
+		JobGroup:  jobGroup,
 		JobStatus: "waiting",
 	},
 	Update: duedatetrigger.Update{

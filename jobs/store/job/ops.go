@@ -29,16 +29,16 @@ func FindById(coll *mongo.Collection, jobId string) (Job, error) {
 	return job, nil
 }
 
-func FindJobsByAmbitAndStatus(coll *mongo.Collection, ambits []string, status string) ([]Job, error) {
+func FindJobsByGroupAndStatus(coll *mongo.Collection, groups []string, status string) ([]Job, error) {
 	const semLogContext = "job::find-all-by-type-and-status"
 
 	f := Filter{}
 	ca := f.Or().AndEtEqTo(EType).AndStatusEqTo(status)
-	if len(ambits) > 1 || len(ambits) == 1 && ambits[0] != AmbitAny {
-		log.Info().Str("types", strings.Join(ambits, ",")).Msg(semLogContext + " - filtering by types")
-		ca.AndAmbitIn(ambits)
+	if len(groups) > 1 || len(groups) == 1 && groups[0] != GroupAny {
+		log.Info().Str("types", strings.Join(groups, ",")).Msg(semLogContext + " - filtering by types")
+		ca.AndGroupIn(groups)
 	} else {
-		log.Info().Str("types", strings.Join(ambits, ",")).Msg(semLogContext + " - accepting all job types")
+		log.Info().Str("types", strings.Join(groups, ",")).Msg(semLogContext + " - accepting all job types")
 	}
 
 	opts := options.Find()

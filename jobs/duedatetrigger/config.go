@@ -12,7 +12,7 @@ const (
 )
 
 type Filter struct {
-	JobAmbit  string `json:"job-ambit,omitempty" yaml:"job-ambit,omitempty" mapstructure:"job-ambit,omitempty"`
+	JobGroup  string `json:"job-group,omitempty" yaml:"job-group,omitempty" mapstructure:"job-group,omitempty"`
 	JobStatus string `json:"job-status,omitempty" yaml:"job-status,omitempty" mapstructure:"job-status,omitempty"`
 }
 

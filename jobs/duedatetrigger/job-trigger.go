@@ -32,7 +32,7 @@ func NewJobTrigger(cfg *Config, wg *sync.WaitGroup) *JobTrigger {
 	}
 
 	if cfg.CheckPointId == "" {
-		jt.Cfg.CheckPointId = cfg.Filter.JobAmbit
+		jt.Cfg.CheckPointId = cfg.Filter.JobGroup
 		log.Warn().Str("chk-id", jt.Cfg.CheckPointId).Msg(semLogContext + " - checkpoint Id not initialized using filter ambit, please do")
 	}
 
@@ -179,7 +179,7 @@ func (t *JobTrigger) Execute(withStartDueDate string) error {
 	f.Or().
 		AndEtEqTo(job.EType).
 		AndStatusEqTo(t.Cfg.Filter.JobStatus).
-		AndAmbitEqTo(t.Cfg.Filter.JobAmbit).
+		AndGroupEqTo(t.Cfg.Filter.JobGroup).
 		AndDueDateBetween(withStartDueDate, today)
 
 	log.Info().Str("filter-from-date", withStartDueDate).Str("filter-to", today).Msg(semLogContext)

@@ -10,7 +10,7 @@ package job
 const (
 	BidFieldName        = "_bid"
 	EtFieldName         = "_et"
-	AmbitFieldName      = "ambit"
+	GroupFieldName      = "group"
 	StatusFieldName     = "status"
 	DueDateFieldName    = "due_date"
 	PropertiesFieldName = "properties"
