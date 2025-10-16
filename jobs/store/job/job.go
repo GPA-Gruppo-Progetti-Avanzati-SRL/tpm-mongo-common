@@ -7,6 +7,7 @@ import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/
 
 const (
 	EType           = "job"
+	CollectionId    = "jobs"
 	GroupAny        = "any"
 	StatusAvailable = "available"
 	StatusWaiting   = "waiting"
