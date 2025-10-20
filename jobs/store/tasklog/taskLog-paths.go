@@ -1,4 +1,4 @@
-package job
+package tasklog
 
 // This file contains the paths to the field in the generated entity.
 // A path is a string with all the identifiers from the root document to the single leaves.
@@ -8,22 +8,18 @@ package job
 // @tpm-schematics:end-region("top-file-section")
 
 const (
-	DomainFieldName     = "domain"
-	SiteFieldName       = "site"
-	BidFieldName        = "_bid"
-	EtFieldName         = "_et"
-	GroupFieldName      = "group"
-	StatusFieldName     = "status"
-	DueDateFieldName    = "due_date"
-	PropertiesFieldName = "properties"
-	TasksFieldName      = "tasks"
-	Tasks_IFieldName    = "tasks.%d"
+	DomainFieldName      = "domain"
+	SiteFieldName        = "site"
+	BidFieldName         = "_bid"
+	EtFieldName          = "_et"
+	NameFieldName        = "name"
+	TaskIdFieldName      = "task_id"
+	PartitionFieldName   = "partition"
+	JobIdFieldName       = "job_id"
+	BlockNumberFieldName = "block_number"
+	EntriesFieldName     = "entries"
+	Entries_IFieldName   = "entries.%d"
 )
 
 // @tpm-schematics:start-region("bottom-file-section")
-
-const (
-	Tasks_IFieldName_status = "tasks.%d.status"
-)
-
 // @tpm-schematics:end-region("bottom-file-section")

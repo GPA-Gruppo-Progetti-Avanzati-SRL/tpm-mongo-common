@@ -1,4 +1,4 @@
-name: job
+name: taskLog
 attributes:
   - name: domain
     type: string
@@ -10,20 +10,22 @@ attributes:
   - name: _et
     type: string
     options: with-filter
-  - name: group
+  - name: name
+    type: string
+  - name: task_id
     type: string
     options: with-filter
-  - name: status
+  - name: partition
+    type: int
+    options: with-filter
+  - name: job_id
     type: string
     options: with-filter
-  - name: due_date
-    type: string
-    options: with-filter
-  - name: properties
-    type: document
-  - name: tasks
+  - name: block_number
+    type: int
+  - name: entries
     type: array
     item:
       struct-ref:
-        name: taskReference
+        name: taskLogEntry
       type: struct

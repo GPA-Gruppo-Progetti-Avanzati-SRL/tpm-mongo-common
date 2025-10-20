@@ -1,11 +1,9 @@
-package job
+package tasklog
 
 import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
-
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 )
 
 // @tpm-schematics:start-region("top-file-section")
@@ -33,11 +31,12 @@ type UnsetOptions struct {
 	Site        UnsetMode
 	Bid         UnsetMode
 	Et          UnsetMode
-	Group       UnsetMode
-	Status      UnsetMode
-	DueDate     UnsetMode
-	Properties  UnsetMode
-	Tasks       UnsetMode
+	Name        UnsetMode
+	TaskId      UnsetMode
+	Partition   UnsetMode
+	JobId       UnsetMode
+	BlockNumber UnsetMode
+	Entries     UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -73,29 +72,34 @@ func WithEtUnsetMode(m UnsetMode) UnsetOption {
 		uopt.Et = m
 	}
 }
-func WithGroupUnsetMode(m UnsetMode) UnsetOption {
+func WithNameUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Group = m
+		uopt.Name = m
 	}
 }
-func WithStatusUnsetMode(m UnsetMode) UnsetOption {
+func WithTaskIdUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Status = m
+		uopt.TaskId = m
 	}
 }
-func WithDueDateUnsetMode(m UnsetMode) UnsetOption {
+func WithPartitionUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.DueDate = m
+		uopt.Partition = m
 	}
 }
-func WithPropertiesUnsetMode(m UnsetMode) UnsetOption {
+func WithJobIdUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Properties = m
+		uopt.JobId = m
 	}
 }
-func WithTasksUnsetMode(m UnsetMode) UnsetOption {
+func WithBlockNumberUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
-		uopt.Tasks = m
+		uopt.BlockNumber = m
+	}
+}
+func WithEntriesUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Entries = m
 	}
 }
 
@@ -116,7 +120,7 @@ func GetUpdateDocumentFromOptions(opts ...UpdateOption) UpdateDocument {
 // Convenience method to create an Update Document from the values of the top fields of the object. The convenience is in the handling
 // the unset because if I pass an empty struct to the update it generates an empty object anyway in the db. Handling the unset eliminates
 // the issue and delete an existing value without creating an empty struct.
-func GetUpdateDocument(obj *Job, opts ...UnsetOption) UpdateDocument {
+func GetUpdateDocument(obj *TaskLog, opts ...UnsetOption) UpdateDocument {
 
 	uo := &UnsetOptions{DefaultMode: KeepCurrent}
 	for _, o := range opts {
@@ -128,11 +132,12 @@ func GetUpdateDocument(obj *Job, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnsetSite(obj.Site, uo.ResolveUnsetMode(uo.Site))
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
-	ud.setOrUnsetGroup(obj.Group, uo.ResolveUnsetMode(uo.Group))
-	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
-	ud.setOrUnsetDue_date(obj.DueDate, uo.ResolveUnsetMode(uo.DueDate))
-	ud.setOrUnsetProperties(obj.Properties, uo.ResolveUnsetMode(uo.Properties))
-	ud.setOrUnsetTasks(obj.Tasks, uo.ResolveUnsetMode(uo.Tasks))
+	ud.setOrUnsetName(obj.Name, uo.ResolveUnsetMode(uo.Name))
+	ud.setOrUnsetTask_id(obj.TaskId, uo.ResolveUnsetMode(uo.TaskId))
+	ud.setOrUnsetPartition(obj.Partition, uo.ResolveUnsetMode(uo.Partition))
+	ud.setOrUnsetJob_id(obj.JobId, uo.ResolveUnsetMode(uo.JobId))
+	ud.setOrUnsetBlock_number(obj.BlockNumber, uo.ResolveUnsetMode(uo.BlockNumber))
+	ud.setOrUnsetEntries(obj.Entries, uo.ResolveUnsetMode(uo.Entries))
 
 	return ud
 }
@@ -321,246 +326,281 @@ func UpdateWith_et(p string) UpdateOption {
 // @tpm-schematics:start-region("-et-field-update-section")
 // @tpm-schematics:end-region("-et-field-update-section")
 
-// SetGroup No Remarks
-func (ud *UpdateDocument) SetGroup(p string) *UpdateDocument {
-	mName := fmt.Sprintf(GroupFieldName)
+// SetName No Remarks
+func (ud *UpdateDocument) SetName(p string) *UpdateDocument {
+	mName := fmt.Sprintf(NameFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetGroup No Remarks
-func (ud *UpdateDocument) UnsetGroup() *UpdateDocument {
-	mName := fmt.Sprintf(GroupFieldName)
+// UnsetName No Remarks
+func (ud *UpdateDocument) UnsetName() *UpdateDocument {
+	mName := fmt.Sprintf(NameFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetGroup No Remarks
-func (ud *UpdateDocument) setOrUnsetGroup(p string, um UnsetMode) {
+// setOrUnsetName No Remarks
+func (ud *UpdateDocument) setOrUnsetName(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetGroup(p)
+		ud.SetName(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetGroup()
+			ud.UnsetName()
 		case SetData2Default:
-			ud.UnsetGroup()
+			ud.UnsetName()
 		}
 	}
 }
 
-func UpdateWithGroup(p string) UpdateOption {
+func UpdateWithName(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetGroup(p)
+			ud.SetName(p)
 		} else {
-			ud.UnsetGroup()
+			ud.UnsetName()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("group-field-update-section")
-// @tpm-schematics:end-region("group-field-update-section")
+// @tpm-schematics:start-region("name-field-update-section")
+// @tpm-schematics:end-region("name-field-update-section")
 
-// SetStatus No Remarks
-func (ud *UpdateDocument) SetStatus(p string) *UpdateDocument {
-	mName := fmt.Sprintf(StatusFieldName)
+// SetTask_id No Remarks
+func (ud *UpdateDocument) SetTask_id(p string) *UpdateDocument {
+	mName := fmt.Sprintf(TaskIdFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetStatus No Remarks
-func (ud *UpdateDocument) UnsetStatus() *UpdateDocument {
-	mName := fmt.Sprintf(StatusFieldName)
+// UnsetTask_id No Remarks
+func (ud *UpdateDocument) UnsetTask_id() *UpdateDocument {
+	mName := fmt.Sprintf(TaskIdFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetStatus No Remarks
-func (ud *UpdateDocument) setOrUnsetStatus(p string, um UnsetMode) {
+// setOrUnsetTask_id No Remarks
+func (ud *UpdateDocument) setOrUnsetTask_id(p string, um UnsetMode) {
 	if p != "" {
-		ud.SetStatus(p)
+		ud.SetTask_id(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetStatus()
+			ud.UnsetTask_id()
 		case SetData2Default:
-			ud.UnsetStatus()
+			ud.UnsetTask_id()
 		}
 	}
 }
 
-func UpdateWithStatus(p string) UpdateOption {
+func UpdateWithTask_id(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetStatus(p)
+			ud.SetTask_id(p)
 		} else {
-			ud.UnsetStatus()
+			ud.UnsetTask_id()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("status-field-update-section")
-// @tpm-schematics:end-region("status-field-update-section")
+// @tpm-schematics:start-region("task-id-field-update-section")
+// @tpm-schematics:end-region("task-id-field-update-section")
 
-// SetDue_date No Remarks
-func (ud *UpdateDocument) SetDue_date(p string) *UpdateDocument {
-	mName := fmt.Sprintf(DueDateFieldName)
+// SetPartition No Remarks
+func (ud *UpdateDocument) SetPartition(p int32) *UpdateDocument {
+	mName := fmt.Sprintf(PartitionFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetDue_date No Remarks
-func (ud *UpdateDocument) UnsetDue_date() *UpdateDocument {
-	mName := fmt.Sprintf(DueDateFieldName)
+// UnsetPartition No Remarks
+func (ud *UpdateDocument) UnsetPartition() *UpdateDocument {
+	mName := fmt.Sprintf(PartitionFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetDue_date No Remarks
-func (ud *UpdateDocument) setOrUnsetDue_date(p string, um UnsetMode) {
-	if p != "" {
-		ud.SetDue_date(p)
+// setOrUnsetPartition No Remarks
+func (ud *UpdateDocument) setOrUnsetPartition(p int32, um UnsetMode) {
+	if p != 0 {
+		ud.SetPartition(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetDue_date()
+			ud.UnsetPartition()
 		case SetData2Default:
-			ud.UnsetDue_date()
+			ud.UnsetPartition()
 		}
 	}
 }
 
-func UpdateWithDue_date(p string) UpdateOption {
+func UpdateWithPartition(p int32) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			ud.SetPartition(p)
+		} else {
+			ud.UnsetPartition()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("partition-field-update-section")
+// @tpm-schematics:end-region("partition-field-update-section")
+
+// SetJob_id No Remarks
+func (ud *UpdateDocument) SetJob_id(p string) *UpdateDocument {
+	mName := fmt.Sprintf(JobIdFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetJob_id No Remarks
+func (ud *UpdateDocument) UnsetJob_id() *UpdateDocument {
+	mName := fmt.Sprintf(JobIdFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetJob_id No Remarks
+func (ud *UpdateDocument) setOrUnsetJob_id(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetJob_id(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetJob_id()
+		case SetData2Default:
+			ud.UnsetJob_id()
+		}
+	}
+}
+
+func UpdateWithJob_id(p string) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != "" {
-			ud.SetDue_date(p)
+			ud.SetJob_id(p)
 		} else {
-			ud.UnsetDue_date()
+			ud.UnsetJob_id()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("due-date-field-update-section")
-// @tpm-schematics:end-region("due-date-field-update-section")
+// @tpm-schematics:start-region("job-id-field-update-section")
+// @tpm-schematics:end-region("job-id-field-update-section")
 
-// SetProperties No Remarks
-func (ud *UpdateDocument) SetProperties(p bson.M) *UpdateDocument {
-	mName := fmt.Sprintf(PropertiesFieldName)
+// SetBlock_number No Remarks
+func (ud *UpdateDocument) SetBlock_number(p int32) *UpdateDocument {
+	mName := fmt.Sprintf(BlockNumberFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetProperties No Remarks
-func (ud *UpdateDocument) UnsetProperties() *UpdateDocument {
-	mName := fmt.Sprintf(PropertiesFieldName)
+// UnsetBlock_number No Remarks
+func (ud *UpdateDocument) UnsetBlock_number() *UpdateDocument {
+	mName := fmt.Sprintf(BlockNumberFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetProperties No Remarks
-func (ud *UpdateDocument) setOrUnsetProperties(p bson.M, um UnsetMode) {
-	if len(p) != 0 {
-		ud.SetProperties(p)
+// setOrUnsetBlock_number No Remarks
+func (ud *UpdateDocument) setOrUnsetBlock_number(p int32, um UnsetMode) {
+	if p != 0 {
+		ud.SetBlock_number(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetProperties()
+			ud.UnsetBlock_number()
 		case SetData2Default:
-			ud.UnsetProperties()
+			ud.UnsetBlock_number()
 		}
 	}
 }
 
-func UpdateWithProperties(p bson.M) UpdateOption {
+func UpdateWithBlock_number(p int32) UpdateOption {
 	return func(ud *UpdateDocument) {
-		if len(p) != 0 {
-			ud.SetProperties(p)
+		if p != 0 {
+			ud.SetBlock_number(p)
 		} else {
-			ud.UnsetProperties()
+			ud.UnsetBlock_number()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("properties-field-update-section")
-// @tpm-schematics:end-region("properties-field-update-section")
+// @tpm-schematics:start-region("block-number-field-update-section")
+// @tpm-schematics:end-region("block-number-field-update-section")
 
-// SetTasks No Remarks
-func (ud *UpdateDocument) SetTasks(p []beans.TaskReference) *UpdateDocument {
-	mName := fmt.Sprintf(TasksFieldName)
+// SetEntries No Remarks
+func (ud *UpdateDocument) SetEntries(p []TaskLogEntry) *UpdateDocument {
+	mName := fmt.Sprintf(EntriesFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
 	})
 	return ud
 }
 
-// UnsetTasks No Remarks
-func (ud *UpdateDocument) UnsetTasks() *UpdateDocument {
-	mName := fmt.Sprintf(TasksFieldName)
+// UnsetEntries No Remarks
+func (ud *UpdateDocument) UnsetEntries() *UpdateDocument {
+	mName := fmt.Sprintf(EntriesFieldName)
 	ud.Unset().Add(func() bson.E {
 		return bson.E{Key: mName, Value: ""}
 	})
 	return ud
 }
 
-// setOrUnsetTasks No Remarks - here2
-func (ud *UpdateDocument) setOrUnsetTasks(p []beans.TaskReference, um UnsetMode) {
+// setOrUnsetEntries No Remarks - here2
+func (ud *UpdateDocument) setOrUnsetEntries(p []TaskLogEntry, um UnsetMode) {
 	if len(p) > 0 {
-		ud.SetTasks(p)
+		ud.SetEntries(p)
 	} else {
 		switch um {
 		case KeepCurrent:
 		case UnsetData:
-			ud.UnsetTasks()
+			ud.UnsetEntries()
 		case SetData2Default:
-			ud.UnsetTasks()
+			ud.UnsetEntries()
 		}
 	}
 }
 
-func UpdateWithTasks(p []beans.TaskReference) UpdateOption {
+func UpdateWithEntries(p []TaskLogEntry) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if len(p) > 0 {
-			ud.SetTasks(p)
+			ud.SetEntries(p)
 		} else {
-			ud.UnsetTasks()
+			ud.UnsetEntries()
 		}
 	}
 }
 
-// @tpm-schematics:start-region("tasks-field-update-section")
-
-func UpdateWithTaskStatus(tskNdx int32, status string) UpdateOption {
-	return func(ud *UpdateDocument) {
-		// partitions are numbered from 1 but array is indexed from 0.
-		mName := fmt.Sprintf(Tasks_IFieldName_status, tskNdx)
-		ud.Set().Add(func() bson.E {
-			return bson.E{Key: mName, Value: status}
-		})
-	}
-}
-
-// @tpm-schematics:end-region("tasks-field-update-section")
+// @tpm-schematics:start-region("entries-field-update-section")
+// @tpm-schematics:end-region("entries-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

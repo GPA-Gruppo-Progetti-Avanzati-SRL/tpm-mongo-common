@@ -17,6 +17,8 @@ const (
 // @tpm-schematics:end-region("top-file-section")
 
 type Task struct {
+	Domain     string            `json:"domain,omitempty" bson:"domain,omitempty" yaml:"domain,omitempty"`
+	Site       string            `json:"site,omitempty" bson:"site,omitempty" yaml:"site,omitempty"`
 	Bid        string            `json:"_bid,omitempty" bson:"_bid,omitempty" yaml:"_bid,omitempty"`
 	Et         string            `json:"_et,omitempty" bson:"_et,omitempty" yaml:"_et,omitempty"`
 	Status     string            `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
@@ -31,7 +33,7 @@ type Task struct {
 }
 
 func (s Task) IsZero() bool {
-	return s.Bid == "" && s.Et == "" && s.Status == "" && s.Group == "" && s.Name == "" && s.JobId == "" && len(s.Properties) == 0 && len(s.Partitions) == 0
+	return s.Domain == "" && s.Site == "" && s.Bid == "" && s.Et == "" && s.Status == "" && s.Group == "" && s.Name == "" && s.JobId == "" && len(s.Properties) == 0 && len(s.Partitions) == 0
 }
 
 type QueryResult struct {

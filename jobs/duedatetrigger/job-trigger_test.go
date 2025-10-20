@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/driver"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/duedatetrigger"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ var triggerConfig = duedatetrigger.Config{
 	Mode:         duedatetrigger.ExecuteLoop,
 	TickInterval: 2 * time.Hour,
 	CheckPointId: "puffo",
-	Store: driver.StoreReference{
+	Store: mongolks.StoreReference{
 		InstanceName: "default",
 		CollectionId: "jobs-collection",
 	},

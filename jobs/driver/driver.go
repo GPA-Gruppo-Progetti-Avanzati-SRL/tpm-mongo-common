@@ -10,7 +10,6 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/worker"
-
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
@@ -20,7 +19,6 @@ import (
 type Driver struct {
 	cfg *Config
 
-	workerFactory worker.Factory
 	numIterations int
 	jobsColl      *mongo.Collection
 	wg            *sync.WaitGroup
@@ -31,23 +29,22 @@ type Driver struct {
 	shutdownChannel chan error // channel used to quit the application. triggered when driver wants to exit.
 }
 
-func NewDriver(cfg *Config, workerFactory worker.Factory, wg *sync.WaitGroup) (*Driver, error) {
+func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
 
 	const semLogContext = "driver::new"
 
-	coll, err := mongolks.GetCollection(context.Background(), cfg.Store.InstanceName, cfg.Store.CollectionId)
+	coll, err := mongolks.GetCollection(context.Background(), cfg.JobsStore.InstanceName, cfg.JobsStore.CollectionId)
 	if err != nil {
-		log.Error().Err(err).Str("store", cfg.Store.InstanceName).Str("collection-id", cfg.Store.CollectionId).Msg("Failed to get collection")
+		log.Error().Err(err).Str("store", cfg.JobsStore.InstanceName).Str("collection-id", cfg.JobsStore.CollectionId).Msg("Failed to get collection")
 		return nil, err
 	}
 
 	m := &Driver{
-		cfg:           cfg,
-		wg:            wg,
-		workerFactory: workerFactory,
-		workersWg:     &sync.WaitGroup{},
-		jobsColl:      coll,
-		quitc:         make(chan struct{}),
+		cfg:       cfg,
+		wg:        wg,
+		workersWg: &sync.WaitGroup{},
+		jobsColl:  coll,
+		quitc:     make(chan struct{}),
 	}
 
 	if cfg.TickInterval == 0 {
@@ -163,7 +160,7 @@ func (m *Driver) findAndStartTasks() []beans.TaskReference {
 
 	var startedTasks []beans.TaskReference
 	if len(tasks) > 0 {
-		startedTasks, err = m.startTasks(m.jobsColl, tasks, m.workerFactory)
+		startedTasks, err = m.startTasks(tasks, worker.WithTaskStoreReference(m.cfg.JobsStore), worker.WithTaskLogStoreReference(m.cfg.JobsLogsStore), worker.WithWaitGroup(m.workersWg))
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 		}
@@ -201,13 +198,13 @@ func (m *Driver) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
 	return tasks, nil
 }
 
-func (m *Driver) startTasks(coll *mongo.Collection, tasks []task.Task, workerFactory worker.Factory) ([]beans.TaskReference, error) {
+func (m *Driver) startTasks(tasks []task.Task, opts ...worker.Option) ([]beans.TaskReference, error) {
 	const semLogContext = "driver::execute-tasks"
 
 	var startedTasks []beans.TaskReference
 	for _, tsk := range tasks {
 
-		wrk, err := workerFactory(coll, tsk, m.workersWg)
+		wrk, err := worker.GetRegisteredWorker(tsk, opts...)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			// keep processing others....

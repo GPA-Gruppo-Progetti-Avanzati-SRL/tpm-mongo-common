@@ -10,6 +10,7 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/worker"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
@@ -27,8 +28,11 @@ const (
 	taskId = jobId + "-t1"
 
 	JobsInstanceId     = "default"
-	JobsCollectionId   = "jobs-collection"
+	JobsCollectionId   = "jobs"
 	JobsCollectionName = "jobs"
+
+	JobsLogsCollectionId   = "jobs-logs"
+	JobsLogsCollectionName = "jobs_logs"
 
 	Host   = "mongodb://localhost:27017"
 	DbName = "tpm_mongo_common"
@@ -60,6 +64,10 @@ var cfg = mongolks.Config{
 		{
 			Id:   JobsCollectionId,
 			Name: JobsCollectionName,
+		},
+		{
+			Id:   JobsLogsCollectionId,
+			Name: JobsLogsCollectionName,
 		},
 	},
 	SecurityProtocol: "PLAIN",
@@ -142,6 +150,7 @@ func populateTask(taskColl *mongo.Collection, aJobId string, aTaskId string) (ta
 		Bid:    aTaskId,
 		Et:     task.EType,
 		JobId:  aJobId,
+		Name:   worker.NoOPWorkerName,
 		Group:  "test-mongo-common",
 		Status: task.StatusAvailable,
 		Properties: bson.M{

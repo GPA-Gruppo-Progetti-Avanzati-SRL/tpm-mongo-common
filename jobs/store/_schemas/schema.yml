@@ -12,3 +12,8 @@ entities:
 - file-name: ./dd-trigger-chk.yml
   document: true
   package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/ddtcheckpoint
+- file-name: ./task-log.yml
+  document: true
+  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/tasklog
+- file-name: ./task-log-entry.yml
+  package: github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/tasklog

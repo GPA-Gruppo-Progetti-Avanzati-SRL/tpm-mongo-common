@@ -1,5 +1,9 @@
 name: task
 attributes:
+  - name: domain
+    type: string
+  - name: site
+    type: string
   - name: _bid
     type: string
     options: with-filter

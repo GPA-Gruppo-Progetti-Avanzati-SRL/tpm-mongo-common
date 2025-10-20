@@ -29,6 +29,8 @@ type UnsetOption func(uopt *UnsetOptions)
 
 type UnsetOptions struct {
 	DefaultMode UnsetMode
+	Domain      UnsetMode
+	Site        UnsetMode
 	Bid         UnsetMode
 	Et          UnsetMode
 	Status      UnsetMode
@@ -50,6 +52,16 @@ func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
 func WithDefaultUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.DefaultMode = m
+	}
+}
+func WithDomainUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Domain = m
+	}
+}
+func WithSiteUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Site = m
 	}
 }
 func WithBidUnsetMode(m UnsetMode) UnsetOption {
@@ -118,6 +130,8 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 	}
 
 	ud := UpdateDocument{}
+	ud.setOrUnsetDomain(obj.Domain, uo.ResolveUnsetMode(uo.Domain))
+	ud.setOrUnsetSite(obj.Site, uo.ResolveUnsetMode(uo.Site))
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
@@ -129,6 +143,98 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 
 	return ud
 }
+
+// SetDomain No Remarks
+func (ud *UpdateDocument) SetDomain(p string) *UpdateDocument {
+	mName := fmt.Sprintf(DomainFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetDomain No Remarks
+func (ud *UpdateDocument) UnsetDomain() *UpdateDocument {
+	mName := fmt.Sprintf(DomainFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetDomain No Remarks
+func (ud *UpdateDocument) setOrUnsetDomain(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetDomain(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetDomain()
+		case SetData2Default:
+			ud.UnsetDomain()
+		}
+	}
+}
+
+func UpdateWithDomain(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetDomain(p)
+		} else {
+			ud.UnsetDomain()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("domain-field-update-section")
+// @tpm-schematics:end-region("domain-field-update-section")
+
+// SetSite No Remarks
+func (ud *UpdateDocument) SetSite(p string) *UpdateDocument {
+	mName := fmt.Sprintf(SiteFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetSite No Remarks
+func (ud *UpdateDocument) UnsetSite() *UpdateDocument {
+	mName := fmt.Sprintf(SiteFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetSite No Remarks
+func (ud *UpdateDocument) setOrUnsetSite(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetSite(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetSite()
+		case SetData2Default:
+			ud.UnsetSite()
+		}
+	}
+}
+
+func UpdateWithSite(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetSite(p)
+		} else {
+			ud.UnsetSite()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("site-field-update-section")
+// @tpm-schematics:end-region("site-field-update-section")
 
 // Set_bid No Remarks
 func (ud *UpdateDocument) Set_bid(p string) *UpdateDocument {

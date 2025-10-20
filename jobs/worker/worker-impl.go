@@ -10,8 +10,8 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
-
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -35,16 +35,27 @@ type workerImpl struct {
 	partitionWorker PartitionWorker
 }
 
-func NewWorker(taskColl *mongo.Collection, task task.Task, partitionWorker PartitionWorker, wg *sync.WaitGroup) (Worker, error) {
+func NewWorker(task task.Task, partitionWorker PartitionWorker, opts ...Option) (Worker, error) {
 	const semLogContext = "worker-impl::new"
 	var err error
 
+	options := Options{}
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	jobsColl, err := mongolks.GetCollection(context.Background(), options.taskStoreRef.InstanceName, options.taskStoreRef.CollectionId)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
 	w := &workerImpl{
 		task:            task,
-		taskCollection:  taskColl,
+		taskCollection:  jobsColl,
 		curPrtNdx:       -1,
 		workerId:        util.NewUUID(),
-		wg:              wg,
+		wg:              options.wg,
 		partitionWorker: partitionWorker}
 
 	if len(task.Partitions) == 0 {

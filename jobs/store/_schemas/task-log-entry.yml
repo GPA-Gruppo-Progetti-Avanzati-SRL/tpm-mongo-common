@@ -1,0 +1,10 @@
+name: Entry
+attributes:
+  - name: ts
+    type: string
+  - name: level
+    type: string
+  - name: text
+    type: string
+  - name: context
+    type: string

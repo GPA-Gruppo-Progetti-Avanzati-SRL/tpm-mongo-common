@@ -13,6 +13,11 @@ import (
 
 const MongoDbDefaultInstanceName = "default"
 
+type StoreReference struct {
+	InstanceName string `yaml:"lks,omitempty" mapstructure:"lks,omitempty" json:"lks,omitempty"`
+	CollectionId string `yaml:"collection-id,omitempty" mapstructure:"collection-id,omitempty" json:"collection-id,omitempty"`
+}
+
 type CollectionCfg struct {
 	Id   string
 	Name string

@@ -8,6 +8,8 @@ package task
 // @tpm-schematics:end-region("top-file-section")
 
 const (
+	DomainFieldName       = "domain"
+	SiteFieldName         = "site"
 	BidFieldName          = "_bid"
 	EtFieldName           = "_et"
 	StatusFieldName       = "status"

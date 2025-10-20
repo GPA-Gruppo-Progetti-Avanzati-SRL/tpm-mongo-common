@@ -8,11 +8,11 @@ import (
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/driver"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/job"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/tasklog"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/worker"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func TestCaseInitialization(t *testing.T) {
@@ -33,7 +33,17 @@ func TestNewWorker(t *testing.T) {
 	require.Condition(t, func() bool { return len(tasks) > 0 }, "expected tasks to be available")
 
 	var wg sync.WaitGroup
-	wrk, err := worker.NewNoOpWorker(taskColl, tasks[0], &wg)
+	wrk, err := worker.NewNoOpWorker(tasks[0],
+		worker.WithTaskStoreReference(mongolks.StoreReference{
+			InstanceName: JobsInstanceId,
+			CollectionId: JobsCollectionId,
+		}),
+		worker.WithTaskLogStoreReference(mongolks.StoreReference{
+			InstanceName: JobsInstanceId,
+			CollectionId: JobsLogsCollectionId,
+		}),
+		worker.WithWaitGroup(&wg),
+	)
 	require.NoError(t, err)
 
 	err = wrk.Start()
@@ -53,18 +63,27 @@ func TestScheduler(t *testing.T) {
 	cfg := driver.Config{
 		ExitOnIdle:             true,
 		ExitAfterMaxIterations: 1,
-		Store: driver.StoreReference{
+		JobsStore: mongolks.StoreReference{
 			InstanceName: JobsInstanceId,
 			CollectionId: JobsCollectionId,
+		},
+		JobsLogsStore: mongolks.StoreReference{
+			InstanceName: JobsInstanceId,
+			CollectionId: JobsLogsCollectionId,
 		},
 	}
 
 	var wg sync.WaitGroup
-	factory := func(taskColl *mongo.Collection, task task.Task, wg *sync.WaitGroup) (worker.Worker, error) {
-		return worker.NewNoOpWorker(taskColl, task, wg)
-	}
 
-	m, err := driver.NewDriver(&cfg, factory, &wg)
+	worker.RegisterFactory(worker.NoOPWorkerName, worker.NewNoOpWorker)
+
+	/*
+		factory := func(task task.Task, opts ...worker.Option) (worker.Worker, error) {
+			return worker.NewNoOpWorker(task, opts...)
+		}
+	*/
+
+	m, err := driver.NewDriver(&cfg, &wg)
 	require.NoError(t, err)
 
 	err = m.Start(nil)
@@ -72,4 +91,11 @@ func TestScheduler(t *testing.T) {
 
 	wg.Wait()
 	log.Info().Msg("waiting for completion")
+}
+
+func TestParseLogEntry(t *testing.T) {
+	s := "2025-10-19T21:07:56+02:00 INF no-op-partition-worker::work job-id=my-job-id partition=4 tsk-id=my-job-id-t1 tsk-name=snoop"
+
+	_, _, err := tasklog.ParseLogLine(s)
+	require.NoError(t, err)
 }
