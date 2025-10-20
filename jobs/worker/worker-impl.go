@@ -44,7 +44,7 @@ func NewWorker(task task.Task, partitionWorker PartitionWorker, opts ...Option) 
 		opt(&options)
 	}
 
-	jobsColl, err := mongolks.GetCollection(context.Background(), options.taskStoreRef.InstanceName, options.taskStoreRef.CollectionId)
+	jobsColl, err := mongolks.GetCollection(context.Background(), options.taskStore.InstanceName, options.taskStore.CollectionId)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

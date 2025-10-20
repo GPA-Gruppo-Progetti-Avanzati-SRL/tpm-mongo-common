@@ -34,9 +34,9 @@ func GetRegisteredWorker(task task.Task, opts ...Option) (Worker, error) {
 }
 
 type Options struct {
-	wg              *sync.WaitGroup
-	taskLogStoreRef mongolks.StoreReference
-	taskStoreRef    mongolks.StoreReference
+	wg           *sync.WaitGroup
+	TaskLogStore mongolks.StoreReference
+	taskStore    mongolks.StoreReference
 }
 
 type Option func(fo *Options)
@@ -49,13 +49,13 @@ func WithWaitGroup(wg *sync.WaitGroup) Option {
 
 func WithTaskStoreReference(sr mongolks.StoreReference) Option {
 	return func(fo *Options) {
-		fo.taskStoreRef = sr
+		fo.taskStore = sr
 	}
 }
 
 func WithTaskLogStoreReference(sr mongolks.StoreReference) Option {
 	return func(fo *Options) {
-		fo.taskLogStoreRef = sr
+		fo.TaskLogStore = sr
 	}
 }
 

@@ -20,7 +20,7 @@ func NewNoOpWorker(task task.Task, opts ...Option) (Worker, error) {
 		opt(options)
 	}
 
-	return NewWorker(task, &NoOpPartitionWorker{logStoreRef: options.taskLogStoreRef}, opts...)
+	return NewWorker(task, &NoOpPartitionWorker{logStoreRef: options.TaskLogStore}, opts...)
 }
 
 func (w *NoOpPartitionWorker) Work(aTask task.Task, partitionNumber int) error {
