@@ -13,6 +13,9 @@ attributes:
   - name: group
     type: string
     options: with-filter
+  - name: name
+    type: string
+    options: with-filter
   - name: status
     type: string
     options: with-filter

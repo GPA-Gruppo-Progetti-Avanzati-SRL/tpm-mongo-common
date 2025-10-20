@@ -13,6 +13,7 @@ const (
 	BidFieldName        = "_bid"
 	EtFieldName         = "_et"
 	GroupFieldName      = "group"
+	NameFieldName       = "name"
 	StatusFieldName     = "status"
 	DueDateFieldName    = "due_date"
 	PropertiesFieldName = "properties"

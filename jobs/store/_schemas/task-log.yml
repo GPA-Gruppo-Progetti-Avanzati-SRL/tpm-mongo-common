@@ -27,5 +27,5 @@ attributes:
     type: array
     item:
       struct-ref:
-        name: taskLogEntry
+        name: Entry
       type: struct

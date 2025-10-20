@@ -2,9 +2,8 @@ package job
 
 import (
 	"fmt"
-	"time"
-
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"time"
 )
 
 // @tpm-schematics:start-region("top-file-section")
@@ -151,6 +150,47 @@ func (ca *Criteria) AndGroupIn(p []string) *Criteria {
 
 // @tpm-schematics:start-region("group-field-filter-section")
 // @tpm-schematics:end-region("group-field-filter-section")
+
+/*
+ * filter-string template: name
+ */
+
+// AndNameEqTo No Remarks
+func (ca *Criteria) AndNameEqTo(p string) *Criteria {
+
+	if p == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(NameFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: p} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// AndNameIsNullOrUnset No Remarks
+func (ca *Criteria) AndNameIsNullOrUnset() *Criteria {
+
+	mName := fmt.Sprintf(NameFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndNameIn(p []string) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(NameFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("name-field-filter-section")
+// @tpm-schematics:end-region("name-field-filter-section")
 
 /*
  * filter-string template: status

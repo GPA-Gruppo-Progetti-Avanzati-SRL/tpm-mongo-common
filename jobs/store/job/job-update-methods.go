@@ -34,6 +34,7 @@ type UnsetOptions struct {
 	Bid         UnsetMode
 	Et          UnsetMode
 	Group       UnsetMode
+	Name        UnsetMode
 	Status      UnsetMode
 	DueDate     UnsetMode
 	Properties  UnsetMode
@@ -76,6 +77,11 @@ func WithEtUnsetMode(m UnsetMode) UnsetOption {
 func WithGroupUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.Group = m
+	}
+}
+func WithNameUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.Name = m
 	}
 }
 func WithStatusUnsetMode(m UnsetMode) UnsetOption {
@@ -129,6 +135,7 @@ func GetUpdateDocument(obj *Job, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnset_bid(obj.Bid, uo.ResolveUnsetMode(uo.Bid))
 	ud.setOrUnset_et(obj.Et, uo.ResolveUnsetMode(uo.Et))
 	ud.setOrUnsetGroup(obj.Group, uo.ResolveUnsetMode(uo.Group))
+	ud.setOrUnsetName(obj.Name, uo.ResolveUnsetMode(uo.Name))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
 	ud.setOrUnsetDue_date(obj.DueDate, uo.ResolveUnsetMode(uo.DueDate))
 	ud.setOrUnsetProperties(obj.Properties, uo.ResolveUnsetMode(uo.Properties))
@@ -366,6 +373,52 @@ func UpdateWithGroup(p string) UpdateOption {
 
 // @tpm-schematics:start-region("group-field-update-section")
 // @tpm-schematics:end-region("group-field-update-section")
+
+// SetName No Remarks
+func (ud *UpdateDocument) SetName(p string) *UpdateDocument {
+	mName := fmt.Sprintf(NameFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetName No Remarks
+func (ud *UpdateDocument) UnsetName() *UpdateDocument {
+	mName := fmt.Sprintf(NameFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetName No Remarks
+func (ud *UpdateDocument) setOrUnsetName(p string, um UnsetMode) {
+	if p != "" {
+		ud.SetName(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetName()
+		case SetData2Default:
+			ud.UnsetName()
+		}
+	}
+}
+
+func UpdateWithName(p string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != "" {
+			ud.SetName(p)
+		} else {
+			ud.UnsetName()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("name-field-update-section")
+// @tpm-schematics:end-region("name-field-update-section")
 
 // SetStatus No Remarks
 func (ud *UpdateDocument) SetStatus(p string) *UpdateDocument {
