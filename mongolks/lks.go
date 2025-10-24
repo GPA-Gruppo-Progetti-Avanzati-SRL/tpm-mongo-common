@@ -55,7 +55,7 @@ func NewLinkedServiceWithConfig(cfg Config) (*LinkedService, error) {
 	if len(cfg.Collections) > 0 {
 		lks.collectionsCfgMap = make(map[string]CollectionCfg)
 		for _, collCfg := range cfg.Collections {
-			lks.collectionsCfgMap[collCfg.Name] = collCfg
+			lks.collectionsCfgMap[collCfg.Id] = collCfg
 		}
 	}
 
