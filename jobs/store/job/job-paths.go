@@ -17,6 +17,7 @@ const (
 	NameFieldName       = "name"
 	StatusFieldName     = "status"
 	DueDateFieldName    = "due_date"
+	RefDateFieldName    = "ref_date"
 	PropertiesFieldName = "properties"
 	TasksFieldName      = "tasks"
 	Tasks_IFieldName    = "tasks.%d"
