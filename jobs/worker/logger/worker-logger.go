@@ -80,12 +80,13 @@ func NewWorkerLogger(aTask task.Task, aPartition int32, taskLogsStoreRef mongolk
 		logBean: tasklog.TaskLog{
 			Domain:      aTask.Domain,
 			Site:        aTask.Site,
-			Partition:   aPartition,
-			BlockNumber: 1,
 			Bid:         fmt.Sprintf("%s-%d", aTask.Bid, aPartition),
 			Et:          tasklog.EType,
+			TaskId:      aTask.Bid,
 			Name:        aTask.Name,
 			JobId:       aTask.JobId,
+			Partition:   aPartition,
+			BlockNumber: 1,
 			Entries:     nil,
 		},
 	}
