@@ -29,6 +29,88 @@ func (ca *Criteria) AndTextSearch(ssearch string) *Criteria {
 }
 
 /*
+ * filter-string template: domain
+ */
+
+// AndDomainEqTo No Remarks
+func (ca *Criteria) AndDomainEqTo(p string) *Criteria {
+
+	if p == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(DomainFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: p} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// AndDomainIsNullOrUnset No Remarks
+func (ca *Criteria) AndDomainIsNullOrUnset() *Criteria {
+
+	mName := fmt.Sprintf(DomainFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndDomainIn(p []string) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(DomainFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("domain-field-filter-section")
+// @tpm-schematics:end-region("domain-field-filter-section")
+
+/*
+ * filter-string template: site
+ */
+
+// AndSiteEqTo No Remarks
+func (ca *Criteria) AndSiteEqTo(p string) *Criteria {
+
+	if p == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(SiteFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: p} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// AndSiteIsNullOrUnset No Remarks
+func (ca *Criteria) AndSiteIsNullOrUnset() *Criteria {
+
+	mName := fmt.Sprintf(SiteFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: nil} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndSiteIn(p []string) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(SiteFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("site-field-filter-section")
+// @tpm-schematics:end-region("site-field-filter-section")
+
+/*
  * filter-string template: _bid
  */
 

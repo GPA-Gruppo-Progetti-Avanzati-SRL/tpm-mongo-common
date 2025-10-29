@@ -3,11 +3,12 @@ package job
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"time"
 )
 
 // @tpm-schematics:start-region("top-file-section")
@@ -15,7 +16,7 @@ import (
 
 // FindByPk ...
 // @tpm-schematics:start-region("find-by-pk-signature-section")
-func FindByPk(collection *mongo.Collection /* pk params, */, mustFind bool, findOptions *options.FindOneOptionsBuilder) (*Job, bool, error) {
+func FindByPk(collection *mongo.Collection, domain, site, bidJob string, mustFind bool, findOptions *options.FindOneOptionsBuilder) (*Job, bool, error) {
 	// @tpm-schematics:end-region("find-by-pk-signature-section")
 	const semLogContext = "job::find-by-pk"
 	// @tpm-schematics:start-region("log-event-section")
@@ -31,7 +32,7 @@ func FindByPk(collection *mongo.Collection /* pk params, */, mustFind bool, find
 	f := Filter{}
 	// @tpm-schematics:start-region("filter-section")
 	// customize the filtering
-	// f.Or().And...
+	f.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndEtEqTo(EType).AndBidEqTo(bidJob)
 	// @tpm-schematics:end-region("filter-section")
 	fd := f.Build()
 	evtTraceLog = evtTraceLog.Str("filter", util.MustToExtendedJsonString(fd, false, false))

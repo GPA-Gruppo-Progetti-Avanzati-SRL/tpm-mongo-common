@@ -2,8 +2,10 @@ name: job
 attributes:
   - name: domain
     type: string
+    options: with-filter
   - name: site
     type: string
+    options: with-filter
   - name: _bid
     type: string
     options: with-filter
