@@ -29,6 +29,38 @@ func (ca *Criteria) AndTextSearch(ssearch string) *Criteria {
 }
 
 /*
+ * filter-object-id template: oId
+ */
+
+// AndOIdEqTo No Remarks
+func (ca *Criteria) AndOIdEqTo(oId bson.ObjectID) *Criteria {
+
+	if oId == bson.NilObjectID {
+		return ca
+	}
+
+	mName := fmt.Sprintf(OIdFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: oId} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+func (ca *Criteria) AndOIdIn(p []bson.ObjectID) *Criteria {
+
+	if len(p) == 0 {
+		return ca
+	}
+
+	mName := fmt.Sprintf(OIdFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.D{{"$in", p}}} }
+	*ca = append(*ca, c)
+	return ca
+}
+
+// @tpm-schematics:start-region("o-id-field-filter-section")
+// @tpm-schematics:end-region("o-id-field-filter-section")
+
+/*
  * filter-string template: domain
  */
 

@@ -18,6 +18,7 @@ const (
 // @tpm-schematics:end-region("top-file-section")
 
 type Job struct {
+	OId        bson.ObjectID         `json:"_id,omitempty" bson:"_id,omitempty" yaml:"_id,omitempty"`
 	Domain     string                `json:"domain,omitempty" bson:"domain,omitempty" yaml:"domain,omitempty"`
 	Site       string                `json:"site,omitempty" bson:"site,omitempty" yaml:"site,omitempty"`
 	Bid        string                `json:"_bid,omitempty" bson:"_bid,omitempty" yaml:"_bid,omitempty"`
@@ -34,7 +35,7 @@ type Job struct {
 }
 
 func (s Job) IsZero() bool {
-	return s.Domain == "" && s.Site == "" && s.Bid == "" && s.Et == "" && s.Group == "" && s.Name == "" && s.Status == "" && s.DueDate == "" && len(s.Properties) == 0 && len(s.Tasks) == 0
+	return s.OId == bson.NilObjectID && s.Domain == "" && s.Site == "" && s.Bid == "" && s.Et == "" && s.Group == "" && s.Name == "" && s.Status == "" && s.DueDate == "" && len(s.Properties) == 0 && len(s.Tasks) == 0
 }
 
 type QueryResult struct {
