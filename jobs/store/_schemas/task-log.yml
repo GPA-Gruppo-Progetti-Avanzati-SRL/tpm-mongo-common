@@ -1,9 +1,21 @@
 name: taskLog
 attributes:
+  - name: oId
+    type: object-id
+    options: with-filter
+    tags:
+      - name: json
+        value: _id,omitempty
+      - name: bson
+        value: _id,omitempty
+      - name: yaml
+        value: _id,omitempty
   - name: domain
     type: string
+    options: with-filter
   - name: site
     type: string
+    options: with-filter
   - name: _bid
     type: string
     options: with-filter
@@ -27,5 +39,5 @@ attributes:
     type: array
     item:
       struct-ref:
-        name: Entry
+        name: LogEntry
       type: struct

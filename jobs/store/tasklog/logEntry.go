@@ -10,7 +10,7 @@ import (
 // @tpm-schematics:start-region("top-file-section")
 // @tpm-schematics:end-region("top-file-section")
 
-type TaskLogEntry struct {
+type LogEntry struct {
 	Ts      string `json:"ts,omitempty" bson:"ts,omitempty" yaml:"ts,omitempty"`
 	Level   string `json:"level,omitempty" bson:"level,omitempty" yaml:"level,omitempty"`
 	Context string `json:"context,omitempty" bson:"context,omitempty" yaml:"context,omitempty"`
@@ -22,7 +22,7 @@ type TaskLogEntry struct {
 	// @tpm-schematics:end-region("struct-section")
 }
 
-func (s TaskLogEntry) IsZero() bool {
+func (s LogEntry) IsZero() bool {
 	return s.Ts == "" && s.Level == "" && s.Text == ""
 }
 
@@ -40,21 +40,21 @@ var FormattedLevels = map[string]zerolog.Level{
 
 var logLineRegexp = regexp.MustCompile("^([0-9\\-T:+]*)\\s(TRC|DBG|INF|WRN|ERR|FTL|PNC)\\s([a-zA-Z:\\-0-9]*)\\s(.*)(?:\\r\\n|\\r|\\n)$")
 
-func ParseLogLine(line string) (zerolog.Level, TaskLogEntry, error) {
+func ParseLogLine(line string) (zerolog.Level, LogEntry, error) {
 	const semLogContext = "task-log-entry::parse-log-line"
 	submatches := logLineRegexp.FindAllStringSubmatch(line, -1)
 
 	if len(submatches) == 0 {
 		log.Warn().Str("line", line).Msg(semLogContext + " - log pattern not recognized")
-		return zerolog.NoLevel, TaskLogEntry{Text: line}, nil
+		return zerolog.NoLevel, LogEntry{Text: line}, nil
 	}
 
 	if len(submatches[0]) != 5 {
 		log.Warn().Int("len-matches", len(submatches[0])).Msg(semLogContext)
-		return zerolog.NoLevel, TaskLogEntry{Text: line}, nil
+		return zerolog.NoLevel, LogEntry{Text: line}, nil
 	}
 
-	e := TaskLogEntry{
+	e := LogEntry{
 		Ts:      submatches[0][1],
 		Level:   submatches[0][2],
 		Context: submatches[0][3],

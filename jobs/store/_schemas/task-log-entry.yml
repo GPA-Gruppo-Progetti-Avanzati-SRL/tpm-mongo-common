@@ -1,4 +1,4 @@
-name: Entry
+name: LogEntry
 attributes:
   - name: ts
     type: string

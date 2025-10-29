@@ -27,6 +27,7 @@ type UnsetOption func(uopt *UnsetOptions)
 
 type UnsetOptions struct {
 	DefaultMode UnsetMode
+	OId         UnsetMode
 	Domain      UnsetMode
 	Site        UnsetMode
 	Bid         UnsetMode
@@ -50,6 +51,11 @@ func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
 func WithDefaultUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.DefaultMode = m
+	}
+}
+func WithOIdUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.OId = m
 	}
 }
 func WithDomainUnsetMode(m UnsetMode) UnsetOption {
@@ -141,6 +147,42 @@ func GetUpdateDocument(obj *TaskLog, opts ...UnsetOption) UpdateDocument {
 
 	return ud
 }
+
+// SetOId No Remarks
+func (ud *UpdateDocument) SetOId(p bson.ObjectID) *UpdateDocument {
+	mName := fmt.Sprintf(OIdFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetOId No Remarks
+func (ud *UpdateDocument) UnsetOId() *UpdateDocument {
+	mName := fmt.Sprintf(OIdFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetOId No Remarks
+func (ud *UpdateDocument) setOrUnsetOId(p bson.ObjectID, um UnsetMode) {
+	if !p.IsZero() {
+		ud.SetOId(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetOId()
+		case SetData2Default:
+			ud.UnsetOId()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("o-id-field-update-section")
+// @tpm-schematics:end-region("o-id-field-update-section")
 
 // SetDomain No Remarks
 func (ud *UpdateDocument) SetDomain(p string) *UpdateDocument {
@@ -557,7 +599,7 @@ func UpdateWithBlock_number(p int32) UpdateOption {
 // @tpm-schematics:end-region("block-number-field-update-section")
 
 // SetEntries No Remarks
-func (ud *UpdateDocument) SetEntries(p []TaskLogEntry) *UpdateDocument {
+func (ud *UpdateDocument) SetEntries(p []LogEntry) *UpdateDocument {
 	mName := fmt.Sprintf(EntriesFieldName)
 	ud.Set().Add(func() bson.E {
 		return bson.E{Key: mName, Value: p}
@@ -575,7 +617,7 @@ func (ud *UpdateDocument) UnsetEntries() *UpdateDocument {
 }
 
 // setOrUnsetEntries No Remarks - here2
-func (ud *UpdateDocument) setOrUnsetEntries(p []TaskLogEntry, um UnsetMode) {
+func (ud *UpdateDocument) setOrUnsetEntries(p []LogEntry, um UnsetMode) {
 	if len(p) > 0 {
 		ud.SetEntries(p)
 	} else {
@@ -589,7 +631,7 @@ func (ud *UpdateDocument) setOrUnsetEntries(p []TaskLogEntry, um UnsetMode) {
 	}
 }
 
-func UpdateWithEntries(p []TaskLogEntry) UpdateOption {
+func UpdateWithEntries(p []LogEntry) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if len(p) > 0 {
 			ud.SetEntries(p)
