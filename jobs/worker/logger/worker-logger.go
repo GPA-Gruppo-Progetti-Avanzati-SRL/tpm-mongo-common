@@ -2,7 +2,6 @@ package logger
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -80,7 +79,7 @@ func NewWorkerLogger(aTask task.Task, aPartition int32, taskLogsStoreRef mongolk
 		logBean: tasklog.TaskLog{
 			Domain:      aTask.Domain,
 			Site:        aTask.Site,
-			Bid:         fmt.Sprintf("%s-%d", aTask.Bid, aPartition),
+			Bid:         aTask.Partitions[aPartition].Bid,
 			Et:          tasklog.EType,
 			TaskId:      aTask.Bid,
 			Name:        aTask.Name,
