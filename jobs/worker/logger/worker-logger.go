@@ -79,7 +79,7 @@ func NewWorkerLogger(aTask task.Task, aPartition int32, taskLogsStoreRef mongolk
 		logBean: tasklog.TaskLog{
 			Domain:      aTask.Domain,
 			Site:        aTask.Site,
-			Bid:         aTask.Partitions[aPartition].Bid,
+			Bid:         aTask.Partitions[aPartition-1].Bid,
 			Et:          tasklog.EType,
 			TaskId:      aTask.Bid,
 			Name:        aTask.Name,
