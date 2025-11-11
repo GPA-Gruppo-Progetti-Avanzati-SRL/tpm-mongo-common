@@ -97,3 +97,15 @@ func (w *BulkWriter) Write(wm mongo.WriteModel) error {
 
 	return nil
 }
+
+func (w *BulkWriter) Insert(item interface{}) error {
+	const semLogContext = "bulk-writer::insert"
+
+	wm := mongo.NewInsertOneModel().SetDocument(item)
+	w.batch = append(w.batch, wm)
+	if len(w.batch) >= w.opts.Size {
+		return w.Flush()
+	}
+
+	return nil
+}
