@@ -1,5 +1,5 @@
 #!/bin/sh
-
+# tpm-morphia-cli gen entity --schema-file ./schema.yml --name SysInfo --out-dir ../../../ --with-format
 # tpm-morphia-cli gen entity --schema-file ./schema.yml --name Partition --out-dir ../../../ --with-format
 # tpm-morphia-cli gen entity --schema-file ./schema.yml --name TaskReference --out-dir ../../../ --with-format
 # tpm-morphia-cli gen entity --schema-file ./schema.yml --name Task --out-dir ../../../ --with-format

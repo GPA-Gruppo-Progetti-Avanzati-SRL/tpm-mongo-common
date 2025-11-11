@@ -8,19 +8,22 @@ package job
 // @tpm-schematics:end-region("top-file-section")
 
 const (
-	OIdFieldName        = "_id"
-	DomainFieldName     = "domain"
-	SiteFieldName       = "site"
-	BidFieldName        = "_bid"
-	EtFieldName         = "_et"
-	GroupFieldName      = "group"
-	NameFieldName       = "name"
-	StatusFieldName     = "status"
-	DueDateFieldName    = "due_date"
-	RefDateFieldName    = "ref_date"
-	PropertiesFieldName = "properties"
-	TasksFieldName      = "tasks"
-	Tasks_IFieldName    = "tasks.%d"
+	OIdFieldName                = "_id"
+	DomainFieldName             = "domain"
+	SiteFieldName               = "site"
+	BidFieldName                = "_bid"
+	EtFieldName                 = "_et"
+	GroupFieldName              = "group"
+	NameFieldName               = "name"
+	StatusFieldName             = "status"
+	DueDateFieldName            = "due_date"
+	PropertiesFieldName         = "properties"
+	TasksFieldName              = "tasks"
+	Tasks_IFieldName            = "tasks.%d"
+	SysInfoFieldName            = "sys_info"
+	SysInfo_DoneAtFieldName     = "sys_info.done_at"
+	SysInfo_CreatedAtFieldName  = "sys_info.created_at"
+	SysInfo_ModifiedAtFieldName = "sys_info.modified_at"
 )
 
 // @tpm-schematics:start-region("bottom-file-section")

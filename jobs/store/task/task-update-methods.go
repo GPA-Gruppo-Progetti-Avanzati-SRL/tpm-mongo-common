@@ -2,8 +2,9 @@ package task
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 )
@@ -40,6 +41,7 @@ type UnsetOptions struct {
 	JobId       UnsetMode
 	Properties  UnsetMode
 	Partitions  UnsetMode
+	SysInfo     UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -110,6 +112,11 @@ func WithPartitionsUnsetMode(m UnsetMode) UnsetOption {
 		uopt.Partitions = m
 	}
 }
+func WithSysInfoUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.SysInfo = m
+	}
+}
 
 type UpdateOption func(ud *UpdateDocument)
 type UpdateOptions []UpdateOption
@@ -146,6 +153,7 @@ func GetUpdateDocument(obj *Task, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnsetJob_id(obj.JobId, uo.ResolveUnsetMode(uo.JobId))
 	ud.setOrUnsetProperties(obj.Properties, uo.ResolveUnsetMode(uo.Properties))
 	ud.setOrUnsetPartitions(obj.Partitions, uo.ResolveUnsetMode(uo.Partitions))
+	ud.setOrUnsetSys_info(&obj.SysInfo, uo.ResolveUnsetMode(uo.SysInfo))
 
 	return ud
 }
@@ -655,6 +663,24 @@ func UpdateWithPartitionStatus(prt int32, status string) UpdateOption {
 	}
 }
 
+func UpdateWithPartitionModifiedAt(prt int32, p bson.DateTime, status string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			mName := fmt.Sprintf(Partitions_I_SysInfo_ModifiedAtFieldName, prt-1)
+			ud.Set().Add(func() bson.E {
+				return bson.E{Key: mName, Value: p}
+			})
+
+			if status == beans.PartitionStatusEOF {
+				m1Name := fmt.Sprintf(SysInfo_DoneAtFieldName)
+				ud.Set().Add(func() bson.E {
+					return bson.E{Key: m1Name, Value: p}
+				})
+			}
+		}
+	}
+}
+
 func UpdateWithIncPartitionAcquisitions(prt int32) UpdateOption {
 	return func(ud *UpdateDocument) {
 		// partitions are numbered from 1 but array is indexed from 0.
@@ -676,6 +702,71 @@ func UpdateWithIncPartitionErrors(prt int32) UpdateOption {
 }
 
 // @tpm-schematics:end-region("partitions-field-update-section")
+
+// SetSys_info No Remarks
+func (ud *UpdateDocument) SetSys_info(p *beans.SysInfo) *UpdateDocument {
+	mName := fmt.Sprintf(SysInfoFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetSys_info No Remarks
+func (ud *UpdateDocument) UnsetSys_info() *UpdateDocument {
+	mName := fmt.Sprintf(SysInfoFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetSys_info No Remarks - here2
+func (ud *UpdateDocument) setOrUnsetSys_info(p *beans.SysInfo, um UnsetMode) {
+	if p != nil && !p.IsZero() {
+		ud.SetSys_info(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetSys_info()
+		case SetData2Default:
+			ud.UnsetSys_info()
+		}
+	}
+}
+
+func UpdateWithSys_info(p *beans.SysInfo) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != nil && !p.IsZero() {
+			ud.SetSys_info(p)
+		} else {
+			ud.UnsetSys_info()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("sys-info-field-update-section")
+
+func UpdateWithModifiedAt(p bson.DateTime, status string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			mName := fmt.Sprintf(SysInfo_ModifiedAtFieldName)
+			ud.Set().Add(func() bson.E {
+				return bson.E{Key: mName, Value: p}
+			})
+
+			if status == StatusDone {
+				m1Name := fmt.Sprintf(SysInfo_DoneAtFieldName)
+				ud.Set().Add(func() bson.E {
+					return bson.E{Key: m1Name, Value: p}
+				})
+			}
+		}
+	}
+}
+
+// @tpm-schematics:end-region("sys-info-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

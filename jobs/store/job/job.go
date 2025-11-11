@@ -27,16 +27,16 @@ type Job struct {
 	Name       string                `json:"name,omitempty" bson:"name,omitempty" yaml:"name,omitempty"`
 	Status     string                `json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
 	DueDate    string                `json:"due_date,omitempty" bson:"due_date,omitempty" yaml:"due_date,omitempty"`
-	RefDate    bson.DateTime         `json:"ref_date,omitempty" bson:"ref_date,omitempty" yaml:"ref_date,omitempty"`
 	Properties bson.M                `json:"properties,omitempty" bson:"properties,omitempty" yaml:"properties,omitempty"`
 	Tasks      []beans.TaskReference `json:"tasks,omitempty" bson:"tasks,omitempty" yaml:"tasks,omitempty"`
+	SysInfo    beans.SysInfo         `json:"sys_info,omitempty" bson:"sys_info,omitempty" yaml:"sys_info,omitempty"`
 
 	// @tpm-schematics:start-region("struct-section")
 	// @tpm-schematics:end-region("struct-section")
 }
 
 func (s Job) IsZero() bool {
-	return s.OId == bson.NilObjectID && s.Domain == "" && s.Site == "" && s.Bid == "" && s.Et == "" && s.Group == "" && s.Name == "" && s.Status == "" && s.DueDate == "" && s.RefDate == 0 && len(s.Properties) == 0 && len(s.Tasks) == 0
+	return s.OId == bson.NilObjectID && s.Domain == "" && s.Site == "" && s.Bid == "" && s.Et == "" && s.Group == "" && s.Name == "" && s.Status == "" && s.DueDate == "" && len(s.Properties) == 0 && len(s.Tasks) == 0 && s.SysInfo.IsZero()
 }
 
 type QueryResult struct {

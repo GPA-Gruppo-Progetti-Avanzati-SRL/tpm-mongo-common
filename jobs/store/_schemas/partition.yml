@@ -31,3 +31,7 @@ attributes:
     type: int
   - name: acquisitions
     type: int
+  - name: sys_info
+    type: struct
+    struct-ref:
+      name: sysInfo

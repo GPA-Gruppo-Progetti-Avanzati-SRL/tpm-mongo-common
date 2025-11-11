@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -87,6 +89,7 @@ func (j Job) UpdateStatus(jobsColl *mongo.Collection, jobId string, st string) e
 
 	updOpts := UpdateOptions{
 		UpdateWithStatus(st),
+		UpdateWithModifiedAt(bson.NewDateTimeFromTime(time.Now()), st),
 	}
 
 	f := Filter{}
@@ -108,6 +111,7 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, 
 
 	updOpts := UpdateOptions{
 		UpdateWithStatus(st),
+		UpdateWithModifiedAt(bson.NewDateTimeFromTime(time.Now()), st),
 	}
 
 	filterDocument := f.Build()

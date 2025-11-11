@@ -1,0 +1,8 @@
+name: sysInfo
+attributes:
+  - name: done_at
+    type: date
+  - name: created_at
+    type: date
+  - name: modified_at
+    type: date

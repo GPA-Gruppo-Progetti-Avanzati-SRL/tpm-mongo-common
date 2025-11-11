@@ -2,8 +2,9 @@ package job
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 )
@@ -38,9 +39,9 @@ type UnsetOptions struct {
 	Name        UnsetMode
 	Status      UnsetMode
 	DueDate     UnsetMode
-	RefDate     UnsetMode
 	Properties  UnsetMode
 	Tasks       UnsetMode
+	SysInfo     UnsetMode
 }
 
 func (uo *UnsetOptions) ResolveUnsetMode(um UnsetMode) UnsetMode {
@@ -101,11 +102,6 @@ func WithDueDateUnsetMode(m UnsetMode) UnsetOption {
 		uopt.DueDate = m
 	}
 }
-func WithRefDateUnsetMode(m UnsetMode) UnsetOption {
-	return func(uopt *UnsetOptions) {
-		uopt.RefDate = m
-	}
-}
 func WithPropertiesUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.Properties = m
@@ -114,6 +110,11 @@ func WithPropertiesUnsetMode(m UnsetMode) UnsetOption {
 func WithTasksUnsetMode(m UnsetMode) UnsetOption {
 	return func(uopt *UnsetOptions) {
 		uopt.Tasks = m
+	}
+}
+func WithSysInfoUnsetMode(m UnsetMode) UnsetOption {
+	return func(uopt *UnsetOptions) {
+		uopt.SysInfo = m
 	}
 }
 
@@ -150,9 +151,9 @@ func GetUpdateDocument(obj *Job, opts ...UnsetOption) UpdateDocument {
 	ud.setOrUnsetName(obj.Name, uo.ResolveUnsetMode(uo.Name))
 	ud.setOrUnsetStatus(obj.Status, uo.ResolveUnsetMode(uo.Status))
 	ud.setOrUnsetDue_date(obj.DueDate, uo.ResolveUnsetMode(uo.DueDate))
-	ud.setOrUnsetRef_date(obj.RefDate, uo.ResolveUnsetMode(uo.RefDate))
 	ud.setOrUnsetProperties(obj.Properties, uo.ResolveUnsetMode(uo.Properties))
 	ud.setOrUnsetTasks(obj.Tasks, uo.ResolveUnsetMode(uo.Tasks))
+	ud.setOrUnsetSys_info(&obj.SysInfo, uo.ResolveUnsetMode(uo.SysInfo))
 
 	return ud
 }
@@ -561,52 +562,6 @@ func UpdateWithDue_date(p string) UpdateOption {
 // @tpm-schematics:start-region("due-date-field-update-section")
 // @tpm-schematics:end-region("due-date-field-update-section")
 
-// SetRef_date No Remarks
-func (ud *UpdateDocument) SetRef_date(p bson.DateTime) *UpdateDocument {
-	mName := fmt.Sprintf(RefDateFieldName)
-	ud.Set().Add(func() bson.E {
-		return bson.E{Key: mName, Value: p}
-	})
-	return ud
-}
-
-// UnsetRef_date No Remarks
-func (ud *UpdateDocument) UnsetRef_date() *UpdateDocument {
-	mName := fmt.Sprintf(RefDateFieldName)
-	ud.Unset().Add(func() bson.E {
-		return bson.E{Key: mName, Value: ""}
-	})
-	return ud
-}
-
-// setOrUnsetRef_date No Remarks
-func (ud *UpdateDocument) setOrUnsetRef_date(p bson.DateTime, um UnsetMode) {
-	if p != 0 {
-		ud.SetRef_date(p)
-	} else {
-		switch um {
-		case KeepCurrent:
-		case UnsetData:
-			ud.UnsetRef_date()
-		case SetData2Default:
-			ud.UnsetRef_date()
-		}
-	}
-}
-
-func UpdateWithRef_date(p bson.DateTime) UpdateOption {
-	return func(ud *UpdateDocument) {
-		if p != 0 {
-			ud.SetRef_date(p)
-		} else {
-			ud.UnsetRef_date()
-		}
-	}
-}
-
-// @tpm-schematics:start-region("ref-date-field-update-section")
-// @tpm-schematics:end-region("ref-date-field-update-section")
-
 // SetProperties No Remarks
 func (ud *UpdateDocument) SetProperties(p bson.M) *UpdateDocument {
 	mName := fmt.Sprintf(PropertiesFieldName)
@@ -709,6 +664,82 @@ func UpdateWithTaskStatus(tskNdx int32, status string) UpdateOption {
 }
 
 // @tpm-schematics:end-region("tasks-field-update-section")
+
+// SetSys_info No Remarks
+func (ud *UpdateDocument) SetSys_info(p *beans.SysInfo) *UpdateDocument {
+	mName := fmt.Sprintf(SysInfoFieldName)
+	ud.Set().Add(func() bson.E {
+		return bson.E{Key: mName, Value: p}
+	})
+	return ud
+}
+
+// UnsetSys_info No Remarks
+func (ud *UpdateDocument) UnsetSys_info() *UpdateDocument {
+	mName := fmt.Sprintf(SysInfoFieldName)
+	ud.Unset().Add(func() bson.E {
+		return bson.E{Key: mName, Value: ""}
+	})
+	return ud
+}
+
+// setOrUnsetSys_info No Remarks - here2
+func (ud *UpdateDocument) setOrUnsetSys_info(p *beans.SysInfo, um UnsetMode) {
+	if p != nil && !p.IsZero() {
+		ud.SetSys_info(p)
+	} else {
+		switch um {
+		case KeepCurrent:
+		case UnsetData:
+			ud.UnsetSys_info()
+		case SetData2Default:
+			ud.UnsetSys_info()
+		}
+	}
+}
+
+func UpdateWithSys_info(p *beans.SysInfo) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != nil && !p.IsZero() {
+			ud.SetSys_info(p)
+		} else {
+			ud.UnsetSys_info()
+		}
+	}
+}
+
+// @tpm-schematics:start-region("sys-info-field-update-section")
+
+func UpdateWithCreatedAt(p bson.DateTime) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			mName := fmt.Sprintf(SysInfo_CreatedAtFieldName)
+			ud.Set().Add(func() bson.E {
+				return bson.E{Key: mName, Value: p}
+			})
+		}
+	}
+}
+
+func UpdateWithModifiedAt(p bson.DateTime, status string) UpdateOption {
+	return func(ud *UpdateDocument) {
+		if p != 0 {
+			mName := fmt.Sprintf(SysInfo_ModifiedAtFieldName)
+			ud.Set().Add(func() bson.E {
+				return bson.E{Key: mName, Value: p}
+			})
+
+			if status == StatusDone {
+				m1Name := fmt.Sprintf(SysInfo_DoneAtFieldName)
+				ud.Set().Add(func() bson.E {
+					return bson.E{Key: m1Name, Value: p}
+				})
+			}
+		}
+	}
+}
+
+// @tpm-schematics:end-region("sys-info-field-update-section")
 
 // @tpm-schematics:start-region("bottom-file-section")
 // @tpm-schematics:end-region("bottom-file-section")

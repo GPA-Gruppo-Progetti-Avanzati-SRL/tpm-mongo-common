@@ -2,8 +2,10 @@ package task
 
 import (
 	"context"
+	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -53,6 +55,7 @@ func (tsk Task) UpdateStatus(taskColl *mongo.Collection, taskId string, st strin
 
 	updOpts := UpdateOptions{
 		UpdateWithStatus(st),
+		UpdateWithModifiedAt(bson.NewDateTimeFromTime(time.Now()), st),
 	}
 
 	f := Filter{}
@@ -79,6 +82,7 @@ func (tsk Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string,
 
 	if st != "" {
 		updOpts = append(updOpts, UpdateWithPartitionStatus(prtNdx, st))
+		updOpts = append(updOpts, UpdateWithPartitionModifiedAt(prtNdx, bson.NewDateTimeFromTime(time.Now()), st))
 	}
 
 	if withErrors {

@@ -28,13 +28,14 @@ type Task struct {
 	JobId      string            `json:"job_id,omitempty" bson:"job_id,omitempty" yaml:"job_id,omitempty"`
 	Properties bson.M            `json:"properties,omitempty" bson:"properties,omitempty" yaml:"properties,omitempty"`
 	Partitions []beans.Partition `json:"partitions,omitempty" bson:"partitions,omitempty" yaml:"partitions,omitempty"`
+	SysInfo    beans.SysInfo     `json:"sys_info,omitempty" bson:"sys_info,omitempty" yaml:"sys_info,omitempty"`
 
 	// @tpm-schematics:start-region("struct-section")
 	// @tpm-schematics:end-region("struct-section")
 }
 
 func (s Task) IsZero() bool {
-	return s.OId == bson.NilObjectID && s.Domain == "" && s.Site == "" && s.Bid == "" && s.Et == "" && s.Status == "" && s.Group == "" && s.Name == "" && s.JobId == "" && len(s.Properties) == 0 && len(s.Partitions) == 0
+	return s.OId == bson.NilObjectID && s.Domain == "" && s.Site == "" && s.Bid == "" && s.Et == "" && s.Status == "" && s.Group == "" && s.Name == "" && s.JobId == "" && len(s.Properties) == 0 && len(s.Partitions) == 0 && s.SysInfo.IsZero()
 }
 
 type QueryResult struct {

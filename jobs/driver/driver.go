@@ -277,7 +277,7 @@ func (m *Driver) onWorkersDone(tasks []beans.TaskReference) error {
 				}
 
 				if ndx == (len(j.Tasks) - 1) {
-					err = j.UpdateStatus(m.jobsColl, j.Bid, task.StatusDone)
+					err = j.UpdateStatus(m.jobsColl, j.Bid, job.StatusDone)
 					if err != nil {
 						log.Error().Err(err).Msg(semLogContext)
 						return err

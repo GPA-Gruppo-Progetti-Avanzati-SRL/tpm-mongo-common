@@ -34,8 +34,6 @@ attributes:
   - name: due_date
     type: string
     options: with-filter
-  - name: ref_date
-    type: date
   - name: properties
     type: document
   - name: tasks
@@ -44,3 +42,7 @@ attributes:
       struct-ref:
         name: taskReference
       type: struct
+  - name: sys_info
+    type: struct
+    struct-ref:
+       name: sysInfo

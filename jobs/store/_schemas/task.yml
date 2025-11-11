@@ -41,3 +41,7 @@ attributes:
       struct-ref:
         name: partition
       type: struct
+  - name: sys_info
+    type: struct
+    struct-ref:
+      name: sysInfo
