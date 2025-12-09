@@ -109,3 +109,13 @@ func (w *BulkWriter) Insert(item interface{}) error {
 
 	return nil
 }
+
+func (w *BulkWriter) Update(filter interface{}, updateDoc interface{}, withUpsert bool) error {
+	wm := mongo.NewUpdateOneModel().SetUpdate(updateDoc).SetUpsert(withUpsert).SetFilter(filter)
+	w.batch = append(w.batch, wm)
+	if len(w.batch) >= w.opts.Size {
+		return w.Flush()
+	}
+
+	return nil
+}
