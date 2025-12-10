@@ -72,7 +72,7 @@ func (t *WorkerLogger) WriteEntry(bean *tasklog.TaskLog) error {
 	return nil
 }
 
-func NewWorkerLogger(aTask task.Task, aPartition int32, taskLogsStoreRef mongolks.StoreReference) *WorkerLogger {
+func NewWorkerLogger(aTask task.Task, aPartition int32, taskLogsStoreRef mongolks.StoreReference, withContext bool) *WorkerLogger {
 	tl := &WorkerLogger{
 		StoreReference: taskLogsStoreRef,
 		stdOutLogLevel: zerolog.GlobalLevel(),
@@ -97,9 +97,11 @@ func NewWorkerLogger(aTask task.Task, aPartition int32, taskLogsStoreRef mongolk
 	if lev > zerolog.InfoLevel {
 		lev = zerolog.InfoLevel
 	}
-	lg := zerolog.New(zerolog.ConsoleWriter{Out: tl, NoColor: true, TimeFormat: time.RFC3339}).Level(lev).
-		With().Str("job-id", aTask.JobId).Str("tsk-id", aTask.Bid).Str("tsk-name", aTask.Name).Timestamp().
-		Logger()
+
+	lg := zerolog.New(zerolog.ConsoleWriter{Out: tl, NoColor: true, TimeFormat: time.RFC3339}).Level(lev)
+	if withContext {
+		lg = lg.With().Str("job-id", aTask.JobId).Str("tsk-id", aTask.Bid).Str("tsk-name", aTask.Name).Timestamp().Logger()
+	}
 	tl.Logger = &lg
 
 	return tl

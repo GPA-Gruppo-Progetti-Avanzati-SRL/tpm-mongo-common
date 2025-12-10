@@ -25,7 +25,7 @@ func NewNoOpWorker(task task.Task, opts ...Option) (Worker, error) {
 
 func (w *NoOpPartitionWorker) Work(aTask task.Task, partitionNumber int) error {
 	const semLogContext = "no-op-partition-worker::work"
-	w.wrkLogger = logger.NewWorkerLogger(aTask, int32(partitionNumber), w.logStoreRef)
+	w.wrkLogger = logger.NewWorkerLogger(aTask, int32(partitionNumber), w.logStoreRef, true)
 	w.wrkLogger.Logger.Info().Int("partition", partitionNumber).Msg(semLogContext)
 
 	for n, v := range aTask.Properties {
