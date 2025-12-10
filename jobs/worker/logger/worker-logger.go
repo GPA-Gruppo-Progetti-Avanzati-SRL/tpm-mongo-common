@@ -101,6 +101,8 @@ func NewWorkerLogger(aTask task.Task, aPartition int32, taskLogsStoreRef mongolk
 	lg := zerolog.New(zerolog.ConsoleWriter{Out: tl, NoColor: true, TimeFormat: time.RFC3339}).Level(lev)
 	if withContext {
 		lg = lg.With().Str("job-id", aTask.JobId).Str("tsk-id", aTask.Bid).Str("tsk-name", aTask.Name).Timestamp().Logger()
+	} else {
+		lg = lg.With().Timestamp().Logger()
 	}
 	tl.Logger = &lg
 
