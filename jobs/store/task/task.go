@@ -19,7 +19,7 @@ const (
 	StatusDone      = "done"
 	StatusError     = "error"
 
-	SystemPropertyMaxRetries = "_max_retries"
+	SystemPropertyMaxRestarts = "_max_restarts"
 )
 
 // @tpm-schematics:end-region("top-file-section")
@@ -78,14 +78,14 @@ func (s Task) IsError() bool {
 	return withErrors
 }
 
-func (s Task) MaxRetries() int32 {
-	const semLogContext = "task::max-retries"
+func (s Task) MaxRestarts() int32 {
+	const semLogContext = "task::max-restarts"
 	if len(s.Properties) > 0 {
-		if v, ok := s.Properties[SystemPropertyMaxRetries]; ok {
+		if v, ok := s.Properties[SystemPropertyMaxRestarts]; ok {
 			if iv, ok := v.(int32); ok {
 				return iv
 			} else {
-				log.Warn().Interface(SystemPropertyMaxRetries, v).Str(SystemPropertyMaxRetries+"-type", fmt.Sprintf("%T", v)).Msg(semLogContext)
+				log.Warn().Interface(SystemPropertyMaxRestarts, v).Str(SystemPropertyMaxRestarts+"-type", fmt.Sprintf("%T", v)).Msg(semLogContext)
 			}
 		}
 	}
@@ -94,7 +94,7 @@ func (s Task) MaxRetries() int32 {
 }
 
 func (s Task) RestartableOnError(prtNdx int) bool {
-	maxRetries := s.MaxRetries()
+	maxRetries := s.MaxRestarts()
 	numPartitionErrors := s.Partitions[prtNdx-1].SysInfo.Errors
 
 	if maxRetries > numPartitionErrors {
