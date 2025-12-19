@@ -6,3 +6,7 @@ attributes:
     type: date
   - name: modified_at
     type: date
+  - name: errors
+    type: int
+  - name: acquisitions
+    type: int

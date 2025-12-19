@@ -13,6 +13,7 @@ const (
 	StatusWaiting   = "waiting"
 	StatusDone      = "done"
 	DueDateLayout   = "20060102"
+	StatusError     = "error"
 )
 
 // @tpm-schematics:end-region("top-file-section")

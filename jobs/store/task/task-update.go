@@ -11,6 +11,7 @@ type UpdateOperator string
 
 const (
 	Set         UpdateOperator = "$set"
+	SetOnInsert UpdateOperator = "$setOnInsert"
 	Unset       UpdateOperator = "$unset"
 	Inc         UpdateOperator = "$inc"
 	CurrentDate UpdateOperator = "$currentDate"
@@ -23,6 +24,10 @@ type Update func() bson.E
 
 type UpdateDocument struct {
 	Ops map[UpdateOperator]*Updates
+}
+
+func (ud *UpdateDocument) SetOnInsert() *Updates {
+	return ud.op(SetOnInsert)
 }
 
 func (ud *UpdateDocument) Set() *Updates {

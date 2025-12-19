@@ -2,6 +2,7 @@ package worker
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
@@ -68,4 +69,31 @@ type Worker interface {
 
 type PartitionWorker interface {
 	Work(aTask task.Task, partitionNumber int) error
+}
+
+const (
+	PartitionWorkErrorFatal     = "fatal"
+	PartitionWorkErrorRetriable = "retriable"
+)
+
+type PartitionWorkError struct {
+	Level string
+	Err   error
+}
+
+func (e *PartitionWorkError) Unwrap() error { return e.Err }
+
+func (e *PartitionWorkError) Error() string { return fmt.Sprintf("%s: %s", e.Level, e.Error()) }
+
+func (e *PartitionWorkError) IsFatal() bool { return e.Level == PartitionWorkErrorFatal }
+
+func (e *PartitionWorkError) Retryable() bool { return e.Level == PartitionWorkErrorRetriable }
+
+func PartitionWorkErrorLevel(err error) string {
+	var pwErr *PartitionWorkError
+	if errors.As(err, &pwErr) {
+		return pwErr.Level
+	}
+
+	return PartitionWorkErrorFatal
 }

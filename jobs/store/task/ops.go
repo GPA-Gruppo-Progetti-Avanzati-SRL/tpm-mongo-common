@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -73,7 +74,7 @@ func (tsk Task) UpdateStatus(taskColl *mongo.Collection, taskId string, st strin
 	return nil
 }
 
-func (tsk Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string, prtNdx int32, st string, withErrors bool) error {
+func (tsk Task) UpdatePartitionStatus(taskColl *mongo.Collection, prtNdx int32, st string) error {
 	const semLogContext = "task::update-partition-status"
 
 	updOpts := UpdateOptions{
@@ -82,15 +83,40 @@ func (tsk Task) UpdatePartitionStatus(taskColl *mongo.Collection, taskId string,
 
 	if st != "" {
 		updOpts = append(updOpts, UpdateWithPartitionStatus(prtNdx, st))
-		updOpts = append(updOpts, UpdateWithPartitionModifiedAt(prtNdx, bson.NewDateTimeFromTime(time.Now()), st))
-	}
-
-	if withErrors {
-		updOpts = append(updOpts, UpdateWithIncPartitionErrors(prtNdx))
+		updOpts = append(updOpts, UpdateWithPartitionModifiedAt(prtNdx, bson.NewDateTimeFromTime(time.Now()), st == beans.PartitionStatusEOF))
 	}
 
 	f := Filter{}
-	f.Or().AndEtEqTo(EType).AndBidEqTo(taskId)
+	f.Or().AndEtEqTo(EType).AndBidEqTo(tsk.Bid)
+
+	updDoc := GetUpdateDocumentFromOptions(updOpts...)
+	resp, err := taskColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	log.Info().Interface("resp", resp).Msg(semLogContext)
+
+	return nil
+}
+
+func (tsk Task) UpdatePartitionStatusOnError(taskColl *mongo.Collection, prtNdx int32, statusInError bool) error {
+	const semLogContext = "task::update-partition-status"
+
+	updOpts := UpdateOptions{
+		UpdateWithIncPartitionAcquisitions(prtNdx),
+		UpdateWithIncPartitionErrors(prtNdx),
+		UpdateWithIncErrors(),
+	}
+
+	if statusInError {
+		updOpts = append(updOpts, UpdateWithPartitionStatus(prtNdx, StatusError))
+		updOpts = append(updOpts, UpdateWithPartitionModifiedAt(prtNdx, bson.NewDateTimeFromTime(time.Now()), false))
+	}
+
+	f := Filter{}
+	f.Or().AndEtEqTo(EType).AndBidEqTo(tsk.Bid)
 
 	updDoc := GetUpdateDocumentFromOptions(updOpts...)
 	resp, err := taskColl.UpdateOne(context.Background(), f.Build(), updDoc.Build())

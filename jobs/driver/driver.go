@@ -263,7 +263,8 @@ func (m *Driver) onWorkersDone(tasks []beans.TaskReference) error {
 				return err
 			}
 
-			if tsk.IsEOF() {
+			switch {
+			case tsk.IsEOF():
 				err = tsk.UpdateStatus(m.jobsColl, tsk.Bid, task.StatusDone)
 				if err != nil {
 					log.Error().Err(err).Msg(semLogContext)
@@ -282,6 +283,24 @@ func (m *Driver) onWorkersDone(tasks []beans.TaskReference) error {
 						log.Error().Err(err).Msg(semLogContext)
 						return err
 					}
+				}
+			case tsk.IsError():
+				err = tsk.UpdateStatus(m.jobsColl, tsk.Bid, task.StatusError)
+				if err != nil {
+					log.Error().Err(err).Msg(semLogContext)
+					return err
+				}
+
+				_, err = j.UpdateTaskStatus(m.jobsColl, tsk.Bid, task.StatusError)
+				if err != nil {
+					log.Error().Err(err).Msg(semLogContext)
+					return err
+				}
+
+				err = j.UpdateStatus(m.jobsColl, j.Bid, job.StatusError)
+				if err != nil {
+					log.Error().Err(err).Msg(semLogContext)
+					return err
 				}
 			}
 

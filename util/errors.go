@@ -3,12 +3,13 @@ package util
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"regexp"
-	"time"
 )
 
 // List of codes from https://www.mongodb.com/docs/manual/reference/error-codes/ retrieved on 2024-12-15 11:13:10
@@ -354,8 +355,11 @@ const (
 
 func MongoErrorCode(err error, mongoDbVersion MongoDbVersion) int32 {
 	const semLogContext = "mongo::error-code"
-
 	mcode := MongoErrInternalError
+	if err == nil {
+		log.Warn().Msg(semLogContext + " - error is nil")
+		return mcode
+	}
 
 	var mongoCmdErr mongo.CommandError
 	var writeExcErr mongo.WriteException

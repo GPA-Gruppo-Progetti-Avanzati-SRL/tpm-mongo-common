@@ -99,12 +99,20 @@ func (w *workerImpl) work() error {
 	partitionNumber, err := w.nextPartitionNumber()
 	for partitionNumber >= 0 && err == nil {
 		err = w.partitionWorker.Work(w.task, partitionNumber)
-		if err != nil {
-			log.Error().Err(err).Msg(semLogContext)
-			return err
+		if err == nil {
+			err = w.task.UpdatePartitionStatus(w.taskCollection, int32(partitionNumber), beans.PartitionStatusEOF)
+		} else {
+			var updErr error
+			if PartitionWorkErrorLevel(err) == PartitionWorkErrorRetriable && w.task.RestartableOnError(partitionNumber) {
+				updErr = w.task.UpdatePartitionStatusOnError(w.taskCollection, int32(partitionNumber), false)
+			} else {
+				updErr = w.task.UpdatePartitionStatusOnError(w.taskCollection, int32(partitionNumber), true)
+			}
+			if updErr != nil {
+				log.Error().Err(updErr).Msg(semLogContext)
+			}
 		}
 
-		err = w.task.UpdatePartitionStatus(w.taskCollection, w.task.Bid, int32(partitionNumber), beans.PartitionStatusEOF, false)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return err

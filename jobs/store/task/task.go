@@ -1,6 +1,11 @@
 package task
 
-import "go.mongodb.org/mongo-driver/v2/bson"
+import (
+	"fmt"
+
+	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
 import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/beans"
 
 // @tpm-schematics:start-region("top-file-section")
@@ -12,6 +17,9 @@ const (
 	StatusAvailable = "available"
 	StatusReady     = "ready"
 	StatusDone      = "done"
+	StatusError     = "error"
+
+	SystemPropertyMaxRetries = "_max_retries"
 )
 
 // @tpm-schematics:end-region("top-file-section")
@@ -53,6 +61,47 @@ func (s Task) IsEOF() bool {
 	}
 
 	return true
+}
+
+func (s Task) IsError() bool {
+	var withErrors bool
+	for _, p := range s.Partitions {
+		if p.Status == beans.PartitionStatusError {
+			withErrors = true
+		}
+
+		if p.Status != beans.PartitionStatusError && p.Status != beans.PartitionStatusEOF {
+			return false
+		}
+	}
+
+	return withErrors
+}
+
+func (s Task) MaxRetries() int32 {
+	const semLogContext = "task::max-retries"
+	if len(s.Properties) > 0 {
+		if v, ok := s.Properties[SystemPropertyMaxRetries]; ok {
+			if iv, ok := v.(int32); ok {
+				return iv
+			} else {
+				log.Warn().Interface(SystemPropertyMaxRetries, v).Str(SystemPropertyMaxRetries+"-type", fmt.Sprintf("%T", v)).Msg(semLogContext)
+			}
+		}
+	}
+
+	return 0
+}
+
+func (s Task) RestartableOnError(prtNdx int) bool {
+	maxRetries := s.MaxRetries()
+	numPartitionErrors := s.Partitions[prtNdx-1].SysInfo.Errors
+
+	if maxRetries > numPartitionErrors {
+		return true
+	}
+
+	return false
 }
 
 // @tpm-schematics:end-region("bottom-file-section")

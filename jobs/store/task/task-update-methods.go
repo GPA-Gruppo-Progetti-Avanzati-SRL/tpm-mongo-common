@@ -663,7 +663,7 @@ func UpdateWithPartitionStatus(prt int32, status string) UpdateOption {
 	}
 }
 
-func UpdateWithPartitionModifiedAt(prt int32, p bson.DateTime, status string) UpdateOption {
+func UpdateWithPartitionModifiedAt(prt int32, p bson.DateTime, isEof bool) UpdateOption {
 	return func(ud *UpdateDocument) {
 		if p != 0 {
 			mName := fmt.Sprintf(Partitions_I_SysInfo_ModifiedAtFieldName, prt-1)
@@ -671,7 +671,7 @@ func UpdateWithPartitionModifiedAt(prt int32, p bson.DateTime, status string) Up
 				return bson.E{Key: mName, Value: p}
 			})
 
-			if status == beans.PartitionStatusEOF {
+			if isEof {
 				m1Name := fmt.Sprintf(SysInfo_DoneAtFieldName)
 				ud.Set().Add(func() bson.E {
 					return bson.E{Key: m1Name, Value: p}
@@ -684,7 +684,7 @@ func UpdateWithPartitionModifiedAt(prt int32, p bson.DateTime, status string) Up
 func UpdateWithIncPartitionAcquisitions(prt int32) UpdateOption {
 	return func(ud *UpdateDocument) {
 		// partitions are numbered from 1 but array is indexed from 0.
-		mName := fmt.Sprintf(PartitionsIAcquisitionsFieldName, prt-1)
+		mName := fmt.Sprintf(Partitions_I_SysInfo_AcquisitionsFieldName, prt-1)
 		ud.Inc().Add(func() bson.E {
 			return bson.E{Key: mName, Value: 1}
 		})
@@ -694,7 +694,7 @@ func UpdateWithIncPartitionAcquisitions(prt int32) UpdateOption {
 func UpdateWithIncPartitionErrors(prt int32) UpdateOption {
 	return func(ud *UpdateDocument) {
 		// partitions are numbered from 1 but array is indexed from 0.
-		mName := fmt.Sprintf(PartitionsIErrorsFieldName, prt-1)
+		mName := fmt.Sprintf(Partitions_I_SysInfo_ErrorsFieldName, prt-1)
 		ud.Inc().Add(func() bson.E {
 			return bson.E{Key: mName, Value: 1}
 		})
@@ -763,6 +763,16 @@ func UpdateWithModifiedAt(p bson.DateTime, status string) UpdateOption {
 				})
 			}
 		}
+	}
+}
+
+func UpdateWithIncErrors() UpdateOption {
+	return func(ud *UpdateDocument) {
+		// partitions are numbered from 1 but array is indexed from 0.
+		mName := SysInfo_ErrorsFieldName
+		ud.Inc().Add(func() bson.E {
+			return bson.E{Key: mName, Value: 1}
+		})
 	}
 }
 
