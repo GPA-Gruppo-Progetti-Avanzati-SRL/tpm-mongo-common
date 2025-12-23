@@ -139,17 +139,24 @@ func NewBulkWriterSet(opts ...BulkWriterOption) *BulkWriterSet {
 	}
 }
 
-func (b *BulkWriterSet) Add(nm string, blkWrt *BulkWriter) error {
+func (b *BulkWriterSet) Add(instanceName, collId string, opts ...BulkWriterOption) error {
 	const semLogContext = "bulk-writer-set::add"
 
-	if _, ok := b.writers[nm]; ok {
+	if _, ok := b.writers[collId]; ok {
 		err := errors.New("bulk-writer already in set")
-		log.Error().Err(err).Str("name", nm).Msg(semLogContext)
+		log.Error().Err(err).Str("name", collId).Msg(semLogContext)
 		return err
 	}
 
-	blkWrt.opts.Size = -1
-	b.writers[nm] = blkWrt
+	coll, err := GetCollection(context.Background(), instanceName, collId)
+	if err != nil {
+		log.Error().Err(err).Str("name", collId).Msg(semLogContext)
+		return err
+	}
+
+	blkWrt := NewBulkWriter(coll, opts...)
+	blkWrt.opts.Size = 0
+	b.writers[collId] = blkWrt
 	return nil
 }
 
