@@ -46,7 +46,14 @@ type BulkWriter struct {
 	stats *BulkWriterStatsInfo
 }
 
-func NewBulkWriter(coll *mongo.Collection, opts ...BulkWriterOption) *BulkWriter {
+func NewBulkWriter(instanceName, collId string, opts ...BulkWriterOption) (*BulkWriter, error) {
+	const semLogContext = "bulk-writer::new"
+	coll, err := GetCollection(context.Background(), instanceName, collId)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
 	wrtOptions := BulkWriterOptions{Size: 100, Ordered: false}
 	for _, opt := range opts {
 		opt(&wrtOptions)
@@ -55,7 +62,7 @@ func NewBulkWriter(coll *mongo.Collection, opts ...BulkWriterOption) *BulkWriter
 	return &BulkWriter{coll: coll,
 		opts:  wrtOptions,
 		batch: make([]mongo.WriteModel, 0, wrtOptions.Size),
-		stats: NewBulkWriterStatsInfo(wrtOptions.MetricsGid, wrtOptions.PrimaryLabel, wrtOptions.SecondaryLabel)}
+		stats: NewBulkWriterStatsInfo(wrtOptions.MetricsGid, wrtOptions.PrimaryLabel, wrtOptions.SecondaryLabel)}, nil
 }
 
 func (w *BulkWriter) String() string {
@@ -66,9 +73,11 @@ func (w *BulkWriter) Stats() *BulkWriterStatsInfo {
 	return w.stats
 }
 
-func (w *BulkWriter) Flush() error {
+func (w *BulkWriter) Flush() (int, error) {
 	const semLogContext = "bulk-writer::flush"
-	if len(w.batch) > 0 {
+
+	sz := len(w.batch)
+	if sz > 0 {
 		begin := time.Now()
 		blkOpts := options.BulkWrite()
 		blkOpts.SetOrdered(w.opts.Ordered)
@@ -77,29 +86,28 @@ func (w *BulkWriter) Flush() error {
 			log.Error().Err(err).Msg(semLogContext)
 			w.batch = w.batch[:0]
 			w.stats.IncErrors(1)
-			return err
-		} else {
-			w.stats.Update(resp, time.Since(begin))
+			return sz, err
 		}
 
+		w.stats.Update(resp, time.Since(begin))
 		log.Info().Interface("resp", resp).Msg(semLogContext)
 		w.batch = w.batch[:0]
 	}
 
-	return nil
+	return sz, nil
 }
 
-func (w *BulkWriter) Write(wm mongo.WriteModel) error {
+func (w *BulkWriter) Write(wm mongo.WriteModel) (int, error) {
 	const semLogContext = "bulk-writer::write"
 	w.batch = append(w.batch, wm)
 	if w.opts.Size > 0 && len(w.batch) >= w.opts.Size {
 		return w.Flush()
 	}
 
-	return nil
+	return 0, nil
 }
 
-func (w *BulkWriter) Insert(item interface{}) error {
+func (w *BulkWriter) Insert(item interface{}) (int, error) {
 	const semLogContext = "bulk-writer::insert"
 
 	wm := mongo.NewInsertOneModel().SetDocument(item)
@@ -108,17 +116,17 @@ func (w *BulkWriter) Insert(item interface{}) error {
 		return w.Flush()
 	}
 
-	return nil
+	return 0, nil
 }
 
-func (w *BulkWriter) Update(filter interface{}, updateDoc interface{}, withUpsert bool) error {
+func (w *BulkWriter) Update(filter interface{}, updateDoc interface{}, withUpsert bool) (int, error) {
 	wm := mongo.NewUpdateOneModel().SetUpdate(updateDoc).SetUpsert(withUpsert).SetFilter(filter)
 	w.batch = append(w.batch, wm)
 	if w.opts.Size > 0 && len(w.batch) >= w.opts.Size {
 		return w.Flush()
 	}
 
-	return nil
+	return 0, nil
 }
 
 type BulkWriterSet struct {
@@ -148,13 +156,12 @@ func (b *BulkWriterSet) Add(instanceName, collId string, opts ...BulkWriterOptio
 		return err
 	}
 
-	coll, err := GetCollection(context.Background(), instanceName, collId)
+	blkWrt, err := NewBulkWriter(instanceName, collId, opts...)
 	if err != nil {
 		log.Error().Err(err).Str("name", collId).Msg(semLogContext)
 		return err
 	}
 
-	blkWrt := NewBulkWriter(coll, opts...)
 	blkWrt.opts.Size = 0
 	b.writers[collId] = blkWrt
 	return nil
@@ -171,47 +178,69 @@ func (b *BulkWriterSet) Size() int {
 	return size
 }
 
-func (b *BulkWriterSet) Write(nm string, wm mongo.WriteModel) error {
+func (b *BulkWriterSet) Write(nm string, wm mongo.WriteModel) (int, error) {
 	const semLogContext = "bulk-writer-set::write"
 
 	wrt, ok := b.writers[nm]
 	if !ok {
 		err := errors.New("bulk-writer not present")
 		log.Error().Err(err).Str("name", nm).Msg(semLogContext)
-		return err
+		return 0, err
 	}
-	err := wrt.Write(wm)
+	sz, err := wrt.Write(wm)
 	if err != nil {
 		log.Error().Err(err).Str("name", nm).Msg(semLogContext)
-		return err
+		return sz, err
 	}
 
+	flushedSize := 0
 	b.currentSize += 1
 	if b.opts.Size > 0 && b.currentSize >= b.opts.Size {
 		for nm, wrt = range b.writers {
-			dataSize := len(wrt.batch)
-			err = wrt.Flush()
+			sz, err = wrt.Flush()
+			flushedSize += sz
 			b.currentSize += len(wrt.batch)
 			if err != nil {
-				log.Error().Err(err).Str("name", nm).Int("data-size", dataSize).Msg(semLogContext)
-				return err
+				log.Error().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
+				return sz, err
 			}
 
-			log.Info().Err(err).Str("name", nm).Int("data-size", dataSize).Msg(semLogContext)
+			log.Info().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
 		}
 	}
 
-	return nil
+	return flushedSize, nil
 }
 
-func (b *BulkWriterSet) Insert(nm string, item interface{}) error {
+func (b *BulkWriterSet) Insert(nm string, item interface{}) (int, error) {
 	const semLogContext = "bulk-writer-set::insert"
 	wm := mongo.NewInsertOneModel().SetDocument(item)
 	return b.Write(nm, wm)
 }
 
-func (b *BulkWriterSet) Update(nm string, filter interface{}, updateDoc interface{}, withUpsert bool) error {
+func (b *BulkWriterSet) Update(nm string, filter interface{}, updateDoc interface{}, withUpsert bool) (int, error) {
 	const semLogContext = "bulk-writer-set::update"
 	wm := mongo.NewUpdateOneModel().SetUpdate(updateDoc).SetUpsert(withUpsert).SetFilter(filter)
 	return b.Write(nm, wm)
+}
+
+func (b *BulkWriterSet) Flush() (int, error) {
+	const semLogContext = "bulk-writer-set::flush"
+
+	flushedSize := 0
+	b.currentSize = 0
+	for nm, wrt := range b.writers {
+		sz, err := wrt.Flush()
+		flushedSize += sz
+		b.currentSize += len(wrt.batch)
+		if err != nil {
+			log.Error().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
+			return flushedSize, err
+		}
+
+		log.Info().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
+	}
+
+	log.Info().Int("flushed-size", flushedSize).Msg(semLogContext)
+	return flushedSize, nil
 }
