@@ -3,9 +3,12 @@ package mongolks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -119,7 +122,15 @@ func (w *BulkWriter) Insert(item interface{}) (int, error) {
 	return 0, nil
 }
 
-func (w *BulkWriter) Update(filter interface{}, updateDoc interface{}, withUpsert bool) (int, error) {
+func (w *BulkWriter) Update(filter bson.D, updateDoc interface{}, withUpsert bool) (int, error) {
+	const semLogContext = "bulk-writer::update"
+
+	if d, ok := updateDoc.(bson.D); ok {
+		log.Trace().Str("filter", util.MustToExtendedJsonString(filter, false, false)).Str("upd", util.MustToExtendedJsonString(d, false, false)).Msg(semLogContext)
+	} else {
+		log.Trace().Str("filter", util.MustToExtendedJsonString(filter, false, false)).Str("upd-type", fmt.Sprintf("%T", updateDoc)).Msg(semLogContext)
+	}
+
 	wm := mongo.NewUpdateOneModel().SetUpdate(updateDoc).SetUpsert(withUpsert).SetFilter(filter)
 	w.batch = append(w.batch, wm)
 	if w.opts.Size > 0 && len(w.batch) >= w.opts.Size {
@@ -218,8 +229,13 @@ func (b *BulkWriterSet) Insert(nm string, item interface{}) (int, error) {
 	return b.Write(nm, wm)
 }
 
-func (b *BulkWriterSet) Update(nm string, filter interface{}, updateDoc interface{}, withUpsert bool) (int, error) {
+func (b *BulkWriterSet) Update(nm string, filter bson.D, updateDoc interface{}, withUpsert bool) (int, error) {
 	const semLogContext = "bulk-writer-set::update"
+	if d, ok := updateDoc.(bson.D); ok {
+		log.Trace().Str("filter", util.MustToExtendedJsonString(filter, false, false)).Str("upd", util.MustToExtendedJsonString(d, false, false)).Msg(semLogContext)
+	} else {
+		log.Trace().Str("filter", util.MustToExtendedJsonString(filter, false, false)).Str("upd-type", fmt.Sprintf("%T", updateDoc)).Msg(semLogContext)
+	}
 	wm := mongo.NewUpdateOneModel().SetUpdate(updateDoc).SetUpsert(withUpsert).SetFilter(filter)
 	return b.Write(nm, wm)
 }
