@@ -139,9 +139,11 @@ func (m *Driver) workLoop() {
 		}
 	}
 
-	if terminate && m.shutdownChannel != nil {
-		m.shutdownChannel <- fmt.Errorf("exiting from driver workloop")
-	}
+	/*
+		if terminate && m.shutdownChannel != nil {
+			m.shutdownChannel <- fmt.Errorf("exiting from driver workloop")
+		}
+	*/
 
 	log.Info().Msg(semLogContext + " - done")
 	m.wg.Done()
