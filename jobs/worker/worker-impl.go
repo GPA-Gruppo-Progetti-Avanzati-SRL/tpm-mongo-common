@@ -85,15 +85,19 @@ func (w *workerImpl) Start() error {
 		w.wg.Add(1)
 	}
 
-	err := w.work()
-	if err != nil {
-		log.Error().Err(err).Msg(semLogContext)
-		return err
-	}
+	/*
+		err := w.work()
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+	*/
+	go w.work()
+
 	return nil
 }
 
-func (w *workerImpl) work() error {
+func (w *workerImpl) work() /* error */ {
 	const semLogContext = "worker-impl::do-work"
 	log.Info().Msg(semLogContext)
 
@@ -114,25 +118,25 @@ func (w *workerImpl) work() error {
 			}
 		}
 
-		if err != nil {
+		errLease := w.leaseHandler.Release()
+		if errLease != nil {
 			log.Error().Err(err).Msg(semLogContext)
-			return err
 		}
 
-		err = w.leaseHandler.Release()
-		if err != nil {
+		if err == nil {
+			partitionNumber, err = w.nextPartitionNumber()
+		} else {
 			log.Error().Err(err).Msg(semLogContext)
 		}
-		partitionNumber, err = w.nextPartitionNumber()
 	}
 
 	if err != nil {
 		w.Terminate(err)
-		return err
+		// return err
 	}
 
 	w.Terminate(nil)
-	return nil
+	// return nil
 }
 
 func (w *workerImpl) Terminate(err error) {

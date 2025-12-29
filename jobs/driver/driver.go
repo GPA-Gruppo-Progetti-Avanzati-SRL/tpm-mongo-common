@@ -54,7 +54,7 @@ func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
 }
 
 func (m *Driver) Start(sh chan error) error {
-	const semLogContext = "monitor::start"
+	const semLogContext = "driver::start"
 	m.shutdownChannel = sh
 	log.Info().Msg(semLogContext + " - add wg")
 	m.wg.Add(1)
@@ -63,13 +63,13 @@ func (m *Driver) Start(sh chan error) error {
 }
 
 func (m *Driver) Close() error {
-	const semLogContext = "monitor::close"
+	const semLogContext = "driver::close"
 	close(m.quitc)
 	return nil
 }
 
 func (m *Driver) workLoop() {
-	const semLogContext = "monitor::work-loop"
+	const semLogContext = "driver::work-loop"
 
 	startedTasks := m.findAndStartTasks()
 	hasTasks := len(startedTasks) > 0
