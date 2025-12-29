@@ -56,6 +56,7 @@ func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
 func (m *Driver) Start(sh chan error) error {
 	const semLogContext = "monitor::start"
 	m.shutdownChannel = sh
+	log.Info().Msg(semLogContext + " - add wg")
 	m.wg.Add(1)
 	go m.workLoop()
 	return nil
@@ -75,7 +76,7 @@ func (m *Driver) workLoop() {
 	log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
 	if !hasTasks && m.cfg.ExitOnIdle {
-		log.Info().Msg(semLogContext + " no tasks available... exiting")
+		log.Info().Msg(semLogContext + " no tasks available... done")
 		m.wg.Done()
 		if m.shutdownChannel != nil {
 			m.shutdownChannel <- fmt.Errorf("exiting from driver workloop")
@@ -142,6 +143,7 @@ func (m *Driver) workLoop() {
 		m.shutdownChannel <- fmt.Errorf("exiting from driver workloop")
 	}
 
+	log.Info().Msg(semLogContext + " - done")
 	m.wg.Done()
 	if m.workersDone != nil {
 		close(m.workersDone)
