@@ -131,6 +131,7 @@ func (w *workerImpl) work() /* error */ {
 	}
 
 	if err != nil {
+		log.Error().Err(err).Msg(semLogContext + " - terminating on error")
 		w.Terminate(err)
 		// return err
 	}
