@@ -1,7 +1,5 @@
 package keystring
 
-import "C"
-
 const (
 	ModeTopLevel = "toplevel"
 	ModeSingle   = "single"
