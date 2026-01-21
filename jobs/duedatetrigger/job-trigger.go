@@ -55,7 +55,7 @@ func (t *JobTrigger) Start() error {
 	}
 
 	if t.Cfg.Mode == ExecuteLoop {
-		log.Info().Msg(semLogContext)
+		log.Info().Msg(semLogContext + " - add wg")
 		t.wg.Add(1)
 		go t.workLoop()
 	}
@@ -142,6 +142,7 @@ func (t *JobTrigger) workLoop() {
 		}
 	}
 
+	log.Info().Msg(semLogContext + " - done")
 	t.wg.Done()
 	log.Info().Msg(semLogContext + " - exiting from trigger loop")
 }

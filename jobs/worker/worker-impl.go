@@ -81,6 +81,7 @@ func (w *workerImpl) Start() error {
 	const semLogContext = "worker-impl::start"
 	log.Info().Msg(semLogContext)
 	if w.wg != nil {
+		log.Info().Msg(semLogContext + " - add wg")
 		w.wg.Add(1)
 	}
 
@@ -130,6 +131,7 @@ func (w *workerImpl) work() /* error */ {
 	}
 
 	if err != nil {
+		log.Error().Err(err).Msg(semLogContext + " - terminating on error")
 		w.Terminate(err)
 		// return err
 	}
@@ -144,6 +146,7 @@ func (w *workerImpl) Terminate(err error) {
 	log.Trace().Msg(semLogContext)
 	w.shutdownSync.Do(func() {
 		if w.wg != nil {
+			log.Info().Msg(semLogContext + " - done")
 			w.wg.Done()
 		}
 	})
