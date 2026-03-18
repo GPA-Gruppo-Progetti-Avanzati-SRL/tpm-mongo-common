@@ -104,4 +104,32 @@ func (s Task) RestartableOnError(prtNdx int) bool {
 	return false
 }
 
+const (
+	PropertiesTaskScope             = "task"
+	PropertiesTaskAndPartitionScope = "task-and-partition"
+	PropertiesPartitionScope        = "partition"
+)
+
+func (s Task) GetStringProperty(key string, scope string) string {
+	if scope == PropertiesTaskScope || scope == PropertiesTaskAndPartitionScope {
+		if v, ok := s.Properties[key]; ok {
+			if sv, ok := v.(string); ok {
+				return sv
+			}
+		}
+	}
+
+	if scope == PropertiesPartitionScope || scope == PropertiesTaskAndPartitionScope {
+		for _, p := range s.Partitions {
+			if v, ok := p.Properties[key]; ok {
+				if sv, ok := v.(string); ok {
+					return sv
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
 // @tpm-schematics:end-region("bottom-file-section")

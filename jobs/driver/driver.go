@@ -19,6 +19,7 @@ import (
 type Driver struct {
 	cfg *Config
 
+	concurrency   int
 	numIterations int
 	jobsColl      *mongo.Collection
 	wg            *sync.WaitGroup
@@ -39,12 +40,20 @@ func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
 		return nil, err
 	}
 
+	concur := cfg.Concurrency
+	if concur <= 0 {
+		concur = 1
+	} else if concur > 5 {
+		concur = 5
+	}
+
 	m := &Driver{
-		cfg:       cfg,
-		wg:        wg,
-		workersWg: &sync.WaitGroup{},
-		jobsColl:  coll,
-		quitc:     make(chan struct{}),
+		cfg:         cfg,
+		wg:          wg,
+		workersWg:   &sync.WaitGroup{},
+		jobsColl:    coll,
+		quitc:       make(chan struct{}),
+		concurrency: concur,
 	}
 
 	if cfg.TickInterval == 0 {
@@ -160,6 +169,10 @@ func (m *Driver) findAndStartTasks() []beans.TaskReference {
 	if err != nil {
 		log.Fatal().Err(err).Msg(semLogContext)
 		return nil
+	}
+
+	if len(tasks) > m.concurrency {
+		tasks = tasks[:m.concurrency]
 	}
 
 	var startedTasks []beans.TaskReference
