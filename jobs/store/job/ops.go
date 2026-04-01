@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -31,11 +32,20 @@ func FindById(coll *mongo.Collection, jobId string) (Job, error) {
 	return job, nil
 }
 
-func FindJobsByGroupAndStatus(coll *mongo.Collection, groups []string, status string) ([]Job, error) {
+func FindJobsByGroupAndStatus(coll *mongo.Collection, groups []string, status ...string) ([]Job, error) {
 	const semLogContext = "job::find-all-by-type-and-status"
 
 	f := Filter{}
-	ca := f.Or().AndEtEqTo(EType).AndStatusEqTo(status)
+	ca := f.Or().AndEtEqTo(EType)
+	switch len(status) {
+	case 0:
+		return nil, fmt.Errorf("at least one status must be provided")
+	case 1:
+		ca.AndStatusEqTo(status[0])
+	default:
+		ca.AndStatusIn(status)
+	}
+
 	if len(groups) > 1 || len(groups) == 1 && groups[0] != GroupAny {
 		log.Info().Str("types", strings.Join(groups, ",")).Msg(semLogContext + " - filtering by types")
 		ca.AndGroupIn(groups)
@@ -69,7 +79,7 @@ func (j Job) GetTasks(coll *mongo.Collection) ([]task.Task, error) {
 	var tsks []task.Task
 	for _, refTsk := range j.Tasks {
 
-		if refTsk.Status == task.StatusAvailable {
+		if refTsk.Status == task.StatusAvailable || refTsk.Status == task.StatusRetry {
 			tsk, err := task.FindById(coll, refTsk.Id)
 			if err != nil {
 				log.Error().Err(err).Msg(semLogContext)
