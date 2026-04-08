@@ -159,7 +159,7 @@ func (s Task) GetBoolProperty(key string, scope string) (bool, bool) {
 	if scope == PropertiesTaskScope || scope == PropertiesTaskAndPartitionScope {
 		if v, ok := s.Properties[key]; ok {
 			if sv, ok := v.(bool); ok {
-				return true, sv
+				return sv, true
 			}
 		}
 	}
@@ -168,7 +168,7 @@ func (s Task) GetBoolProperty(key string, scope string) (bool, bool) {
 		for _, p := range s.Partitions {
 			if v, ok := p.Properties[key]; ok {
 				if sv, ok := v.(bool); ok {
-					return true, sv
+					return sv, true
 				}
 			}
 		}
