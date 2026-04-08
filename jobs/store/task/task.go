@@ -155,4 +155,26 @@ func (s Task) GetStringProperty(key string, scope string) string {
 	return ""
 }
 
+func (s Task) GetBoolProperty(key string, scope string) (bool, bool) {
+	if scope == PropertiesTaskScope || scope == PropertiesTaskAndPartitionScope {
+		if v, ok := s.Properties[key]; ok {
+			if sv, ok := v.(bool); ok {
+				return true, sv
+			}
+		}
+	}
+
+	if scope == PropertiesPartitionScope || scope == PropertiesTaskAndPartitionScope {
+		for _, p := range s.Partitions {
+			if v, ok := p.Properties[key]; ok {
+				if sv, ok := v.(bool); ok {
+					return true, sv
+				}
+			}
+		}
+	}
+
+	return false, false
+}
+
 // @tpm-schematics:end-region("bottom-file-section")
