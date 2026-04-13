@@ -27,7 +27,7 @@ type CollectionsCfg []CollectionCfg
 
 type TLSConfig struct {
 	CaLocation string `json:"ca-location" mapstructure:"ca-location" yaml:"ca-location"`
-	SkipVerify bool   `json:"skip-verify" mapstructure:"skip-verify" yaml:"skip-verify"`
+	SkipVerify bool   `json:"vpks,omitempty" mapstructure:"vpks,omitempty" yaml:"vpks,omitempty"`
 }
 
 type Config struct {
