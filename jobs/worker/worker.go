@@ -68,7 +68,7 @@ type Worker interface {
 }
 
 type PartitionWorker interface {
-	Work(aTask task.Task, partitionNumber int) error
+	Work(aTask task.Task, partitionNumber int) (bool, error)
 }
 
 const (

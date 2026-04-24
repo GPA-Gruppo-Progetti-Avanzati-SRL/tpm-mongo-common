@@ -103,9 +103,14 @@ func (w *workerImpl) work() /* error */ {
 
 	partitionNumber, err := w.nextPartitionNumber()
 	for partitionNumber >= 0 && err == nil {
-		err = w.partitionWorker.Work(w.task, partitionNumber)
+		var eof bool
+		eof, err = w.partitionWorker.Work(w.task, partitionNumber)
 		if err == nil {
-			err = w.task.UpdatePartitionStatus(w.taskCollection, int32(partitionNumber), beans.PartitionStatusEOF)
+			pst := beans.PartitionStatusEOF
+			if !eof {
+				pst = beans.PartitionStatusRetry
+			}
+			err = w.task.UpdatePartitionStatus(w.taskCollection, int32(partitionNumber), pst)
 		} else {
 			var updErr error
 			if PartitionWorkErrorLevel(err) == PartitionWorkErrorRetriable && w.task.RestartableOnError(partitionNumber) {
@@ -215,7 +220,7 @@ func (c *workerImpl) acquirePartition() (int, error) {
 
 		prtNdx = prtNdx + 1
 		prt := c.task.Partitions[c.shuffledPartitionIndexes[prtNdx]]
-		if prt.Status == beans.PartitionStatusAvailable {
+		if prt.IsAcquireable() {
 			lh, ok, err := lease.AcquireLease(c.taskCollection, c.workerId, beans.PartitionId(c.task.Bid, prt.PartitionNumber), false)
 			if ok {
 				log.Info().Str("partition-id", beans.PartitionId(c.task.Bid, prt.PartitionNumber)).Msg(semLogContext + " - acquired partition")

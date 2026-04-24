@@ -11,14 +11,14 @@ import "github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/
 // @tpm-schematics:start-region("top-file-section")
 
 const (
-	EType           = "task"
-	CollectionId    = "jobs"
-	AmbitAny        = "any"
-	StatusAvailable = "available"
-	StatusReady     = "ready"
-	StatusDone      = "done"
-	StatusError     = "error"
-
+	EType                     = "task"
+	CollectionId              = "jobs"
+	AmbitAny                  = "any"
+	StatusAvailable           = "available"
+	StatusReady               = "ready"
+	StatusDone                = "done"
+	StatusError               = "error"
+	StatusRetry               = "retry"
 	SystemPropertyMaxRestarts = "_max_restarts"
 )
 
@@ -68,14 +68,37 @@ func (s Task) IsError() bool {
 	for _, p := range s.Partitions {
 		if p.Status == beans.PartitionStatusError {
 			withErrors = true
+			break
 		}
 
-		if p.Status != beans.PartitionStatusError && p.Status != beans.PartitionStatusEOF {
+		/*
+			if p.Status != beans.PartitionStatusError && p.Status != beans.PartitionStatusEOF {
+				return withErrors
+			}
+		*/
+	}
+
+	return withErrors
+}
+
+func (s Task) IsRetry() bool {
+
+	// Is a Retry if at least one is retry but is not error. eof is not considered
+	hasRetry := false
+	for _, p := range s.Partitions {
+		if p.Status == beans.PartitionStatusEOF {
+			continue
+		}
+
+		// EOF are not considered. If there is one retry and others are EOF go for retry
+		if p.Status == beans.PartitionStatusRetry {
+			hasRetry = true
+		} else {
 			return false
 		}
 	}
 
-	return withErrors
+	return hasRetry
 }
 
 func (s Task) MaxRestarts() int32 {
@@ -102,6 +125,56 @@ func (s Task) RestartableOnError(prtNdx int) bool {
 	}
 
 	return false
+}
+
+const (
+	PropertiesTaskScope             = "task"
+	PropertiesTaskAndPartitionScope = "task-and-partition"
+	PropertiesPartitionScope        = "partition"
+)
+
+func (s Task) GetStringProperty(key string, scope string) string {
+	if scope == PropertiesTaskScope || scope == PropertiesTaskAndPartitionScope {
+		if v, ok := s.Properties[key]; ok {
+			if sv, ok := v.(string); ok {
+				return sv
+			}
+		}
+	}
+
+	if scope == PropertiesPartitionScope || scope == PropertiesTaskAndPartitionScope {
+		for _, p := range s.Partitions {
+			if v, ok := p.Properties[key]; ok {
+				if sv, ok := v.(string); ok {
+					return sv
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+func (s Task) GetBoolProperty(key string, scope string) (bool, bool) {
+	if scope == PropertiesTaskScope || scope == PropertiesTaskAndPartitionScope {
+		if v, ok := s.Properties[key]; ok {
+			if sv, ok := v.(bool); ok {
+				return sv, true
+			}
+		}
+	}
+
+	if scope == PropertiesPartitionScope || scope == PropertiesTaskAndPartitionScope {
+		for _, p := range s.Partitions {
+			if v, ok := p.Properties[key]; ok {
+				if sv, ok := v.(bool); ok {
+					return sv, true
+				}
+			}
+		}
+	}
+
+	return false, false
 }
 
 // @tpm-schematics:end-region("bottom-file-section")

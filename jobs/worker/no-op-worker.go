@@ -23,7 +23,7 @@ func NewNoOpWorker(task task.Task, opts ...Option) (Worker, error) {
 	return NewWorker(task, &NoOpPartitionWorker{logStoreRef: options.TaskLogStore}, opts...)
 }
 
-func (w *NoOpPartitionWorker) Work(aTask task.Task, partitionNumber int) error {
+func (w *NoOpPartitionWorker) Work(aTask task.Task, partitionNumber int) (bool, error) {
 	const semLogContext = "no-op-partition-worker::work"
 	w.wrkLogger = logger.NewWorkerLogger(aTask, int32(partitionNumber), w.logStoreRef, true)
 	w.wrkLogger.Logger.Info().Int("partition", partitionNumber).Msg(semLogContext)
@@ -35,6 +35,11 @@ func (w *NoOpPartitionWorker) Work(aTask task.Task, partitionNumber int) error {
 		w.wrkLogger.Logger.Trace().Str("partition-prop-name", n).Interface("partition-prop-value", v).Msg(semLogContext)
 	}
 
+	isDone := true
+	if partitionNumber == 2 {
+		isDone = false
+	}
+
 	w.wrkLogger.Flush()
-	return nil
+	return isDone, nil
 }

@@ -58,11 +58,12 @@ func TestNewWorker(t *testing.T) {
 	log.Info().Msg("terminated")
 }
 
-func TestScheduler(t *testing.T) {
+func TestDriver(t *testing.T) {
 
 	cfg := driver.Config{
-		ExitOnIdle:             true,
-		ExitAfterMaxIterations: 1,
+		ExitOnIdle:             false,
+		ExitAfterMaxIterations: 5,
+		RetryTickInterval:      2,
 		JobsStore: mongolks.StoreReference{
 			InstanceName: JobsInstanceId,
 			CollectionId: JobsCollectionId,

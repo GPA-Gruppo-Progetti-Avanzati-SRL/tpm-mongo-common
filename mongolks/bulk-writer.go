@@ -205,19 +205,20 @@ func (b *BulkWriterSet) Write(nm string, wm mongo.WriteModel) (int, error) {
 	}
 
 	flushedSize := 0
-	b.currentSize += 1
+	b.currentSize = b.Size()
 	if b.opts.Size > 0 && b.currentSize >= b.opts.Size {
-		for nm, wrt = range b.writers {
-			sz, err = wrt.Flush()
-			flushedSize += sz
-			b.currentSize += len(wrt.batch)
-			if err != nil {
-				log.Error().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
-				return sz, err
-			}
-
-			log.Info().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
-		}
+		flushedSize, err = b.Flush()
+		//for nm, wrt = range b.writers {
+		//	sz, err = wrt.Flush()
+		//	flushedSize += sz
+		//	if err != nil {
+		//		log.Error().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
+		//		return sz, err
+		//	}
+		//
+		//	log.Info().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
+		//}
+		//b.currentSize = b.Size()
 	}
 
 	return flushedSize, nil
@@ -244,13 +245,12 @@ func (b *BulkWriterSet) Flush() (int, error) {
 	const semLogContext = "bulk-writer-set::flush"
 
 	flushedSize := 0
-	b.currentSize = 0
 	for nm, wrt := range b.writers {
 		sz, err := wrt.Flush()
 		flushedSize += sz
-		b.currentSize += len(wrt.batch)
 		if err != nil {
 			log.Error().Err(err).Str("name", nm).Int("flushed", sz).Msg(semLogContext)
+			b.currentSize = b.Size()
 			return flushedSize, err
 		}
 
@@ -258,5 +258,6 @@ func (b *BulkWriterSet) Flush() (int, error) {
 	}
 
 	log.Info().Int("flushed-size", flushedSize).Msg(semLogContext)
+	b.currentSize = b.Size()
 	return flushedSize, nil
 }

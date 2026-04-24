@@ -13,6 +13,7 @@ const (
 	PartitionStatusClosed    = "closed"
 	PartitionStatusEOF       = "EOF"
 	PartitionStatusError     = "error"
+	PartitionStatusRetry     = "retry"
 )
 
 // @tpm-schematics:end-region("top-file-section")
@@ -39,6 +40,10 @@ func (s Partition) IsZero() bool {
 
 func PartitionId(partitionGroup string, partitionNumber int32) string {
 	return fmt.Sprintf("%s:%03d", partitionGroup, partitionNumber)
+}
+
+func (s Partition) IsAcquireable() bool {
+	return s.Status == PartitionStatusAvailable || s.Status == PartitionStatusRetry
 }
 
 // @tpm-schematics:end-region("bottom-file-section")

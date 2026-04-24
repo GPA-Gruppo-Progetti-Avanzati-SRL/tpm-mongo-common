@@ -15,4 +15,6 @@ type Config struct {
 	ExitOnIdle             bool                    `yaml:"exit-on-idle,omitempty" mapstructure:"exit-on-idle,omitempty" json:"exit-on-idle,omitempty"`
 	ExitAfterMaxIterations int                     `yaml:"exit-after-max-iterations,omitempty" mapstructure:"exit-after-max-iterations,omitempty" json:"exit-after-max-iterations,omitempty"`
 	TickInterval           time.Duration           `yaml:"tick-interval,omitempty" mapstructure:"tick-interval,omitempty" json:"tick-interval,omitempty"`
+	RetryTickInterval      int                     `yaml:"retry-tick-interval,omitempty" mapstructure:"retry-tick-interval,omitempty" json:"retry-tick-interval,omitempty"`
+	Concurrency            int                     `yaml:"concurrency,omitempty" mapstructure:"concurrency,omitempty" json:"concurrency,omitempty"`
 }

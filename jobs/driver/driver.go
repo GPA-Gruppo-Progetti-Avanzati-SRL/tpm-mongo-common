@@ -19,6 +19,7 @@ import (
 type Driver struct {
 	cfg *Config
 
+	concurrency   int
 	numIterations int
 	jobsColl      *mongo.Collection
 	wg            *sync.WaitGroup
@@ -39,16 +40,28 @@ func NewDriver(cfg *Config, wg *sync.WaitGroup) (*Driver, error) {
 		return nil, err
 	}
 
+	concur := cfg.Concurrency
+	if concur <= 0 {
+		concur = 1
+	} else if concur > 5 {
+		concur = 5
+	}
+
 	m := &Driver{
-		cfg:       cfg,
-		wg:        wg,
-		workersWg: &sync.WaitGroup{},
-		jobsColl:  coll,
-		quitc:     make(chan struct{}),
+		cfg:         cfg,
+		wg:          wg,
+		workersWg:   &sync.WaitGroup{},
+		jobsColl:    coll,
+		quitc:       make(chan struct{}),
+		concurrency: concur,
 	}
 
 	if cfg.TickInterval == 0 {
 		cfg.TickInterval = time.Second
+	}
+
+	if cfg.RetryTickInterval <= 0 {
+		cfg.RetryTickInterval = 2
 	}
 	return m, nil
 }
@@ -71,7 +84,8 @@ func (m *Driver) Close() error {
 func (m *Driver) workLoop() {
 	const semLogContext = "driver::work-loop"
 
-	startedTasks := m.findAndStartTasks()
+	// At the very start-up include the retries
+	startedTasks := m.findAndStartTasks(true)
 	hasTasks := len(startedTasks) > 0
 	log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
@@ -86,10 +100,11 @@ func (m *Driver) workLoop() {
 
 	m.numIterations++
 	ticker := time.NewTicker(m.cfg.TickInterval)
-	log.Info().Float64("tick-interval-ss", m.cfg.TickInterval.Seconds()).Msg(semLogContext + " starting scheduler loop")
+	log.Info().Float64("tick-interval-ss", m.cfg.TickInterval.Seconds()).Int("tick-interval-for-retries", m.cfg.RetryTickInterval).Msg(semLogContext + " starting scheduler loop")
 
 	// Use select to wait on the done channel OR a timeout
 	var terminate bool
+	retryTicks := 0
 	for !terminate {
 		select {
 		case <-ticker.C:
@@ -100,13 +115,29 @@ func (m *Driver) workLoop() {
 					terminate = true
 				}
 
-				startedTasks = m.findAndStartTasks()
-				hasTasks = len(startedTasks) > 0
-				log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
+				m.numIterations++
+				if m.cfg.ExitAfterMaxIterations > 0 && m.numIterations == m.cfg.ExitAfterMaxIterations {
+					log.Info().Int("iterations", m.numIterations).Int("exit-after", m.cfg.ExitAfterMaxIterations).Msg(semLogContext + " max-iterations reached... exiting")
+					terminate = true
+				} else {
+					retryTicks++
+					log.Info().Int("max-retry-ticks", m.cfg.RetryTickInterval).Int("retry-ticks", retryTicks).Msg(semLogContext + " ***")
+					if m.cfg.RetryTickInterval > 0 && retryTicks >= m.cfg.RetryTickInterval {
+						log.Info().Msg(semLogContext + " *** including retry tasks")
+						retryTicks = 0
+						startedTasks = m.findAndStartTasks(true)
+					} else {
+						startedTasks = m.findAndStartTasks(false)
+					}
 
-				if hasTasks {
-					m.numIterations++
+					hasTasks = len(startedTasks) > 0
+					log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 				}
+				/*
+					if hasTasks {
+						m.numIterations++
+					}
+				*/
 			}
 
 		case <-m.workersDone:
@@ -118,21 +149,25 @@ func (m *Driver) workLoop() {
 				terminate = true
 			}
 
-			if m.cfg.ExitAfterMaxIterations > 0 && m.numIterations == m.cfg.ExitAfterMaxIterations {
-				log.Info().Msg(semLogContext + " max-iterations reached... exiting")
-				terminate = true
-			} else {
-				startedTasks = m.findAndStartTasks()
-				hasTasks = len(startedTasks) > 0
-				log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
+			// retries should not be included on workers done but only at intervals.
+			startedTasks = m.findAndStartTasks(false)
+			hasTasks = len(startedTasks) > 0
+			log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
+			if !hasTasks && m.cfg.ExitOnIdle {
+				log.Info().Msg(semLogContext + " no tasks available... exiting")
+				terminate = true
+			}
+
+			/*
 				if hasTasks {
 					m.numIterations++
 				} else if m.cfg.ExitOnIdle {
 					log.Info().Msg(semLogContext + " no tasks available... exiting")
 					terminate = true
 				}
-			}
+			*/
+
 		case <-m.quitc:
 			log.Info().Msg(semLogContext + " quit")
 			terminate = true
@@ -153,13 +188,21 @@ func (m *Driver) workLoop() {
 	log.Info().Msg(semLogContext + " - exiting from scheduler loop")
 }
 
-func (m *Driver) findAndStartTasks() []beans.TaskReference {
+func (m *Driver) findAndStartTasks(includeRetries bool) []beans.TaskReference {
 	const semLogContext = "driver::find-and-start-tasks"
 
-	tasks, err := m.FindTasks(m.jobsColl)
+	filterStatus := []string{job.StatusAvailable}
+	if includeRetries {
+		filterStatus = append(filterStatus, job.StatusRetry)
+	}
+	tasks, err := m.FindTasks(m.jobsColl, filterStatus...)
 	if err != nil {
 		log.Fatal().Err(err).Msg(semLogContext)
 		return nil
+	}
+
+	if len(tasks) > m.concurrency {
+		tasks = tasks[:m.concurrency]
 	}
 
 	var startedTasks []beans.TaskReference
@@ -175,11 +218,11 @@ func (m *Driver) findAndStartTasks() []beans.TaskReference {
 	return startedTasks
 }
 
-func (m *Driver) FindTasks(jobsColl *mongo.Collection) ([]task.Task, error) {
+func (m *Driver) FindTasks(jobsColl *mongo.Collection, jobStatus ...string) ([]task.Task, error) {
 	const semLogContext = "driver::find-tasks"
 	var tasks []task.Task
 
-	jobs, err := job.FindJobsByGroupAndStatus(jobsColl, m.cfg.JobTypes, job.StatusAvailable)
+	jobs, err := job.FindJobsByGroupAndStatus(jobsColl, m.cfg.JobTypes, jobStatus...)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err
@@ -267,44 +310,51 @@ func (m *Driver) onWorkersDone(tasks []beans.TaskReference) error {
 				return err
 			}
 
+			var taskStatus string
+			var jobStatus string
 			switch {
+			case tsk.IsError():
+				// Error is first. If any is in error the error bubbles up
+				taskStatus = task.StatusError
+				jobStatus = job.StatusError
+
 			case tsk.IsEOF():
-				err = tsk.UpdateStatus(m.jobsColl, tsk.Bid, task.StatusDone)
+				// EOF if all partitions are EOF
+				taskStatus = task.StatusDone
+				jobStatus = job.StatusDone
+
+			case tsk.IsRetry():
+				taskStatus = task.StatusRetry
+				jobStatus = job.StatusRetry
+			}
+
+			if taskStatus != "" {
+				err = tsk.UpdateStatus(m.jobsColl, tsk.Bid, taskStatus)
 				if err != nil {
 					log.Error().Err(err).Msg(semLogContext)
 					return err
 				}
 
-				ndx, err := j.UpdateTaskStatus(m.jobsColl, tsk.Bid, task.StatusDone)
+				ndx, err := j.UpdateTaskStatus(m.jobsColl, tsk.Bid, taskStatus)
 				if err != nil {
 					log.Error().Err(err).Msg(semLogContext)
 					return err
 				}
 
-				if ndx == (len(j.Tasks) - 1) {
-					err = j.UpdateStatus(m.jobsColl, j.Bid, job.StatusDone)
+				if taskStatus == task.StatusDone {
+					if ndx == (len(j.Tasks) - 1) {
+						err = j.UpdateStatus(m.jobsColl, j.Bid, jobStatus)
+						if err != nil {
+							log.Error().Err(err).Msg(semLogContext)
+							return err
+						}
+					}
+				} else {
+					err = j.UpdateStatus(m.jobsColl, j.Bid, jobStatus)
 					if err != nil {
 						log.Error().Err(err).Msg(semLogContext)
 						return err
 					}
-				}
-			case tsk.IsError():
-				err = tsk.UpdateStatus(m.jobsColl, tsk.Bid, task.StatusError)
-				if err != nil {
-					log.Error().Err(err).Msg(semLogContext)
-					return err
-				}
-
-				_, err = j.UpdateTaskStatus(m.jobsColl, tsk.Bid, task.StatusError)
-				if err != nil {
-					log.Error().Err(err).Msg(semLogContext)
-					return err
-				}
-
-				err = j.UpdateStatus(m.jobsColl, j.Bid, job.StatusError)
-				if err != nil {
-					log.Error().Err(err).Msg(semLogContext)
-					return err
 				}
 			}
 
