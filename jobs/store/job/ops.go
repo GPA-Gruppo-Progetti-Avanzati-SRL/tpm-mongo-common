@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -139,7 +140,7 @@ func UpdateManyStatus(jobsColl *mongo.Collection, f *Filter, st string) (int64, 
 }
 
 func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st string) (int, error) {
-	const semLogContext = "job::update-task-status"
+	const semLogContext = semLogContextPackage + "update-task-status"
 
 	taskNdx := -1
 	for i, t := range j.Tasks {
@@ -170,4 +171,97 @@ func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st stri
 
 	log.Info().Interface("resp", resp).Msg(semLogContext)
 	return taskNdx, nil
+}
+
+func (j Job) Restart() error {
+	const semLogContext = semLogContextPackage + "restart"
+
+	lks, err := mongolks.GetLinkedService(context.Background(), mongolks.MongoDbDefaultInstanceName)
+	if err != nil {
+		return err
+	}
+
+	jobCollection := lks.GetCollection(CollectionId, "")
+	if jobCollection == nil {
+		err = errors.New("cannot find collection by id")
+		return err
+	}
+
+	taskCollection := lks.GetCollection(task.CollectionId, "")
+	if taskCollection == nil {
+		err = errors.New("cannot find collection by id")
+		return err
+	}
+
+	for t := 0; t < len(j.Tasks); t++ {
+		// Status of the task as in the job.
+		j.Tasks[t].Status = task.StatusAvailable
+
+		tskRef := j.Tasks[t]
+		tsk, _, err := task.FindByPk(taskCollection, j.Domain, j.Site, tskRef.JobId, tskRef.Id, true, options.FindOne())
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+
+		for p := 0; p < len(tsk.Partitions); p++ {
+			tsk.Partitions[p].Status = task.StatusAvailable
+		}
+
+		tsk.Status = task.StatusAvailable
+		tskUpdate := task.GetUpdateDocumentFromOptions(
+			task.UpdateWithPartitions(tsk.Partitions),
+			task.UpdateWithStatus(tsk.Status),
+		)
+		tUd := tskUpdate.Build()
+		tFilter := task.Filter{}
+		tFilter.Or().AndDomainEqTo(j.Domain).AndSiteEqTo(j.Site).AndEtEqTo(task.EType).AndJobIdEqTo(tskRef.JobId).AndBidEqTo(tskRef.Id)
+		tFd := tFilter.Build()
+
+		log.Info().
+			Str("update-filter", util.MustToExtendedJsonString(tFd, false, false)).
+			Str("update-document", util.MustToExtendedJsonString(tUd, false, false)).
+			Msg(semLogContext)
+
+		resp, err := taskCollection.UpdateOne(context.Background(), tFd, tUd, options.UpdateOne())
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+
+		if resp.MatchedCount == 0 {
+			err = errors.New("no matched documents")
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+	}
+
+	j.Status = StatusAvailable
+	jobUpdate := GetUpdateDocumentFromOptions(
+		UpdateWithTasks(j.Tasks),
+		UpdateWithStatus(j.Status),
+	)
+	jUd := jobUpdate.Build()
+	jFilter := Filter{}
+	jFilter.Or().AndDomainEqTo(j.Domain).AndSiteEqTo(j.Site).AndEtEqTo(EType).AndBidEqTo(j.Bid)
+	jFd := jFilter.Build()
+
+	log.Info().
+		Str("update-filter", util.MustToExtendedJsonString(jFd, false, false)).
+		Str("update-document", util.MustToExtendedJsonString(jUd, false, false)).
+		Msg(semLogContext)
+
+	jResp, err := jobCollection.UpdateOne(context.Background(), jFd, jUd, options.UpdateOne())
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	if jResp.MatchedCount == 0 {
+		err = errors.New("no matched documents")
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	return nil
 }
