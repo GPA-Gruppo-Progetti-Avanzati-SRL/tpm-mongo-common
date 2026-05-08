@@ -85,7 +85,12 @@ func (m *Driver) workLoop() {
 	const semLogContext = "driver::work-loop"
 
 	// At the very start-up include the retries
-	startedTasks := m.findAndStartTasks(true)
+	err := m.restartRetryJobs()
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+	}
+
+	startedTasks := m.findAndStartTasks()
 	hasTasks := len(startedTasks) > 0
 	log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
@@ -125,11 +130,13 @@ func (m *Driver) workLoop() {
 					if m.cfg.RetryTickInterval > 0 && retryTicks >= m.cfg.RetryTickInterval {
 						log.Info().Msg(semLogContext + " *** including retry tasks")
 						retryTicks = 0
-						startedTasks = m.findAndStartTasks(true)
-					} else {
-						startedTasks = m.findAndStartTasks(false)
+						err = m.restartRetryJobs()
+						if err != nil {
+							log.Error().Err(err).Msg(semLogContext)
+						}
 					}
 
+					startedTasks = m.findAndStartTasks()
 					hasTasks = len(startedTasks) > 0
 					log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 				}
@@ -150,7 +157,7 @@ func (m *Driver) workLoop() {
 			}
 
 			// retries should not be included on workers done but only at intervals.
-			startedTasks = m.findAndStartTasks(false)
+			startedTasks = m.findAndStartTasks()
 			hasTasks = len(startedTasks) > 0
 			log.Info().Int("num-started-tasks", len(startedTasks)).Msg(semLogContext)
 
@@ -188,13 +195,13 @@ func (m *Driver) workLoop() {
 	log.Info().Msg(semLogContext + " - exiting from scheduler loop")
 }
 
-func (m *Driver) findAndStartTasks(includeRetries bool) []beans.TaskReference {
+func (m *Driver) findAndStartTasks() []beans.TaskReference {
 	const semLogContext = "driver::find-and-start-tasks"
 
 	filterStatus := []string{job.StatusAvailable}
-	if includeRetries {
-		filterStatus = append(filterStatus, job.StatusRetry)
-	}
+	//if includeRetries {
+	//	filterStatus = append(filterStatus, job.StatusRetry)
+	//}
 	tasks, err := m.FindTasks(m.jobsColl, filterStatus...)
 	if err != nil {
 		log.Fatal().Err(err).Msg(semLogContext)
@@ -218,11 +225,45 @@ func (m *Driver) findAndStartTasks(includeRetries bool) []beans.TaskReference {
 	return startedTasks
 }
 
+func (m *Driver) restartRetryJobs() error {
+	const semLogContext = "driver::restart-retry-jobs"
+
+	filterStatus := []string{job.StatusRetry}
+
+	jobs, err := m.findJobs(m.jobsColl, filterStatus...)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return err
+	}
+
+	for _, j := range jobs {
+		err = j.Restart()
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Driver) findJobs(jobsColl *mongo.Collection, jobStatus ...string) ([]job.Job, error) {
+	const semLogContext = "driver::find-jobs"
+
+	jobs, err := job.FindJobsByGroupAndStatus(jobsColl, m.cfg.JobTypes, jobStatus...)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
+	}
+
+	return jobs, nil
+}
+
 func (m *Driver) FindTasks(jobsColl *mongo.Collection, jobStatus ...string) ([]task.Task, error) {
 	const semLogContext = "driver::find-tasks"
 	var tasks []task.Task
 
-	jobs, err := job.FindJobsByGroupAndStatus(jobsColl, m.cfg.JobTypes, jobStatus...)
+	jobs, err := m.findJobs(jobsColl, jobStatus...)
 	if err != nil {
 		log.Error().Err(err).Msg(semLogContext)
 		return nil, err

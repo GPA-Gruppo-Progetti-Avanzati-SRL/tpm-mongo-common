@@ -15,6 +15,8 @@ const (
 	DueDateLayout   = "20060102"
 	StatusError     = "error"
 	StatusRetry     = "retry"
+
+	semLogContextPackage = "job::"
 )
 
 // @tpm-schematics:end-region("top-file-section")
