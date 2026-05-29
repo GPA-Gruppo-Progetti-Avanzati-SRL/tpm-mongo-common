@@ -237,7 +237,7 @@ func (m *Driver) restartRetryJobs() error {
 	}
 
 	for _, j := range jobs {
-		err = j.Restart()
+		err = j.Restart(true)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return err

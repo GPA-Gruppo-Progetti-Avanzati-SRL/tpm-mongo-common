@@ -173,7 +173,7 @@ func (j Job) UpdateTaskStatus(taskColl *mongo.Collection, taskId string, st stri
 	return taskNdx, nil
 }
 
-func (j Job) Restart() error {
+func (j Job) Restart(retryOnly bool) error {
 	const semLogContext = semLogContextPackage + "restart"
 
 	lks, err := mongolks.GetLinkedService(context.Background(), mongolks.MongoDbDefaultInstanceName)
@@ -194,6 +194,11 @@ func (j Job) Restart() error {
 	}
 
 	for t := 0; t < len(j.Tasks); t++ {
+
+		if retryOnly && j.Tasks[t].Status != task.StatusRetry {
+			continue
+		}
+
 		// Status of the task as in the job.
 		j.Tasks[t].Status = task.StatusAvailable
 
