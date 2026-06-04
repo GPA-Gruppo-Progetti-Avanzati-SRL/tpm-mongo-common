@@ -20,7 +20,20 @@ const (
 	StatusError               = "error"
 	StatusRetry               = "retry"
 	SystemPropertyMaxRestarts = "_max_restarts"
+
+	semLogContextPackage = "task::"
 )
+
+type Counter struct {
+	Dimension1 string `json:"dimension_1,omitempty" bson:"dimension_1,omitempty" yaml:"dimension_1,omitempty"`
+	Count1     int32  `json:"count_1,omitempty" bson:"count_1,omitempty" yaml:"count_1,omitempty"`
+	Count2     int32  `json:"count_2,omitempty" bson:"count_2,omitempty" yaml:"count_2,omitempty"`
+}
+
+type CounterQueryResult struct {
+	Records int       `json:"records,omitempty" bson:"records,omitempty" yaml:"records,omitempty"`
+	Data    []Counter `json:"data,omitempty" bson:"data,omitempty" yaml:"data,omitempty"`
+}
 
 // @tpm-schematics:end-region("top-file-section")
 
