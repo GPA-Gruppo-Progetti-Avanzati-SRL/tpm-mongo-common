@@ -1,17 +1,17 @@
 module github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common
 
-go 1.25.5
+go 1.26.3
 
 require (
-	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.93
+	github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common v0.1.95
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/zerolog v1.35.1
 	github.com/stretchr/testify v1.11.1
 	go.mongodb.org/mongo-driver/v2 v2.6.0
-	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo v0.0.0-20260505230356-fd7c9562e4aa
-	go.opentelemetry.io/otel v1.43.0
-	go.opentelemetry.io/otel/metric v1.43.0
+	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo v0.0.0-20260603001352-fa42063f3ae4
+	go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/metric v1.44.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -38,11 +38,11 @@ require (
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 )

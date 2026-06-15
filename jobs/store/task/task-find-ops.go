@@ -3,11 +3,13 @@ package task
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"time"
 )
 
 // @tpm-schematics:start-region("top-file-section")
@@ -103,4 +105,86 @@ func Find(collection *mongo.Collection, f *Filter, withCount bool, findOptions *
 }
 
 // @tpm-schematics:start-region("bottom-file-section")
+
+func CountByStatus(collection *mongo.Collection, f *Filter, findOptions *options.FindOptions) (CounterQueryResult, error) {
+	const semLogContext = "jobs::count"
+	qr := CounterQueryResult{}
+
+	pipeline := mongo.Pipeline{}
+	fd := f.Build()
+	log.Trace().Str("filter", util.MustToExtendedJsonString(fd, false, false)).Msg(semLogContext)
+
+	pipeline = append(pipeline, bson.D{{"$match", fd}})
+	if findOptions != nil {
+		if findOptions.Skip != nil {
+			pipeline = append(pipeline, bson.D{{"$skip", findOptions.Skip}})
+		}
+		if findOptions.Limit != nil {
+			pipeline = append(pipeline, bson.D{{"$limit", findOptions.Limit}})
+		}
+	}
+
+	pipeline = append(pipeline,
+		bson.D{
+			{"$group",
+				bson.D{
+					{"_id",
+						bson.D{
+							{"job", "$job_id"},
+							{"status", "$status"},
+						},
+					},
+					{"_count", bson.D{{"$sum", 1}}},
+				},
+			},
+		},
+		bson.D{
+			{"$group",
+				bson.D{
+					{"_id", "$_id.status"},
+					{"count_1", bson.D{{"$sum", "$_count"}}},
+					{"count_2", bson.D{{"$sum", 1}}},
+				},
+			},
+		},
+		bson.D{
+			{"$project",
+				bson.D{
+					{"_id", 0},
+					{"dimension_1", "$_id"},
+					{"count_1", 1},
+					{"count_2", 1},
+				},
+			},
+		})
+
+	ctx := context.Background()
+
+	opts := options.Aggregate()
+	cur, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContext)
+		return qr, err
+	}
+
+	for _, stage := range pipeline {
+		log.Trace().Str("filter", util.MustToExtendedJsonString(stage, true, true)).Msg(semLogContext)
+	}
+
+	for cur.Next(context.Background()) {
+		dto := Counter{}
+		err = cur.Decode(&dto)
+		if err != nil {
+			return qr, err
+		}
+
+		qr.Data = append(qr.Data, dto)
+	}
+
+	if cur.Err() != nil {
+		return qr, cur.Err()
+	}
+	return qr, nil
+}
+
 // @tpm-schematics:end-region("bottom-file-section")
