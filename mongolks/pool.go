@@ -9,7 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/event"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -141,13 +140,13 @@ func (cfg *PoolConfig) getOptions(opts *options.ClientOptions) *options.ClientOp
 		opts.SetMaxConnecting(cfg.MaxConnecting)
 	}
 
-	opts.Monitor = combineMonitors(
-		otelmongo.NewMonitor(otelmongo.WithTracerProvider(otel.GetTracerProvider())),
+	opts.Monitor = // combineMonitors(
+		//	otelmongo.NewMonitor(otelmongo.WithTracerProvider(otel.GetTracerProvider())),
 		mongoprom.NewCommandMonitor(
 			mongoprom.WithInstanceName(""),
 			mongoprom.WithNamespace(""),
-		),
-	)
+			//		),
+		)
 
 	pm := cfg.newPoolMetrics()
 	opts.SetPoolMonitor(pm.getPoolMonitor())
