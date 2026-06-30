@@ -293,10 +293,13 @@ func Delete(coll *mongo.Collection, domain, site string, filter *Filter, limit i
 	var totalDeletions int
 	for i := 0; i < len(qr.Data); i += 20 {
 		var jobIds []string
+		var leaseGids []string
 		for ndx := i; ndx < i+20 && ndx < len(qr.Data); ndx++ {
 			jobIds = append(jobIds, qr.Data[ndx].Bid)
+			leaseGids = append(leaseGids, strings.Join([]string{qr.Data[ndx].Domain, qr.Data[ndx].Site, qr.Data[ndx].Bid}, ":"))
 		}
 
+		// task-log deletion
 		f1 := tasklog.Filter{}
 		f1.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndJobIdIn(jobIds).AndEtEqTo(tasklog.EType)
 		f1d := f1.Build()
@@ -309,6 +312,7 @@ func Delete(coll *mongo.Collection, domain, site string, filter *Filter, limit i
 
 		totalDeletions += int(resp.DeletedCount)
 
+		// task deletion
 		f2 := tasklog.Filter{}
 		f2.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndJobIdIn(jobIds).AndEtEqTo(task.EType)
 		f2d := f2.Build()
@@ -321,8 +325,9 @@ func Delete(coll *mongo.Collection, domain, site string, filter *Filter, limit i
 
 		totalDeletions += int(resp.DeletedCount)
 
+		// job deletion
 		f3 := Filter{}
-		f3.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndBidIn(jobIds).AndEtIn([]string{EType, lease.EntityType})
+		f3.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndBidIn(jobIds).AndEtEqTo(EType)
 		f3d := f3.Build()
 		log.Info().Str("filter", util.MustToExtendedJsonString(f3d, false, false)).Msg(semLogContext + " - deleting jobs")
 		resp, err = coll.DeleteMany(context.Background(), f3d, options.DeleteMany())
@@ -333,8 +338,9 @@ func Delete(coll *mongo.Collection, domain, site string, filter *Filter, limit i
 
 		totalDeletions += int(resp.DeletedCount)
 
+		// lease deletion
 		f4 := lease.Filter{}
-		f4.Or().AndBidIn(jobIds).AndEtIn([]string{lease.EntityType})
+		f4.Or().AndGidIn(leaseGids).AndEtIn([]string{lease.EntityType})
 		f4d := f4.Build()
 		log.Info().Str("filter", util.MustToExtendedJsonString(f4d, false, false)).Msg(semLogContext + " - deleting task leases")
 		resp, err = coll.DeleteMany(context.Background(), f4d, options.DeleteMany())
