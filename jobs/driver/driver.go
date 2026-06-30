@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -308,6 +309,8 @@ func (m *Driver) startTasks(tasks []task.Task, opts ...worker.Option) ([]beans.T
 
 		startedTasks = append(startedTasks, beans.TaskReference{
 			Id:     tsk.Bid,
+			Domain: tsk.Domain,
+			Site:   tsk.Site,
 			JobId:  tsk.JobId,
 			Status: tsk.Status,
 		})
@@ -331,8 +334,9 @@ func (m *Driver) onWorkersDone(tasks []beans.TaskReference) error {
 
 	for _, tsk := range tasks {
 
+		leaseGroupId := strings.Join([]string{tsk.Domain, tsk.Site, tsk.JobId}, ":")
 		// issue.... in here a contention skips the job..... that doesn't get updated ...
-		lh, ok, err := lease.AcquireLease(m.jobsColl, "all", tsk.JobId, true)
+		lh, ok, err := lease.AcquireLease(m.jobsColl, leaseGroupId, tsk.JobId, true)
 		if err != nil {
 			log.Error().Err(err).Msg(semLogContext)
 			return err

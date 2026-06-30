@@ -6,7 +6,7 @@ import "go.mongodb.org/mongo-driver/v2/bson"
 
 const (
 	EType        = "task-log"
-	CollectionId = "jobs-logs"
+	CollectionId = "jobs"
 )
 
 // @tpm-schematics:end-region("top-file-section")

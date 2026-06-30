@@ -77,7 +77,7 @@ func AcquireLease(client *mongo.Collection, leaseGroupId, leasedObjectId string,
 		}
 	} else {
 		if !l.Acquirable() {
-			log.Info().Str("status", l.Status).Str("lease-type", leaseGroupId).Str("leased-object-id", leasedObjectId).Msg(semLogContext + " - lease cannot be acquired")
+			log.Info().Str("status", l.Status).Str("lease-group-id", leaseGroupId).Str("leased-object-id", leasedObjectId).Msg(semLogContext + " - lease cannot be acquired")
 			return nil, false, nil
 		} else {
 			f := Filter{}

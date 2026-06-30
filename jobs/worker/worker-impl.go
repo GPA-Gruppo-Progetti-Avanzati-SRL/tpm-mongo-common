@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"math/rand"
+	"strings"
 	"sync"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
@@ -221,7 +222,7 @@ func (c *workerImpl) acquirePartition() (int, error) {
 		prtNdx = prtNdx + 1
 		prt := c.task.Partitions[c.shuffledPartitionIndexes[prtNdx]]
 		if prt.IsAcquireable() {
-			lh, ok, err := lease.AcquireLease(c.taskCollection, c.workerId, beans.PartitionId(c.task.Bid, prt.PartitionNumber), false)
+			lh, ok, err := lease.AcquireLease(c.taskCollection, strings.Join([]string{c.task.Domain, c.task.Site, c.task.JobId}, ":"), beans.PartitionId(c.task.Bid, prt.PartitionNumber), false)
 			if ok {
 				log.Info().Str("partition-id", beans.PartitionId(c.task.Bid, prt.PartitionNumber)).Msg(semLogContext + " - acquired partition")
 				c.leaseHandler = lh
