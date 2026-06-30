@@ -273,7 +273,7 @@ func (j Job) Restart(retryOnly bool) error {
 	return nil
 }
 
-func Delete(coll *mongo.Collection, domain, site string, filter *Filter, limit int) (int, error) {
+func Delete(coll *mongo.Collection, filter *Filter, limit int) (int, error) {
 	const semLogContext = semLogContextPackage + "delete"
 
 	opts := options.Find()
@@ -290,11 +290,22 @@ func Delete(coll *mongo.Collection, domain, site string, filter *Filter, limit i
 		return 0, nil
 	}
 
+	// take the domain and site from the very first one.
+	domain := qr.Data[0].Domain
+	site := qr.Data[0].Site
+
 	var totalDeletions int
 	for i := 0; i < len(qr.Data); i += 20 {
+
 		var jobIds []string
 		var leaseGids []string
 		for ndx := i; ndx < i+20 && ndx < len(qr.Data); ndx++ {
+			if domain != qr.Data[ndx].Domain || site != qr.Data[ndx].Site {
+				err = errors.New("invalid op. domain and site doesn't match. erroneous filter condition")
+				log.Error().Err(err).Msg(semLogContext)
+				return 0, err
+			}
+
 			jobIds = append(jobIds, qr.Data[ndx].Bid)
 			leaseGids = append(leaseGids, strings.Join([]string{qr.Data[ndx].Domain, qr.Data[ndx].Site, qr.Data[ndx].Bid}, ":"))
 		}
