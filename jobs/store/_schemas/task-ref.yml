@@ -6,3 +6,9 @@ attributes:
     type: string
   - name: job_id
     type: string
+  - name: domain
+    type: string
+    options: with-filter
+  - name: site
+    type: string
+    options: with-filter

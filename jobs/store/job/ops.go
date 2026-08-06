@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/task"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/jobs/store/tasklog"
+	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/lease"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/mongolks"
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/util"
 	"github.com/rs/zerolog/log"
@@ -269,4 +271,97 @@ func (j Job) Restart(retryOnly bool) error {
 	}
 
 	return nil
+}
+
+func Delete(coll *mongo.Collection, filter *Filter, limit int) (int, error) {
+	const semLogContext = semLogContextPackage + "delete"
+
+	opts := options.Find()
+	if limit > 0 {
+		opts.SetLimit(int64(limit))
+	}
+
+	qr, err := Find(coll, filter, false, opts)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(qr.Data) == 0 {
+		return 0, nil
+	}
+
+	// take the domain and site from the very first one.
+	domain := qr.Data[0].Domain
+	site := qr.Data[0].Site
+
+	var totalDeletions int
+	for i := 0; i < len(qr.Data); i += 20 {
+
+		var jobIds []string
+		var leaseGids []string
+		for ndx := i; ndx < i+20 && ndx < len(qr.Data); ndx++ {
+			if domain != qr.Data[ndx].Domain || site != qr.Data[ndx].Site {
+				err = errors.New("invalid op. domain and site doesn't match. erroneous filter condition")
+				log.Error().Err(err).Msg(semLogContext)
+				return 0, err
+			}
+
+			jobIds = append(jobIds, qr.Data[ndx].Bid)
+			leaseGids = append(leaseGids, strings.Join([]string{qr.Data[ndx].Domain, qr.Data[ndx].Site, qr.Data[ndx].Bid}, ":"))
+		}
+
+		// task-log deletion
+		f1 := tasklog.Filter{}
+		f1.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndJobIdIn(jobIds).AndEtEqTo(tasklog.EType)
+		f1d := f1.Build()
+		log.Info().Str("filter", util.MustToExtendedJsonString(f1d, false, false)).Msg(semLogContext + " - deleting task-logs")
+		resp, err := coll.DeleteMany(context.Background(), f1d, options.DeleteMany())
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return 0, err
+		}
+
+		totalDeletions += int(resp.DeletedCount)
+
+		// task deletion
+		f2 := tasklog.Filter{}
+		f2.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndJobIdIn(jobIds).AndEtEqTo(task.EType)
+		f2d := f2.Build()
+		log.Info().Str("filter", util.MustToExtendedJsonString(f2d, false, false)).Msg(semLogContext + " - deleting tasks")
+		resp, err = coll.DeleteMany(context.Background(), f2d, options.DeleteMany())
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return 0, err
+		}
+
+		totalDeletions += int(resp.DeletedCount)
+
+		// job deletion
+		f3 := Filter{}
+		f3.Or().AndDomainEqTo(domain).AndSiteEqTo(site).AndBidIn(jobIds).AndEtEqTo(EType)
+		f3d := f3.Build()
+		log.Info().Str("filter", util.MustToExtendedJsonString(f3d, false, false)).Msg(semLogContext + " - deleting jobs")
+		resp, err = coll.DeleteMany(context.Background(), f3d, options.DeleteMany())
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return 0, err
+		}
+
+		totalDeletions += int(resp.DeletedCount)
+
+		// lease deletion
+		f4 := lease.Filter{}
+		f4.Or().AndGidIn(leaseGids).AndEtIn([]string{lease.EntityType})
+		f4d := f4.Build()
+		log.Info().Str("filter", util.MustToExtendedJsonString(f4d, false, false)).Msg(semLogContext + " - deleting task leases")
+		resp, err = coll.DeleteMany(context.Background(), f4d, options.DeleteMany())
+		if err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+			return 0, err
+		}
+
+		totalDeletions += int(resp.DeletedCount)
+	}
+
+	return totalDeletions, nil
 }

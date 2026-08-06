@@ -2,16 +2,18 @@ package lease
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-common/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"time"
 )
 
 // @tpm-schematics:start-region("top-file-section")
 
 import (
-	"github.com/rs/zerolog/log"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -48,15 +50,15 @@ func (s Lease) IsZero() bool {
 
 // @tpm-schematics:start-region("bottom-file-section")
 
-func NewLease(leaseType string, objId string, status string, durationSecs int32) Lease {
+func NewLease(leaseGroup string, objId string, status string, durationSecs int32) Lease {
 
 	leasedObjectId := objId // LeasedObjectId(leaseType, objId)
-	lid := strings.Join([]string{leaseType, objId, util.NewObjectId().String()}, ":")
+	lid := strings.Join([]string{leaseGroup, objId, util.NewObjectId().String()}, ":")
 
 	l := Lease{
 		Bid:          leasedObjectId,
 		Et:           EntityType,
-		Gid:          leaseType,
+		Gid:          leaseGroup,
 		LeaseId:      lid,
 		Status:       status,
 		Duration:     durationSecs,
