@@ -20,7 +20,7 @@ type QueryOptions struct {
 	// @tpm-schematics:start-region("query-options-struct-section")
 	Name   string `form:"name" query:"name" json:"name,omitempty" bson:"name,omitempty" yaml:"name,omitempty"`
 	Status string `form:"status" query:"status" json:"status,omitempty" bson:"status,omitempty" yaml:"status,omitempty"`
-	OId    string `form:"oId" query:"oId" json:"oId,omitempty" bson:"oId,omitempty" yaml:"oId,omitempty"`
+	Bid    string `form:"bid" query:"bid" json:"bid,omitempty" bson:"bid,omitempty" yaml:"bid,omitempty"`
 	// @tpm-schematics:end-region("query-options-struct-section")
 }
 
