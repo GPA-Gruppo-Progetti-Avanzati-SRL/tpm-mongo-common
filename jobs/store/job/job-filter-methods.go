@@ -8,6 +8,8 @@ import (
 )
 
 // @tpm-schematics:start-region("top-file-section")
+import "github.com/rs/zerolog/log"
+
 // @tpm-schematics:end-region("top-file-section")
 
 func FilterMethodsGoInfo() string {
@@ -67,7 +69,12 @@ func (ca *Criteria) AndOIdHexEqTo(oId string) *Criteria {
 	}
 
 	mName := fmt.Sprintf(OIdFieldName)
-	c := func() bson.E { return bson.E{Key: mName, Value: bson.ObjectIDFromHex(oId)} }
+	objId, err := bson.ObjectIDFromHex(oId)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContextPackage + "and-oid-hex-eq-to")
+		return ca
+	}
+	c := func() bson.E { return bson.E{Key: mName, Value: objId} }
 	*ca = append(*ca, c)
 	return ca
 }
