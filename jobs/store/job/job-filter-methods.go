@@ -2,8 +2,9 @@ package job
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // @tpm-schematics:start-region("top-file-section")
@@ -58,6 +59,19 @@ func (ca *Criteria) AndOIdIn(p []bson.ObjectID) *Criteria {
 }
 
 // @tpm-schematics:start-region("o-id-field-filter-section")
+
+func (ca *Criteria) AndOIdHexEqTo(oId string) *Criteria {
+
+	if oId == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(OIdFieldName)
+	c := func() bson.E { return bson.E{Key: mName, Value: bson.ObjectIDFromHex(oId)} }
+	*ca = append(*ca, c)
+	return ca
+}
+
 // @tpm-schematics:end-region("o-id-field-filter-section")
 
 /*
