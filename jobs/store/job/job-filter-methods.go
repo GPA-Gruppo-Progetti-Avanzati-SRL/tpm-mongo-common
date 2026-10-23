@@ -2,11 +2,14 @@ package job
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // @tpm-schematics:start-region("top-file-section")
+import "github.com/rs/zerolog/log"
+
 // @tpm-schematics:end-region("top-file-section")
 
 func FilterMethodsGoInfo() string {
@@ -58,6 +61,24 @@ func (ca *Criteria) AndOIdIn(p []bson.ObjectID) *Criteria {
 }
 
 // @tpm-schematics:start-region("o-id-field-filter-section")
+
+func (ca *Criteria) AndOIdHexEqTo(oId string) *Criteria {
+
+	if oId == "" {
+		return ca
+	}
+
+	mName := fmt.Sprintf(OIdFieldName)
+	objId, err := bson.ObjectIDFromHex(oId)
+	if err != nil {
+		log.Error().Err(err).Msg(semLogContextPackage + "and-oid-hex-eq-to")
+		return ca
+	}
+	c := func() bson.E { return bson.E{Key: mName, Value: objId} }
+	*ca = append(*ca, c)
+	return ca
+}
+
 // @tpm-schematics:end-region("o-id-field-filter-section")
 
 /*
