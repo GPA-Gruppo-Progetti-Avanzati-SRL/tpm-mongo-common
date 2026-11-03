@@ -382,7 +382,7 @@ func (s *Consumer) newChangeStream() (*mongo.ChangeStream, error) {
 
 		counter++
 		log.Info().Err(err).Int("retry-num", counter).Msg(semLogContext)
-		collStream, err = coll.Watch(context.TODO(), mongo.Pipeline{}, opts)
+		collStream, err = coll.Watch(context.TODO(), pipeline, opts)
 	}
 
 	if err != nil {
