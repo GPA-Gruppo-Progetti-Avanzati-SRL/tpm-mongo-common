@@ -208,6 +208,11 @@ func (b *BulkWriterSet) Write(nm string, wm mongo.WriteModel) (int, error) {
 	b.currentSize = b.Size()
 	if b.opts.Size > 0 && b.currentSize >= b.opts.Size {
 		flushedSize, err = b.Flush()
+		if err != nil {
+			log.Error().Err(err).Str("name", nm).Int("flushed", flushedSize).Msg(semLogContext)
+			return sz, err
+		}
+
 		//for nm, wrt = range b.writers {
 		//	sz, err = wrt.Flush()
 		//	flushedSize += sz

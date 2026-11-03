@@ -380,11 +380,6 @@ func (s *watcherImpl) nextEvent() (*events.ChangeEvent, error) {
 	if !ok {
 		s.statsInfo.ResetMillisecondsBehindSource()
 
-		if s.chgStream.ID() == 0 {
-			log.Warn().Msg(semLogContext + " - stream EOF")
-			return nil, io.EOF
-		}
-
 		if s.chgStream.Err() != nil {
 			ec := util.MongoErrorCode(s.chgStream.Err(), s.ServerVersion)
 			if ec == util.MongoErrChangeStreamHistoryLost {
@@ -400,6 +395,11 @@ func (s *watcherImpl) nextEvent() (*events.ChangeEvent, error) {
 			}
 
 			return nil, s.chgStream.Err()
+		}
+
+		if s.chgStream.ID() == 0 {
+			log.Warn().Msg(semLogContext + " - stream EOF")
+			return nil, io.EOF
 		}
 
 		return nil, errors.New("watcher undefined condition")

@@ -36,12 +36,12 @@ func findLeaseByGroupIdAndLeasedObjectId(coll *mongo.Collection, leaseGroupId st
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			log.Info().Str("lease-gid", leaseGroupId).Str("leased-object-id", leasedObjectId).Msg(semLogContext + " - no lease found")
 			return Lease{}, nil
-		} else {
-			log.Error().Err(err).Str("lease-gid", leaseGroupId).Str("leased-object-id", leasedObjectId).Msg(semLogContext)
 		}
+
+		log.Error().Err(err).Str("lease-gid", leaseGroupId).Str("leased-object-id", leasedObjectId).Msg(semLogContext)
 	}
 
-	return doc, nil
+	return doc, err
 }
 
 func CanAcquireLease(coll *mongo.Collection, leaseGroupId, leasedObjectId string) (bool, error) {
@@ -241,17 +241,17 @@ func (lh *Handler) RenewLease(withErrors bool) error {
 
 	f := Filter{}
 	f.Or().AndBidEqTo(lh.Lease.Bid).AndGidEqTo(lh.Lease.Gid).AndEtagEqTo(lh.Lease.Etag).AndEtEqTo(EntityType)
-	lh.Lease = lh.Lease.Renewed()
+	renewedLease := lh.Lease.Renewed()
 
 	updOptions := []UpdateOption{
-		UpdateWithStatus(lh.Lease.Status),
-		UpdateWithEtag(lh.Lease.Etag),
-		UpdateWithTs(lh.Lease.Ts),
-		UpdateWithData(lh.Lease.Data),
+		UpdateWithStatus(renewedLease.Status),
+		UpdateWithEtag(renewedLease.Etag),
+		UpdateWithTs(renewedLease.Ts),
+		UpdateWithData(renewedLease.Data),
 	}
 	if withErrors {
 		updOptions = append(updOptions, UpdateWithIncErrors(1))
-		lh.Lease.Errors++
+		renewedLease.Errors++
 	}
 	ud := GetUpdateDocumentFromOptions(updOptions...)
 
@@ -260,6 +260,8 @@ func (lh *Handler) RenewLease(withErrors bool) error {
 		log.Error().Err(err).Msg(semLogContext)
 		return err
 	}
+
+	lh.Lease = renewedLease
 
 	if res.ModifiedCount == 0 {
 		log.Error().Msg(semLogContext + " lease already released")

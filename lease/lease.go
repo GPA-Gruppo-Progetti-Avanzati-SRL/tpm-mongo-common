@@ -116,11 +116,12 @@ func (l Lease) Acquired() Lease {
 func (l Lease) Renewed() Lease {
 	const semLogContext = "lease::renewed"
 
-	l.Status = StatusLeased
-	l.Ts = time.Now().Format(time.RFC3339Nano)
-	l.Etag++
+	newL := l
+	newL.Status = StatusLeased
+	newL.Ts = time.Now().Format(time.RFC3339Nano)
+	newL.Etag++
 
-	return l
+	return newL
 }
 
 func (l Lease) Cleared() Lease {
