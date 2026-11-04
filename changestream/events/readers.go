@@ -2,43 +2,76 @@ package events
 
 import (
 	"fmt"
+
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func getString(m bson.M, fieldName string, mandatory bool) (string, error) {
-
+func getField(m any, fieldName string) (any, bool, error) {
+	var field any
 	var err error
-	i, ok := m[fieldName]
-	if !ok {
-		if mandatory {
-			err = fmt.Errorf("missing %s", fieldName)
+	var ok bool
+
+	switch container := m.(type) {
+	case bson.M:
+		field, ok = container[fieldName]
+	case bson.D:
+		for _, f := range container {
+			if f.Key == fieldName {
+				ok = true
+				field = f.Value
+				break
+			}
 		}
+
+	default:
+		err = fmt.Errorf("unknown container type %T for %s", container, fieldName)
+	}
+
+	return field, ok, err
+}
+
+func getString(m any, fieldName string, mandatory bool) (string, error) {
+
+	field, ok, err := getField(m, fieldName)
+	if err != nil {
 		return "", err
 	}
 
-	v, ok := i.(string)
 	if !ok {
-		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+			return "", err
+		}
+		return "", nil
+	}
+
+	v, ok := field.(string)
+	if !ok {
+		err = fmt.Errorf("invalid type %T fot %s", field, fieldName)
 		return "", err
 	}
 
 	return v, nil
 }
 
-func getNumberLong(m bson.M, fieldName string, mandatory bool) (int64, error) {
+func getNumberLong(m any, fieldName string, mandatory bool) (int64, error) {
 
-	var err error
-	i, ok := m[fieldName]
-	if !ok {
-		if mandatory {
-			err = fmt.Errorf("missing %s", fieldName)
-		}
+	field, ok, err := getField(m, fieldName)
+	if err != nil {
 		return 0, err
 	}
 
-	v, ok := i.(int64)
 	if !ok {
-		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+			return 0, err
+		}
+		return 0, nil
+	}
+
+	v, ok := field.(int64)
+	if !ok {
+		err = fmt.Errorf("invalid type %T fot %s", field, fieldName)
 		return 0, err
 	}
 
@@ -47,18 +80,22 @@ func getNumberLong(m bson.M, fieldName string, mandatory bool) (int64, error) {
 
 func getTimestamp(m bson.M, fieldName string, mandatory bool) (bson.Timestamp, error) {
 
-	var err error
-	i, ok := m[fieldName]
-	if !ok {
-		if mandatory {
-			err = fmt.Errorf("missing %s", fieldName)
-		}
+	field, ok, err := getField(m, fieldName)
+	if err != nil {
 		return bson.Timestamp{}, err
 	}
 
-	v, ok := i.(bson.Timestamp)
 	if !ok {
-		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+			return bson.Timestamp{}, err
+		}
+		return bson.Timestamp{}, nil
+	}
+
+	v, ok := field.(bson.Timestamp)
+	if !ok {
+		err = fmt.Errorf("invalid type %T fot %s", field, fieldName)
 		return bson.Timestamp{}, err
 	}
 
@@ -67,48 +104,23 @@ func getTimestamp(m bson.M, fieldName string, mandatory bool) (bson.Timestamp, e
 
 func getDateTime(m bson.M, fieldName string, mandatory bool) (bson.DateTime, error) {
 
-	var err error
-	i, ok := m[fieldName]
-	if !ok {
-		if mandatory {
-			err = fmt.Errorf("missing %s", fieldName)
-		}
+	field, ok, err := getField(m, fieldName)
+	if err != nil {
 		return 0, err
 	}
 
-	v, ok := i.(bson.DateTime)
 	if !ok {
-		err = fmt.Errorf("invalid type %T fot %s", i, fieldName)
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+			return 0, err
+		}
+		return 0, nil
+	}
+
+	v, ok := field.(bson.DateTime)
+	if !ok {
+		err = fmt.Errorf("invalid type %T fot %s", field, fieldName)
 		return 0, err
-	}
-
-	return v, nil
-}
-
-func getDocument(m bson.M, fieldName string, mandatory bool) (bson.M, error) {
-
-	var err error
-	i, ok := m[fieldName]
-	if !ok {
-		if mandatory {
-			err = fmt.Errorf("missing %s", fieldName)
-		}
-		return nil, err
-	}
-
-	if i == nil {
-		if mandatory {
-			err = fmt.Errorf("missing %s", fieldName)
-			return nil, err
-		}
-
-		return nil, err
-	}
-
-	v, ok := i.(bson.M)
-	if !ok {
-		err = fmt.Errorf("invalid type %T for %s", i, fieldName)
-		return nil, err
 	}
 
 	return v, nil
@@ -119,18 +131,73 @@ type Namespace struct {
 	Coll string `yaml:"coll,omitempty" mapstructure:"coll,omitempty" json:"coll,omitempty"`
 }
 
-func getNamespace(m bson.M, mandatory bool) (Namespace, error) {
+func getDocument(m any, fieldName string, mandatory bool) (bson.D, error) {
 
-	var err error
-	d, err := getDocument(m, "ns", mandatory)
+	field, ok, err := getField(m, fieldName)
+	if err != nil {
+		return bson.D{}, err
+	}
+
+	if !ok {
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+			return bson.D{}, err
+		}
+		return bson.D{}, nil
+	}
+
+	v, ok := field.(bson.D)
+	if !ok {
+		err = fmt.Errorf("invalid type %T for %s", field, fieldName)
+		return nil, err
+	}
+
+	return v, nil
+}
+
+func getMap(m any, fieldName string, mandatory bool) (bson.M, error) {
+
+	field, ok, err := getField(m, fieldName)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		if mandatory {
+			err = fmt.Errorf("missing %s", fieldName)
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	v, ok := field.(bson.M)
+	if !ok {
+		err = fmt.Errorf("invalid type %T for %s", field, fieldName)
+		return nil, err
+	}
+
+	return v, nil
+}
+
+func getNamespace(m any, mandatory bool) (Namespace, error) {
+
+	nsDoc, ok, err := getField(m, "ns")
 	if err != nil {
 		return Namespace{}, err
 	}
 
+	if !ok {
+		if mandatory {
+			err = fmt.Errorf("missing %s", "ns")
+			return Namespace{}, err
+		}
+		return Namespace{}, nil
+	}
+
 	ns := Namespace{}
-	ns.Db, err = getString(d, "db", true)
+	ns.Db, err = getString(nsDoc, "db", true)
 	if err == nil {
-		ns.Coll, err = getString(d, "coll", true)
+		ns.Coll, err = getString(nsDoc, "coll", true)
 	}
 
 	return ns, nil

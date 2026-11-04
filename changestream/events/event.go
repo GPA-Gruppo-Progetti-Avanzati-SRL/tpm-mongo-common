@@ -3,12 +3,14 @@ package events
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type EventId struct {

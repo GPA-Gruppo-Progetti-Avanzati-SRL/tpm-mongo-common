@@ -1,9 +1,10 @@
 package events
 
 import (
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"time"
 )
 
 // https://www.mongodb.com/docs/manual/reference/change-events/delete/
@@ -46,7 +47,7 @@ func parseDeleteOperationType(m bson.M) (ChangeEvent, error) {
 		OpType: OperationTypeDelete,
 	}
 
-	id, err := getDocument(m, "_id", true)
+	id, err := getMap(m, "_id", true)
 	if err == nil {
 		var data string
 		data, err = getString(id, "_data", true)
@@ -61,15 +62,15 @@ func parseDeleteOperationType(m bson.M) (ChangeEvent, error) {
 	}
 
 	if err == nil {
-		e.DocumentKey, err = getDocument(m, "documentKey", true)
+		e.DocumentKey, err = getMap(m, "documentKey", true)
 	}
 
 	if err == nil {
-		e.Lsid, err = getDocument(m, "lsid", false)
+		e.Lsid, err = getMap(m, "lsid", false)
 	}
 
 	if err == nil {
-		e.OperationDescription, err = getDocument(m, "operationDescription", false)
+		e.OperationDescription, err = getMap(m, "operationDescription", false)
 	}
 
 	if err == nil {

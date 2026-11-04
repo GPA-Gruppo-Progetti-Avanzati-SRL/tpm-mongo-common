@@ -1,6 +1,7 @@
 package consumerproducer
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -292,9 +293,19 @@ func (s *Consumer) Poll() (*events.ChangeEvent, error) {
 
 	s.statsInfo.IncNumEvents()
 
+	/*
+		var data bson.M
+		if err := s.chgStream.Decode(&data); err != nil {
+			log.Error().Err(err).Msg(semLogContext)
+		}
+	*/
+
 	var data bson.M
-	if err := s.chgStream.Decode(&data); err != nil {
+	dec := bson.NewDecoder(bson.NewDocumentReader(bytes.NewReader(s.chgStream.Current)))
+	dec.DefaultDocumentM()
+	if err := dec.Decode(&data); err != nil {
 		log.Error().Err(err).Msg(semLogContext)
+		return nil, err
 	}
 
 	evt, err := events.ParseEvent(data)

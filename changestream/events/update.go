@@ -1,9 +1,10 @@
 package events
 
 import (
+	"time"
+
 	"github.com/GPA-Gruppo-Progetti-Avanzati-SRL/tpm-mongo-common/changestream/checkpoint"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"time"
 )
 
 // https://www.mongodb.com/docs/manual/reference/change-events/update/
@@ -48,7 +49,7 @@ func parseUpdateOperationType(m bson.M) (ChangeEvent, error) {
 		OpType: OperationTypeUpdate,
 	}
 
-	id, err := getDocument(m, "_id", true)
+	id, err := getMap(m, "_id", true)
 	if err == nil {
 		var data string
 		data, err = getString(id, "_data", true)
@@ -63,23 +64,23 @@ func parseUpdateOperationType(m bson.M) (ChangeEvent, error) {
 	}
 
 	if err == nil {
-		e.FullDocument, err = getDocument(m, "fullDocument", false)
+		e.FullDocument, err = getMap(m, "fullDocument", false)
 	}
 
 	if err == nil {
-		e.FullDocumentBeforeChange, err = getDocument(m, "fullDocumentBeforeChange", false)
+		e.FullDocumentBeforeChange, err = getMap(m, "fullDocumentBeforeChange", false)
 	}
 
 	if err == nil {
-		e.UpdateDescription, err = getDocument(m, "updateDescription", false)
+		e.UpdateDescription, err = getMap(m, "updateDescription", false)
 	}
 
 	if err == nil {
-		e.DocumentKey, err = getDocument(m, "documentKey", true)
+		e.DocumentKey, err = getMap(m, "documentKey", true)
 	}
 
 	if err == nil {
-		e.Lsid, err = getDocument(m, "lsid", false)
+		e.Lsid, err = getMap(m, "lsid", false)
 	}
 
 	if err == nil {

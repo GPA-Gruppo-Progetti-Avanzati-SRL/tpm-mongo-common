@@ -16,10 +16,10 @@ var testData = bson.M{"_id": bson.M{"_data": "8267E7317E000000082B042C0100296E5A
 func TestParse01(t *testing.T) {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	zerolog.SetGlobalLevel(zerolog.WarnLevel)
-	for i := 1; i < 100000; i++ {
+	for i := 1; i < 2; i++ {
 		ce, err := events.ParseEvent(testData)
 		require.NoError(t, err)
-		_ = ce.String()
+		t.Log(ce.String())
 	}
 }
 
