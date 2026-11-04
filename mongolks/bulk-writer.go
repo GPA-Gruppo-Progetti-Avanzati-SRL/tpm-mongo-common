@@ -210,7 +210,7 @@ func (b *BulkWriterSet) Write(nm string, wm mongo.WriteModel) (int, error) {
 		flushedSize, err = b.Flush()
 		if err != nil {
 			log.Error().Err(err).Str("name", nm).Int("flushed", flushedSize).Msg(semLogContext)
-			return sz, err
+			return flushedSize, err
 		}
 
 		//for nm, wrt = range b.writers {

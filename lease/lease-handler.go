@@ -261,11 +261,11 @@ func (lh *Handler) RenewLease(withErrors bool) error {
 		return err
 	}
 
-	lh.Lease = renewedLease
-
 	if res.ModifiedCount == 0 {
-		log.Error().Msg(semLogContext + " lease already released")
+		err = errors.New("lease already released")
+		log.Error().Err(err).Msg(semLogContext)
 	}
 
+	lh.Lease = renewedLease
 	return err
 }
